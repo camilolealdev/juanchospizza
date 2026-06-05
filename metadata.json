@@ -1,0 +1,8 @@
+{
+  "name": "Guido Pizza Bogotá | Premium App",
+  "description": "Plataforma unificada multi-rol para Guido Pizza Bogotá. Gestión de pedidos, rastreo en tiempo real, constructor visual de pizzas y analítica avanzada.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ]
+}
