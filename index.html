@@ -38,16 +38,29 @@
         }
         .btn-primary:hover { background-color: var(--rojo-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(192,57,43,.5); }
 
-        .cart-widget {
-            position: fixed; bottom: 30px; right: 30px; background-color: var(--rrojo-acento); color: var(--blanco-puro);
-            width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,.3); z-index: 999; cursor: pointer; transition: var(--transition-smooth);
+        .nav-actions { display: flex; align-items: center; gap: 8px; }
+        .nav-cart {
+            color: var(--blanco-puro); cursor: pointer; font-size: 1.1rem;
+            display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+            background: rgba(255,255,255,.1); border-radius: 12px; transition: var(--transition-smooth);
+            text-decoration: none; position: relative;
         }
-        .cart-widget:hover { transform: scale(1.1); }
-        .cart-count {
-            position: absolute; top: -5px; right: -5px; background-color: var(--amarillo-calido); color: var(--negro-carbon);
-            font-weight: 700; font-size: .8rem; width: 22px; height: 22px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; border: 2px solid var(--rrojo-acento);
+        .nav-cart:hover { background: rgba(255,255,255,.2); }
+        .nav-cart .cart-count {
+            background: var(--amarillo-calido); color: var(--negro-carbon); font-weight: 700;
+            font-size: .7rem; width: 20px; height: 20px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .nav-chatbot {
+            background: linear-gradient(135deg,#25D366,#1ebd58); color: var(--blanco-puro) !important;
+            padding: 8px 16px; border-radius: 50px; font-weight: 600 !important; font-size: .85rem;
+            box-shadow: 0 4px 15px rgba(37,211,102,.3); transition: var(--transition-smooth); text-decoration: none;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .nav-chatbot:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(37,211,102,.4); }
+        @media(max-width:768px) {
+            .nav-actions { flex-direction: column; width: 100%; }
+            .nav-cart, .nav-chatbot { width: 100%; justify-content: center; }
         }
 
         header {
@@ -63,9 +76,7 @@
         .nav-links a::after { content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background: var(--amarillo-calido); transition: var(--transition-smooth); }
         .nav-links a:hover { color: var(--amarillo-calido); }
         .nav-links a:hover::after { width: 100%; }
-        .nav-wpp { background: linear-gradient(135deg,#25D366,#1ebd58); color: var(--blanco-puro) !important; padding: 8px 18px; border-radius: 50px; font-weight: 600 !important; box-shadow: 0 4px 15px rgba(37,211,102,.3); }
-        .nav-wpp::after { display: none !important; }
-        .nav-wpp:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(37,211,102,.4); }
+
         .hamburger { display: none; color: var(--blanco-puro); font-size: 1.5rem; cursor: pointer; background: rgba(255,255,255,.1); width: 40px; height: 40px; border-radius: 12px; align-items: center; justify-content: center; }
 
         #inicio {
@@ -291,11 +302,6 @@
 </head>
 <body>
 
-<div class="cart-widget" id="cartFloatBtn">
-    <i class="fa-solid fa-basket-shopping"></i>
-    <div class="cart-count" id="cartCounter">0</div>
-</div>
-
 <header>
     <a href="#inicio" class="logo"><img src="/logo.png" alt="Juancho's Pizza" class="logo-img"> Juancho's Pizza</a>
     <div class="hamburger" id="navToggle"><i class="fa-solid fa-bars"></i></div>
@@ -304,7 +310,15 @@
         <li><a href="#menu" id="navMenuBtn" onclick="event.preventDefault();window.dispatchEvent(new CustomEvent('open-digital-menu'));document.getElementById('menu')?.scrollIntoView({behavior:'smooth'})">Menú</a></li>
         <li><a href="#crea-tu-pizza">Crea tu Pizza</a></li>
         <li><a href="#domicilios">Domicilios</a></li>
-        <li><a href="https://wa.me/573117074843" target="_blank" class="nav-wpp"><i class="fa-brands fa-whatsapp"></i> ¡Pide Ya!</a></li>
+        <li class="nav-actions">
+            <a href="#" id="navCartBtn" class="nav-cart" title="Carrito">
+                <i class="fa-solid fa-basket-shopping"></i>
+                <span class="cart-count" id="cartCounter">0</span>
+            </a>
+            <a href="https://wa.me/573117074843?text=Hola%2C%20quiero%20hacer%20un%20pedido" target="_blank" class="nav-chatbot">
+                <i class="fa-brands fa-whatsapp"></i> Chatbot
+            </a>
+        </li>
     </ul>
 </header>
 
@@ -821,8 +835,9 @@ document.getElementById('confirmBtn').addEventListener('click', function() {
     }, 2800);
 });
 
-// Cart float scroll
-document.getElementById('cartFloatBtn').addEventListener('click', () => {
+// Cart nav scroll
+document.getElementById('navCartBtn').addEventListener('click', (e) => {
+    e.preventDefault();
     document.getElementById('crea-tu-pizza').scrollIntoView({ behavior: 'smooth' });
 });
 
