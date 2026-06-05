@@ -87,15 +87,6 @@ const App: React.FC = () => {
         <i className={`fas ${isAuthenticated ? 'fa-right-from-bracket' : 'fa-crown'} text-xl transition-transform group-hover:scale-110`}></i>
       </button>
 
-      {/* Floating Menu Digital Button */}
-      <button
-        onClick={() => setShowDigitalMenu(true)}
-        className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-2xl bg-[#C0392B] shadow-lg shadow-[#C0392B]/30 flex items-center justify-center text-white hover:bg-[#962D22] transition-all group"
-        title="Menú Digital"
-      >
-        <i className="fas fa-book-open text-xl transition-transform group-hover:scale-110"></i>
-      </button>
-
       {/* Menu Digital Overlay */}
       {showDigitalMenu && <MenuDigital onClose={() => setShowDigitalMenu(false)} />}
 
