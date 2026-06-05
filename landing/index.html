@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juancho's Pizza y Comidas Rápidas</title>
+  <meta name="description" content="Las mejores pizzas, lasañas y spaguettis de Nemocón. Domicilios rápidos. En sabor y calidad, no hay igual.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ====== HEADER ====== -->
+  <header class="header" id="inicio">
+    <div class="header__container">
+      <a href="#" class="header__logo">&#127829; Juancho's Pizza</a>
+      <button class="header__hamburger" id="hamburgerBtn" aria-label="Abrir menú">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <nav class="header__nav" id="mainNav">
+        <a href="#inicio" class="header__link">Inicio</a>
+        <a href="#menu" class="header__link">Menú</a>
+        <a href="#domicilios" class="header__link">Domicilios</a>
+      </nav>
+      <a href="https://wa.me/573117074843?text=Hola!%20Quiero%20ordenar" target="_blank" rel="noopener" class="header__whatsapp" aria-label="Pedir por WhatsApp">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        <span>Pedir</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- ====== HERO ====== -->
+  <section class="hero">
+    <div class="hero__overlay"></div>
+    <div class="hero__content">
+      <h1 class="hero__title">En Sabor y Calidad, No Hay Igual</h1>
+      <p class="hero__subtitle">Las mejores pizzas, lasañas y spaguettis de Nemocón directamente a tu puerta.</p>
+      <a href="#menu" class="hero__cta">VER MENÚ Y ORDENAR</a>
+    </div>
+  </section>
+
+  <!-- ====== MENU ====== -->
+  <section class="menu" id="menu">
+    <div class="menu__container">
+      <h2 class="section__title">Nuestro Menú</h2>
+      <p class="section__subtitle">Hecho con ingredientes frescos y mucho amor</p>
+
+      <div class="menu__grid">
+
+        <!-- Card 1 - Pizza -->
+        <article class="card">
+          <div class="card__img">
+            <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80" alt="Pizza Especial Juancho's" loading="lazy">
+            <span class="card__badge">MÁS PEDIDA</span>
+          </div>
+          <div class="card__body">
+            <h3 class="card__title">Pizza Especial Juancho's</h3>
+            <p class="card__desc">Salsa de tomate casera, queso mozzarella fundido, pepperoni, champiñones frescos, aceitunas y pimentón.</p>
+            <div class="card__footer">
+              <span class="card__price">$38.900</span>
+              <button class="card__btn add-to-cart" data-product="Pizza Especial Juancho's" data-price="38900">Añadir al Pedido</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 2 - Lasaña -->
+        <article class="card">
+          <div class="card__img">
+            <img src="https://images.unsplash.com/photo-1574894709920-11b28e7367e3?w=600&q=80" alt="Lasaña Súper Mixta" loading="lazy">
+            <span class="card__badge">FAMILIA</span>
+          </div>
+          <div class="card__body">
+            <h3 class="card__title">Lasaña Súper Mixta</h3>
+            <p class="card__desc">Capas de pasta artesanal, carne boloñesa, pollo desmechado, salsa bechamel y mucho queso gratinado.</p>
+            <div class="card__footer">
+              <span class="card__price">$42.500</span>
+              <button class="card__btn add-to-cart" data-product="Lasaña Súper Mixta" data-price="42500">Añadir al Pedido</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 3 - Spaguetti -->
+        <article class="card">
+          <div class="card__img">
+            <img src="https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=600&q=80" alt="Spaguetti a la Boloñesa Casera" loading="lazy">
+            <span class="card__badge">CLÁSICO</span>
+          </div>
+          <div class="card__body">
+            <h3 class="card__title">Spaguetti a la Boloñesa Casera</h3>
+            <p class="card__desc">Pasta al dente con receta de salsa de carne de la casa y queso parmesano.</p>
+            <div class="card__footer">
+              <span class="card__price">$28.900</span>
+              <button class="card__btn add-to-cart" data-product="Spaguetti a la Boloñesa Casera" data-price="28900">Añadir al Pedido</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 4 - Hamburguesa -->
+        <article class="card">
+          <div class="card__img">
+            <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80" alt="Hamburguesa de la Casa" loading="lazy">
+            <span class="card__badge">ESTRELLA</span>
+          </div>
+          <div class="card__body">
+            <h3 class="card__title">Hamburguesa de la Casa</h3>
+            <p class="card__desc">Carne artesanal, queso, vegetales frescos y salsas especiales.</p>
+            <div class="card__footer">
+              <span class="card__price">$24.900</span>
+              <button class="card__btn add-to-cart" data-product="Hamburguesa de la Casa" data-price="24900">Añadir al Pedido</button>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== DOMICILIOS ====== -->
+  <section class="delivery" id="domicilios">
+    <div class="delivery__container">
+      <h2 class="section__title section__title--light">Domicilios y Ubicación</h2>
+      <p class="delivery__tagline">Domicilios rápidos en todo el sector. Tu comida llega caliente.</p>
+
+      <div class="delivery__grid">
+        <div class="delivery__info">
+          <div class="delivery__card">
+            <h3>&#128205; Dirección</h3>
+            <p>Nemocón - Vía Principal (Cra 6 No. 5-40)</p>
+          </div>
+          <div class="delivery__card">
+            <h3>&#128222; Contáctanos</h3>
+            <a href="tel:+573117074843" class="delivery__phone">311 707 4843</a>
+            <a href="tel:+573227699056" class="delivery__phone">322 769 9056</a>
+          </div>
+          <div class="delivery__card">
+            <h3>&#128176; Pide por WhatsApp</h3>
+            <a href="https://wa.me/573117074843?text=Hola!%20Quiero%20ordenar" target="_blank" rel="noopener" class="delivery__whatsapp-btn">&#128172; Pedir ahora</a>
+          </div>
+        </div>
+
+        <div class="delivery__map">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15910.423675073743!2d-73.87821111428565!3d5.065416091070264!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e6a7c8e9b8e6a7f%3A0x7b8e6a7c8e9b8e6a!2sNemoc%C3%B3n%2C%20Cundinamarca!5e0!3m2!1ses!2sco!4v1690000000000"
+            width="100%" height="300" style="border:0; border-radius: 16px;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+            title="Ubicación de Juancho's Pizza en Nemocón">
+          </iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== FOOTER ====== -->
+  <footer class="footer">
+    <div class="footer__container">
+      <div class="footer__brand">
+        <h3>&#127829; Juancho's Pizza</h3>
+        <p>En sabor y calidad, no hay igual.</p>
+      </div>
+      <div class="footer__hours">
+        <h4>&#128338; Horarios</h4>
+        <p>Lunes a Domingo<br>4:00 PM - 11:00 PM</p>
+      </div>
+      <div class="footer__social">
+        <h4>&#128279; Síguenos</h4>
+        <div class="footer__social-links">
+          <a href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <a href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+          </a>
+          <a href="https://wa.me/573117074843" target="_blank" rel="noopener" aria-label="WhatsApp">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <p>&copy; 2026 Juancho's Pizza y Comidas Rápidas. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- ====== CART FLOATING BUTTON ====== -->
+  <div class="cart-float" id="cartFloat">
+    <span class="cart-float__icon">&#128722;</span>
+    <span class="cart-float__count" id="cartCount">0</span>
+  </div>
+
+  <!-- ====== CART TOAST ====== -->
+  <div class="cart-toast" id="cartToast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
