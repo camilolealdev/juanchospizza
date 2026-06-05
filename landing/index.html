@@ -1,198 +1,734 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Juancho's Pizza y Comidas Rápidas</title>
-  <meta name="description" content="Las mejores pizzas, lasañas y spaguettis de Nemocón. Domicilios rápidos. En sabor y calidad, no hay igual.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juancho's Pizza y Comidas Rápidas - Nemocón</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,700;1,400&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* ==========================================================================
+           VARIABLES Y CONFIGURACIÓN BASE (Design System)
+           ========================================================================== */
+        :root {
+            --bg-general: #F4EFEA;
+            --rrojo-acento: #C0392B;
+            --rojo-hover: #962D22;
+            --amarillo-calido: #F9DC5C;
+            --marron-madera: #8B572A;
+            --negro-carbon: #1A1A1A;
+            --blanco-puro: #FFFFFF;
+            
+            --font-headings: 'Bitter', serif;
+            --font-body: 'Poppins', sans-serif;
+            --transition-smooth: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-general);
+            color: var(--negro-carbon);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ==========================================================================
+           COMPONENTES GLOBALES Y UI
+           ========================================================================== */
+        .btn-primary {
+            background-color: var(--rrojo-acento);
+            color: var(--blanco-puro);
+            padding: 14px 28px;
+            border: none;
+            border-radius: 30px;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(192, 57, 43, 0.3);
+            transition: var(--transition-smooth);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--rojo-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(192, 57, 43, 0.5);
+        }
+
+        /* Contadores y Widgets Flotantes */
+        .cart-widget {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: var(--rrojo-acento);
+            color: var(--blanco-puro);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 999;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .cart-widget:hover {
+            transform: scale(1.1);
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--amarillo-calido);
+            color: var(--negro-carbon);
+            font-weight: 700;
+            font-size: 0.8rem;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--rrojo-acento);
+        }
+
+        /* ==========================================================================
+           HEADER & NAV
+           ========================================================================== */
+        header {
+            background-color: rgba(26, 26, 26, 0.95);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: 15px 5%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 3px solid var(--marron-madera);
+        }
+
+        .logo {
+            font-family: var(--font-headings);
+            color: var(--amarillo-calido);
+            font-size: 1.6rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--blanco-puro);
+            text-decoration: none;
+            font-weight: 400;
+            font-size: 0.95rem;
+            transition: var(--transition-smooth);
+        }
+
+        .nav-links a:hover {
+            color: var(--amarillo-calido);
+        }
+
+        .nav-wpp {
+            background-color: #25D366;
+            color: var(--blanco-puro) !important;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600 !important;
+        }
+
+        .nav-wpp:hover {
+            background-color: #1ebd58;
+            transform: translateY(-1px);
+        }
+
+        .hamburger {
+            display: none;
+            color: var(--blanco-puro);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        /* ==========================================================================
+           HERO SECTION
+           ========================================================================== */
+        #inicio {
+            height: 100vh;
+            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.75)), 
+                        url('https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1920&q=80') no-repeat center center/cover;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0 20px;
+            border-bottom: 8px solid var(--marron-madera);
+        }
+
+        .hero-content h1 {
+            font-family: var(--font-headings);
+            color: var(--amarillo-calido);
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
+            text-transform: uppercase;
+        }
+
+        .hero-content p {
+            color: var(--blanco-puro);
+            font-size: 1.3rem;
+            max-width: 700px;
+            margin: 0 auto 35px auto;
+            font-weight: 300;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+        }
+
+        /* ==========================================================================
+           SECCIÓN DE TRANSICIÓN RÚSTICA (The Boos Concept)
+           ========================================================================== */
+        .divider-banner {
+            background-color: var(--marron-madera);
+            color: var(--amarillo-calido);
+            text-align: center;
+            padding: 40px 20px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+        }
+
+        .divider-banner h2 {
+            font-family: var(--font-headings);
+            font-size: 2rem;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .divider-banner p {
+            font-family: var(--font-headings);
+            font-style: italic;
+            color: var(--bg-general);
+            font-size: 1.1rem;
+        }
+
+        /* ==========================================================================
+           SECCIÓN COCKTAIL-STYLE GRID (MÉTODO ZIG-ZAG ALTERNADO)
+           ========================================================================== */
+        #menu {
+            padding: 0;
+        }
+
+        .product-section {
+            display: flex;
+            min-height: 85vh;
+            align-items: center;
+            border-bottom: 2px solid rgba(139, 87, 42, 0.15);
+            background: var(--bg-general);
+            position: relative;
+        }
+
+        /* El truco del sombreado inmersivo de bordes de la landing de referencia */
+        .product-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0px 40px 40px -20px rgba(0,0,0,0.05), inset 0px -40px 40px -20px rgba(0,0,0,0.05);
+            pointer-events: none;
+        }
+
+        .product-visual {
+            width: 50%;
+            height: 85vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-visual img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: var(--transition-smooth);
+        }
+
+        .product-section:hover .product-visual img {
+            transform: scale(1.03);
+        }
+
+        .product-info {
+            width: 50%;
+            padding: 8% 6%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Inversión de orden automática para simular el Zig-Zag exacto */
+        .product-section.type-b {
+            flex-direction: row-reverse;
+        }
+
+        .product-info h2 {
+            font-family: var(--font-headings);
+            color: var(--negro-carbon);
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            line-height: 1.2;
+            border-left: 5px solid var(--rrojo-acento);
+            padding-left: 15px;
+        }
+
+        .ingredients-list {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .ingredients-list li {
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+            color: #4A4A4A;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ingredients-list li::before {
+            content: '■';
+            color: var(--marron-madera);
+            font-size: 0.7rem;
+        }
+
+        .product-description {
+            font-family: var(--font-headings);
+            font-style: italic;
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 1.05rem;
+        }
+
+        .price-tag {
+            font-family: var(--font-headings);
+            color: var(--rrojo-acento);
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        /* ==========================================================================
+           DOMICILIOS Y UBICACIÓN
+           ========================================================================== */
+        #domicilios {
+            background-color: var(--amarillo-calido);
+            padding: 80px 5%;
+            display: flex;
+            gap: 50px;
+            align-items: center;
+            border-top: 6px solid var(--marron-madera);
+        }
+
+        .delivery-info {
+            width: 45%;
+        }
+
+        .delivery-info h2 {
+            font-family: var(--font-headings);
+            color: var(--rrojo-acento);
+            font-size: 2.8rem;
+            margin-bottom: 20px;
+        }
+
+        .delivery-card {
+            background-color: var(--blanco-puro);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 2px dashed var(--marron-madera);
+        }
+
+        .delivery-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .delivery-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .delivery-item i {
+            color: var(--rrojo-acento);
+            font-size: 1.4rem;
+            margin-top: 4px;
+        }
+
+        .delivery-item a {
+            color: var(--negro-carbon);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: var(--transition-smooth);
+        }
+
+        .delivery-item a:hover {
+            color: var(--rrojo-acento);
+        }
+
+        .delivery-map {
+            width: 55%;
+            height: 400px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border: 4px solid var(--blanco-puro);
+        }
+
+        /* ==========================================================================
+           FOOTER
+           ========================================================================== */
+        footer {
+            background-color: var(--negro-carbon);
+            color: var(--bg-general);
+            padding: 40px 5% 20px 5%;
+            text-align: center;
+            border-top: 4px solid var(--rrojo-acento);
+        }
+
+        .footer-content {
+            margin-bottom: 25px;
+        }
+
+        .footer-content p {
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .social-links a {
+            background-color: rgba(255,255,255,0.1);
+            color: var(--amarillo-calido);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: var(--transition-smooth);
+        }
+
+        .social-links a:hover {
+            background-color: var(--rrojo-acento);
+            color: var(--blanco-puro);
+            transform: translateY(-3px);
+        }
+
+        .copyright {
+            font-size: 0.8rem;
+            color: #777;
+            border-top: 1px solid #333;
+            padding-top: 20px;
+        }
+
+        /* ==========================================================================
+           RESPONSIVE DESIGN (Enfoque Mobile-First / Breakpoints Críticos)
+           ========================================================================== */
+        @media (max-width: 992px) {
+            .product-section, .product-section.type-b {
+                flex-direction: column !important; /* Colapso total a formato vertical */
+                min-height: auto;
+            }
+            .product-visual, .product-info {
+                width: 100%;
+                height: auto;
+            }
+            .product-visual {
+                height: 45vh;
+            }
+            #domicilios {
+                flex-direction: column;
+                padding: 50px 20px;
+            }
+            .delivery-info, .delivery-map {
+                width: 100%;
+            }
+            .delivery-map {
+                height: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 2.3rem;
+            }
+            .hero-content p {
+                font-size: 1rem;
+            }
+            .nav-links {
+                display: none; /* Lógica controlada por JS */
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background-color: rgba(26, 26, 26, 0.98);
+                padding: 20px;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+                border-bottom: 3px solid var(--marron-madera);
+            }
+            .nav-links.active {
+                display: flex;
+            }
+            .hamburger {
+                display: block;
+            }
+        }
+    </style>
 </head>
 <body>
 
-  <!-- ====== HEADER ====== -->
-  <header class="header" id="inicio">
-    <div class="header__container">
-      <a href="#" class="header__logo">&#127829; Juancho's Pizza</a>
-      <button class="header__hamburger" id="hamburgerBtn" aria-label="Abrir menú">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      <nav class="header__nav" id="mainNav">
-        <a href="#inicio" class="header__link">Inicio</a>
-        <a href="#menu" class="header__link">Menú</a>
-        <a href="#domicilios" class="header__link">Domicilios</a>
-      </nav>
-      <a href="https://wa.me/573117074843?text=Hola!%20Quiero%20ordenar" target="_blank" rel="noopener" class="header__whatsapp" aria-label="Pedir por WhatsApp">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        <span>Pedir</span>
-      </a>
+    <div class="cart-widget" onclick="alert('Pedido simulado: Abriendo pasarela de WhatsApp...')">
+        <i class="fa-solid fa-basket-shopping"></i>
+        <div class="cart-count" id="cartCounter">0</div>
     </div>
-  </header>
 
-  <!-- ====== HERO ====== -->
-  <section class="hero">
-    <div class="hero__overlay"></div>
-    <div class="hero__content">
-      <h1 class="hero__title">En Sabor y Calidad, No Hay Igual</h1>
-      <p class="hero__subtitle">Las mejores pizzas, lasañas y spaguettis de Nemocón directamente a tu puerta.</p>
-      <a href="#menu" class="hero__cta">VER MENÚ Y ORDENAR</a>
-    </div>
-  </section>
-
-  <!-- ====== MENU ====== -->
-  <section class="menu" id="menu">
-    <div class="menu__container">
-      <h2 class="section__title">Nuestro Menú</h2>
-      <p class="section__subtitle">Hecho con ingredientes frescos y mucho amor</p>
-
-      <div class="menu__grid">
-
-        <!-- Card 1 - Pizza -->
-        <article class="card">
-          <div class="card__img">
-            <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80" alt="Pizza Especial Juancho's" loading="lazy">
-            <span class="card__badge">MÁS PEDIDA</span>
-          </div>
-          <div class="card__body">
-            <h3 class="card__title">Pizza Especial Juancho's</h3>
-            <p class="card__desc">Salsa de tomate casera, queso mozzarella fundido, pepperoni, champiñones frescos, aceitunas y pimentón.</p>
-            <div class="card__footer">
-              <span class="card__price">$38.900</span>
-              <button class="card__btn add-to-cart" data-product="Pizza Especial Juancho's" data-price="38900">Añadir al Pedido</button>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 2 - Lasaña -->
-        <article class="card">
-          <div class="card__img">
-            <img src="https://images.unsplash.com/photo-1574894709920-11b28e7367e3?w=600&q=80" alt="Lasaña Súper Mixta" loading="lazy">
-            <span class="card__badge">FAMILIA</span>
-          </div>
-          <div class="card__body">
-            <h3 class="card__title">Lasaña Súper Mixta</h3>
-            <p class="card__desc">Capas de pasta artesanal, carne boloñesa, pollo desmechado, salsa bechamel y mucho queso gratinado.</p>
-            <div class="card__footer">
-              <span class="card__price">$42.500</span>
-              <button class="card__btn add-to-cart" data-product="Lasaña Súper Mixta" data-price="42500">Añadir al Pedido</button>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 3 - Spaguetti -->
-        <article class="card">
-          <div class="card__img">
-            <img src="https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=600&q=80" alt="Spaguetti a la Boloñesa Casera" loading="lazy">
-            <span class="card__badge">CLÁSICO</span>
-          </div>
-          <div class="card__body">
-            <h3 class="card__title">Spaguetti a la Boloñesa Casera</h3>
-            <p class="card__desc">Pasta al dente con receta de salsa de carne de la casa y queso parmesano.</p>
-            <div class="card__footer">
-              <span class="card__price">$28.900</span>
-              <button class="card__btn add-to-cart" data-product="Spaguetti a la Boloñesa Casera" data-price="28900">Añadir al Pedido</button>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 4 - Hamburguesa -->
-        <article class="card">
-          <div class="card__img">
-            <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80" alt="Hamburguesa de la Casa" loading="lazy">
-            <span class="card__badge">ESTRELLA</span>
-          </div>
-          <div class="card__body">
-            <h3 class="card__title">Hamburguesa de la Casa</h3>
-            <p class="card__desc">Carne artesanal, queso, vegetales frescos y salsas especiales.</p>
-            <div class="card__footer">
-              <span class="card__price">$24.900</span>
-              <button class="card__btn add-to-cart" data-product="Hamburguesa de la Casa" data-price="24900">Añadir al Pedido</button>
-            </div>
-          </div>
-        </article>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- ====== DOMICILIOS ====== -->
-  <section class="delivery" id="domicilios">
-    <div class="delivery__container">
-      <h2 class="section__title section__title--light">Domicilios y Ubicación</h2>
-      <p class="delivery__tagline">Domicilios rápidos en todo el sector. Tu comida llega caliente.</p>
-
-      <div class="delivery__grid">
-        <div class="delivery__info">
-          <div class="delivery__card">
-            <h3>&#128205; Dirección</h3>
-            <p>Nemocón - Vía Principal (Cra 6 No. 5-40)</p>
-          </div>
-          <div class="delivery__card">
-            <h3>&#128222; Contáctanos</h3>
-            <a href="tel:+573117074843" class="delivery__phone">311 707 4843</a>
-            <a href="tel:+573227699056" class="delivery__phone">322 769 9056</a>
-          </div>
-          <div class="delivery__card">
-            <h3>&#128176; Pide por WhatsApp</h3>
-            <a href="https://wa.me/573117074843?text=Hola!%20Quiero%20ordenar" target="_blank" rel="noopener" class="delivery__whatsapp-btn">&#128172; Pedir ahora</a>
-          </div>
+    <header>
+        <a href="#inicio" class="logo">
+            <i class="fa-solid fa-pizza-slice"></i> Juancho's Pizza
+        </a>
+        <div class="hamburger" id="navToggle">
+            <i class="fa-solid fa-bars"></i>
         </div>
+        <ul class="nav-links" id="navMenu">
+            <li><a href="#inicio">Inicio</a></li>
+            <li><a href="#menu">Menú</a></li>
+            <li><a href="#domicilios">Domicilios</a></li>
+            <li><a href="https://wa.me/573117074843" target="_blank" class="nav-wpp"><i class="fa-brands fa-whatsapp"></i> ¡Pide Ya!</a></li>
+        </ul>
+    </header>
 
-        <div class="delivery__map">
-          <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15910.423675073743!2d-73.87821111428565!3d5.065416091070264!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e6a7c8e9b8e6a7f%3A0x7b8e6a7c8e9b8e6a!2sNemoc%C3%B3n%2C%20Cundinamarca!5e0!3m2!1ses!2sco!4v1690000000000"
-            width="100%" height="300" style="border:0; border-radius: 16px;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-            title="Ubicación de Juancho's Pizza en Nemocón">
-          </iframe>
+    <section id="inicio">
+        <div class="hero-content">
+            <h1>En Sabor y Calidad, No Hay Igual</h1>
+            <p>Las mejores pizzas, lasañas y spaguettis de Nemocón directamente a tu puerta.</p>
+            <a href="#menu" class="btn-primary">VER MENÚ Y ORDENAR <i class="fa-solid fa-arrow-down"></i></a>
         </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ====== FOOTER ====== -->
-  <footer class="footer">
-    <div class="footer__container">
-      <div class="footer__brand">
-        <h3>&#127829; Juancho's Pizza</h3>
-        <p>En sabor y calidad, no hay igual.</p>
-      </div>
-      <div class="footer__hours">
-        <h4>&#128338; Horarios</h4>
-        <p>Lunes a Domingo<br>4:00 PM - 11:00 PM</p>
-      </div>
-      <div class="footer__social">
-        <h4>&#128279; Síguenos</h4>
-        <div class="footer__social-links">
-          <a href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-          </a>
-          <a href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-          </a>
-          <a href="https://wa.me/573117074843" target="_blank" rel="noopener" aria-label="WhatsApp">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          </a>
+    <div class="divider-banner">
+        <h2>Tradición & Ingredientes Frescos</h2>
+        <p>Recetas artesanales de barrio preparadas al momento</p>
+    </div>
+
+    <main id="menu">
+        
+        <section class="product-section">
+            <div class="product-visual">
+                <img src="https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=800&q=80" alt="Pizza Especial Juanchos">
+            </div>
+            <div class="product-info">
+                <h2>Pizza Especial Juancho's</h2>
+                <ul class="ingredients-list">
+                    <li>Salsa de tomate casera secreta</li>
+                    <li>Queso mozzarella fundido premium</li>
+                    <li>Pepperoni curado madurado</li>
+                    <li>Champiñones frescos seleccionados, aceitunas y pimentón</li>
+                </ul>
+                <p class="product-description">"La insignia de la casa. Un balance perfecto entre crujido y suavidad artesanal."</p>
+                <span class="price-tag">$24.900</span>
+                <div>
+                    <button class="btn-primary add-to-order-btn">Añadir al Pedido <i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <section class="product-section type-b">
+            <div class="product-visual">
+                <img src="https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&w=800&q=80" alt="Lasaña Super Mixta">
+            </div>
+            <div class="product-info">
+                <h2>Lasaña Súper Mixta</h2>
+                <ul class="ingredients-list">
+                    <li>Capas de pasta artesanal al huevo</li>
+                    <li>Carne boloñesa madurada a fuego lento</li>
+                    <li>Pollo desmechado jugoso</li>
+                    <li>Salsa bechamel tradicional y mucho queso gratinado</li>
+                </ul>
+                <p class="product-description">"Dorada a la perfección con una capa crujiente de queso parmesano por encima."</p>
+                <span class="price-tag">$18.500</span>
+                <div>
+                    <button class="btn-primary add-to-order-btn">Añadir al Pedido <i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <section class="product-section">
+            <div class="product-visual">
+                <img src="https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=800&q=80" alt="Spaguetti a la Boloñesa">
+            </div>
+            <div class="product-info">
+                <h2>Spaguetti a la Boloñesa Casera</h2>
+                <ul class="ingredients-list">
+                    <li>Pasta italiana al dente</li>
+                    <li>Salsa de carne receta original de la casa</li>
+                    <li>Especias aromáticas y albahaca</li>
+                    <li>Lluvia abundante de queso parmesano</li>
+                </ul>
+                <p class="product-description">"El verdadero confort food de barrio. Sabor denso, casero y entrañable."</p>
+                <span class="price-tag">$15.900</span>
+                <div>
+                    <button class="btn-primary add-to-order-btn">Añadir al Pedido <i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <section class="product-section type-b">
+            <div class="product-visual">
+                <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80" alt="Hamburguesa de la Casa">
+            </div>
+            <div class="product-info">
+                <h2>Hamburguesa de la Casa</h2>
+                <ul class="ingredients-list">
+                    <li>Carne artesanal de res (150g) seleccionada</li>
+                    <li>Queso cheddar fundido doble</li>
+                    <li>Vegetales frescos de la huerta local</li>
+                    <li>Salsas especiales de la casa y pan brioche</li>
+                </ul>
+                <p class="product-description">"Grande, jugosa y pecaminosa. Hecha con fuego, pasión y mística urbana."</p>
+                <span class="price-tag">$13.500</span>
+                <div>
+                    <button class="btn-primary add-to-order-btn">Añadir al Pedido <i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <section id="domicilios">
+        <div class="delivery-info">
+            <h2>Pide Sin Moverte de Casa</h2>
+            <div class="delivery-card">
+                <div class="delivery-item">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <div>
+                        <p style="font-weight: 700;">Nuestra Ubicación</p>
+                        <p>Nemocón - Vía Principal (Cra 6 No. 5-40)</p>
+                    </div>
+                </div>
+                <div class="delivery-item">
+                    <i class="fa-solid fa-phone-volume"></i>
+                    <div>
+                        <p style="font-weight: 700;">Líneas de Atención Inmediata</p>
+                        <p><a href="tel:+573117074843">311 707 4843</a></p>
+                        <p><a href="tel:+573227699056">322 769 9056</a></p>
+                    </div>
+                </div>
+                <div class="delivery-item">
+                    <i class="fa-solid fa-motorcycle"></i>
+                    <div>
+                        <p style="font-weight: 700;">Garantía Juancho's</p>
+                        <p>Domicilios rápidos en todo el sector. Tu comida llega perfectamente caliente y lista para disfrutar.</p>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-    <div class="footer__bottom">
-      <p>&copy; 2026 Juancho's Pizza y Comidas Rápidas. Todos los derechos reservados.</p>
-    </div>
-  </footer>
+        
+        <div class="delivery-map">
+            <iframe 
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3972.54848574895!2d-73.882424!3d5.409543!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e401d46e32d1f4d%3A0x7d0eaef39bf50d3a!2sNemoc%C3%B3n%2C%20Cundinamarca!5e0!3m2!1ses!2sco!4v1700000000000!5m2!1ses!2sco" 
+                width="100%" 
+                height="100%" 
+                style="border:0;" 
+                allowfullscreen="" 
+                loading="lazy" 
+                referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+        </div>
+    </section>
 
-  <!-- ====== CART FLOATING BUTTON ====== -->
-  <div class="cart-float" id="cartFloat">
-    <span class="cart-float__icon">&#128722;</span>
-    <span class="cart-float__count" id="cartCount">0</span>
-  </div>
+    <footer>
+        <div class="footer-content">
+            <p style="font-family: var(--font-headings); font-size: 1.4rem; color: var(--amarillo-calido); margin-bottom:10px;">&#127829; Juancho's Pizza</p>
+            <p><i class="fa-regular fa-clock"></i> Horario de Atención: Lunes a Domingo - 4:00 PM a 11:00 PM</p>
+            <div class="social-links">
+                <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+                <a href="#"><i class="fa-brands fa-instagram"></i></a>
+                <a href="https://wa.me/573117074843" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+            </div>
+        </div>
+        <div class="copyright">
+            <p>&copy; 2026 Juancho's Pizza y Comidas Rápidas. Todos los derechos reservados.</p>
+        </div>
+    </footer>
 
-  <!-- ====== CART TOAST ====== -->
-  <div class="cart-toast" id="cartToast"></div>
+    <script>
+        // 1. Menú Hamburguesa para Móviles
+        const navToggle = document.getElementById('navToggle');
+        const navMenu = document.getElementById('navMenu');
 
-  <script src="script.js"></script>
+        navToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+        });
+
+        // Cerrar menú móvil al presionar una opción de enlace
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('active');
+            });
+        });
+
+        // 2. Sistema Lógico y de Simulación del Carrito de Compras
+        let itemsInCart = 0;
+        const cartCounter = document.getElementById('cartCounter');
+        const addToOrderButtons = document.querySelectorAll('.add-to-order-btn');
+
+        addToOrderButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                itemsInCart++;
+                cartCounter.innerText = itemsInCart;
+                
+                // Animación visual de feedback en el botón
+                button.innerHTML = '¡Añadido! <i class="fa-solid fa-check"></i>';
+                button.style.backgroundColor = '#27AE60';
+                
+                setTimeout(() => {
+                    button.innerHTML = 'Añadir al Pedido <i class="fa-solid fa-plus"></i>';
+                    button.style.backgroundColor = 'var(--rrojo-acento)';
+                }, 1500);
+            });
+        });
+    </script>
 </body>
 </html>
