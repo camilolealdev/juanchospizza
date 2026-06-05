@@ -1,13 +1,5 @@
-
-import React, { useState, createContext, useContext, useEffect } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import { UserRole, GastroModule } from './types';
-import CustomerView from './views/roles/CustomerView';
-import AdminDashboard from './views/roles/AdminDashboard';
-import KitchenView from './views/roles/KitchenView';
-import RepartidorView from './views/roles/RepartidorView';
-import MarketingView from './views/roles/MarketingView';
-import ProfileView from './views/roles/ProfileView';
-import AIChatWidget from './components/AIChatWidget';
 import AdminLayout from './components/AdminLayout';
 import GastroProDashboard from './views/roles/GastroProDashboard';
 import MenuInteligente from './views/roles/MenuInteligente';
@@ -41,116 +33,18 @@ const TEST_USERS: Record<string, { role: UserRole; pin: string; name: string }> 
   'marketing': { role: UserRole.MARKETING, pin: '9999', name: 'Marketing Team' },
 };
 
-const LoginPage: React.FC<{ onLogin: (role: UserRole, pin: string) => void }> = ({ onLogin }) => {
-  const [selectedRole, setSelectedRole] = useState('');
-  const [pin, setPin] = useState('');
-  const [error, setError] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRole || !pin) {
-      setError('Selecciona un rol e ingresa el PIN');
-      return;
-    }
-    onLogin(selectedRole as UserRole, pin);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[200] bg-stone-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-24 h-24 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i className="fas fa-pizza-slice text-4xl text-white"></i>
-          </div>
-          <h1 className="text-3xl font-brand text-white">Guido Pizza</h1>
-          <p className="text-stone-500 mt-2">Acceso Personal</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="text-xs text-stone-500 uppercase font-bold mb-2 block">Selecciona tu rol</label>
-            <select 
-              value={selectedRole}
-              onChange={(e) => { setSelectedRole(e.target.value); setError(''); }}
-              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white"
-            >
-              <option value="">-- Seleccionar --</option>
-              <option value={UserRole.ADMIN}>Administrador</option>
-              <option value={UserRole.OPERATOR}>Cocina</option>
-              <option value={UserRole.REPARTIDOR}>Repartidor</option>
-              <option value={UserRole.MARKETING}>Marketing</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs text-stone-500 uppercase font-bold mb-2 block">PIN de acceso</label>
-            <input 
-              type="password" 
-              value={pin}
-              onChange={(e) => { setPin(e.target.value); setError(''); }}
-              maxLength={4}
-              placeholder="••••"
-              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-center text-3xl tracking-[0.5em]"
-            />
-          </div>
-
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-          <button 
-            type="submit"
-            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all"
-          >
-            Entrar
-          </button>
-        </form>
-
-        <div className="mt-8 p-4 bg-stone-900 rounded-xl border border-white/5">
-          <p className="text-xs text-stone-500 uppercase font-bold mb-2">Credenciales:</p>
-          <div className="text-xs text-stone-400 grid grid-cols-2 gap-2">
-            <span>Admin: 1234</span>
-            <span>Cocina: 5678</span>
-            <span>Repartidor: 0000</span>
-            <span>Marketing: 9999</span>
-          </div>
-        </div>
-
-        <a href="/" className="block text-center mt-6 text-stone-500 text-sm hover:text-white" onClick={(e) => { e.preventDefault(); window.location.href = '/'; }}>
-          ← Volver al sitio público
-        </a>
-      </div>
-    </div>
-  );
-};
-
 const App: React.FC = () => {
   const [role, setRole] = useState<UserRole>(UserRole.CLIENT);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentPath, setCurrentPath] = useState('/');
+  const [showLogin, setShowLogin] = useState(false);
   const [gastroModule, setGastroModule] = useState<GastroModule>('dashboard');
-
-  useEffect(() => {
-    const handleNavigation = () => {
-      setCurrentPath(window.location.pathname);
-    };
-    
-    window.addEventListener('popstate', handleNavigation);
-    handleNavigation();
-    
-    return () => window.removeEventListener('popstate', handleNavigation);
-  }, []);
-
-  const navigate = (path: string) => {
-    window.history.pushState({}, '', path);
-    setCurrentPath(path);
-  };
 
   const login = (selectedRole: UserRole, pin?: string): boolean => {
     const userKey = Object.keys(TEST_USERS).find(k => TEST_USERS[k].role === selectedRole);
     if (userKey && TEST_USERS[userKey].pin === pin) {
       setRole(selectedRole);
       setIsAuthenticated(true);
-      navigate('/');
+      setShowLogin(false);
       return true;
     }
     return false;
@@ -159,7 +53,6 @@ const App: React.FC = () => {
   const logout = () => {
     setRole(UserRole.CLIENT);
     setIsAuthenticated(false);
-    navigate('/');
   };
 
   const renderGastroModule = () => {
@@ -175,52 +68,127 @@ const App: React.FC = () => {
     }
   };
 
-  const renderContent = () => {
-    if (currentPath === '/staff' || currentPath === '/login' || currentPath === '/admin.html') {
-      if (isAuthenticated) {
-        navigate('/');
-        return null;
-      }
-      return <LoginPage onLogin={login} />;
-    }
+  return (
+    <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
+      {/* Floating admin button - always visible */}
+      <button
+        onClick={() => isAuthenticated ? logout() : setShowLogin(true)}
+        className="fixed bottom-6 left-6 z-[9999] w-14 h-14 rounded-2xl bg-stone-950/90 backdrop-blur-xl border border-white/10 text-stone-400 hover:text-white hover:border-orange-500/50 flex items-center justify-center shadow-2xl transition-all group"
+        title={isAuthenticated ? 'Cerrar sesión' : 'Panel Administrativo'}
+      >
+        <i className={`fas ${isAuthenticated ? 'fa-right-from-bracket' : 'fa-crown'} text-xl transition-transform group-hover:scale-110`}></i>
+      </button>
 
-    switch (role) {
-      case UserRole.ADMIN: return (
-        <AdminLayout
-          module={gastroModule}
-          onModuleChange={setGastroModule}
-          userName={TEST_USERS['admin']?.name || 'Admin'}
-          onLogout={logout}
-        >
-          {renderGastroModule()}
-        </AdminLayout>
-      );
-      case UserRole.OPERATOR: return <KitchenView />;
-      case UserRole.REPARTIDOR: return <RepartidorView />;
-      case UserRole.MARKETING: return <MarketingView />;
-      default: return <CustomerView />;
+      {/* Login Modal */}
+      {showLogin && !isAuthenticated && <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />}
+
+      {/* Admin CRM Overlay */}
+      {isAuthenticated && role === UserRole.ADMIN && (
+        <div className="fixed inset-0 z-[9998] animate-fade-in">
+          <AdminLayout
+            module={gastroModule}
+            onModuleChange={setGastroModule}
+            userName={TEST_USERS['admin']?.name || 'Admin'}
+            onLogout={logout}
+          >
+            {renderGastroModule()}
+          </AdminLayout>
+        </div>
+      )}
+    </AuthContext.Provider>
+  );
+};
+
+const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => boolean; onClose: () => void }> = ({ onLogin, onClose }) => {
+  const [selectedRole, setSelectedRole] = useState('');
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
+  const [showHint, setShowHint] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRole || !pin) {
+      setError('Selecciona un rol e ingresa el PIN');
+      return;
     }
+    const success = onLogin(selectedRole as UserRole, pin);
+    if (!success) setError('PIN incorrecto');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
-      <div className="min-h-screen flex flex-col selection:bg-orange-600 selection:text-white bg-stone-950">
-        
-        {currentPath === '/staff' || currentPath === '/login' ? (
-          renderContent()
-        ) : (
-          <>
-            {isProfileOpen && <ProfileView role={role} onClose={() => setIsProfileOpen(false)} />}
-            
-            <main className="flex-1">
-              {renderContent()}
-            </main>
+    <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="w-full max-w-md bg-stone-950 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl animate-zoom-in">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-900/30">
+            <i className="fas fa-pizza-slice text-2xl text-white"></i>
+          </div>
+          <h2 className="text-2xl font-black text-white">GastroPro</h2>
+          <p className="text-stone-500 text-sm mt-1">CRM Gastronómico</p>
+        </div>
 
-            {role === UserRole.CLIENT && <AIChatWidget />}
-          </>
-        )}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block">Rol</label>
+            <select
+              value={selectedRole}
+              onChange={(e) => { setSelectedRole(e.target.value); setError(''); }}
+              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold focus:border-orange-600/50 outline-none transition-colors"
+            >
+              <option value="">Seleccionar rol</option>
+              <option value={UserRole.ADMIN}>Administrador</option>
+              <option value={UserRole.OPERATOR}>Cocina</option>
+              <option value={UserRole.REPARTIDOR}>Repartidor</option>
+              <option value={UserRole.MARKETING}>Marketing</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block">PIN</label>
+            <input
+              type="password"
+              value={pin}
+              onChange={(e) => { setPin(e.target.value); setError(''); }}
+              maxLength={4}
+              placeholder="••••"
+              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-center text-2xl tracking-[0.5em] font-bold focus:border-orange-600/50 outline-none transition-colors"
+            />
+          </div>
+
+          {error && <p className="text-red-500 text-xs text-center font-bold">{error}</p>}
+
+          <button
+            type="submit"
+            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs transition-all shadow-lg shadow-orange-900/30 active:scale-[0.98]"
+          >
+            Entrar
+          </button>
+        </form>
+
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => setShowHint(!showHint)}
+            className="text-[10px] text-stone-600 hover:text-stone-400 uppercase tracking-widest font-bold transition-colors"
+          >
+            {showHint ? 'Ocultar' : '¿Olvidaste el PIN?'}
+          </button>
+          {showHint && (
+            <div className="mt-3 p-3 bg-stone-900 rounded-xl border border-white/5 text-[10px] text-stone-500 space-y-1">
+              <p>Admin: <span className="text-orange-500 font-bold">1234</span></p>
+              <p>Cocina: <span className="text-orange-500 font-bold">5678</span></p>
+              <p>Repartidor: <span className="text-orange-500 font-bold">0000</span></p>
+              <p>Marketing: <span className="text-orange-500 font-bold">9999</span></p>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center text-stone-500 hover:text-white hover:bg-stone-800 transition-colors"
+        >
+          <i className="fas fa-times text-xs"></i>
+        </button>
       </div>
-    </AuthContext.Provider>
+    </div>
   );
 };
 

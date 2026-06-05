@@ -26,6 +26,8 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; scroll-behavior: smooth; }
         body { font-family: var(--font-body); background-color: var(--bg-general); color: var(--negro-carbon); overflow-x: hidden; line-height: 1.6; }
+        #root { position: fixed; inset: 0; z-index: 9990; pointer-events: none; }
+        #root > * { pointer-events: auto; }
 
         .btn-primary {
             background-color: var(--rrojo-acento); color: var(--blanco-puro); padding: 14px 28px; border: none; border-radius: 30px;
@@ -850,5 +852,7 @@ document.querySelectorAll('.add-to-order-btn').forEach(btn => {
 cartCounter.textContent = itemsInCart;
 render();
 </script>
+<div id="root"></div>
+<script type="module" src="/src/main.tsx"></script>
 </body>
 </html>
