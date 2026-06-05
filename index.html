@@ -25,6 +25,8 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; scroll-behavior: smooth; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
         body { font-family: var(--font-body); background-color: var(--bg-general); color: var(--negro-carbon); overflow-x: hidden; line-height: 1.6; }
         #root { position: fixed; inset: 0; z-index: 9990; pointer-events: none; }
         #root > * { pointer-events: auto; }
@@ -299,7 +301,7 @@
     <div class="hamburger" id="navToggle"><i class="fa-solid fa-bars"></i></div>
     <ul class="nav-links" id="navMenu">
         <li><a href="#inicio">Inicio</a></li>
-        <li><a href="#menu">Menú</a></li>
+        <li><a href="#menu" id="navMenuBtn" onclick="event.preventDefault();window.dispatchEvent(new CustomEvent('open-digital-menu'));document.getElementById('menu')?.scrollIntoView({behavior:'smooth'})">Menú</a></li>
         <li><a href="#crea-tu-pizza">Crea tu Pizza</a></li>
         <li><a href="#domicilios">Domicilios</a></li>
         <li><a href="https://wa.me/573117074843" target="_blank" class="nav-wpp"><i class="fa-brands fa-whatsapp"></i> ¡Pide Ya!</a></li>

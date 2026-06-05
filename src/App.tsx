@@ -1,6 +1,7 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { UserRole, GastroModule } from './types';
 import AdminLayout from './components/AdminLayout';
+import MenuDigital from './components/MenuDigital';
 import GastroProDashboard from './views/roles/GastroProDashboard';
 import MenuInteligente from './views/roles/MenuInteligente';
 import InventarioView from './views/roles/InventarioView';
@@ -38,6 +39,13 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [gastroModule, setGastroModule] = useState<GastroModule>('dashboard');
+  const [showDigitalMenu, setShowDigitalMenu] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setShowDigitalMenu(true);
+    window.addEventListener('open-digital-menu', handler);
+    return () => window.removeEventListener('open-digital-menu', handler);
+  }, []);
 
   const login = (selectedRole: UserRole, pin?: string): boolean => {
     const userKey = Object.keys(TEST_USERS).find(k => TEST_USERS[k].role === selectedRole);
@@ -78,6 +86,18 @@ const App: React.FC = () => {
       >
         <i className={`fas ${isAuthenticated ? 'fa-right-from-bracket' : 'fa-crown'} text-xl transition-transform group-hover:scale-110`}></i>
       </button>
+
+      {/* Floating Menu Digital Button */}
+      <button
+        onClick={() => setShowDigitalMenu(true)}
+        className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-2xl bg-[#C0392B] shadow-lg shadow-[#C0392B]/30 flex items-center justify-center text-white hover:bg-[#962D22] transition-all group"
+        title="Menú Digital"
+      >
+        <i className="fas fa-book-open text-xl transition-transform group-hover:scale-110"></i>
+      </button>
+
+      {/* Menu Digital Overlay */}
+      {showDigitalMenu && <MenuDigital onClose={() => setShowDigitalMenu(false)} />}
 
       {/* Login Modal */}
       {showLogin && !isAuthenticated && <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />}
