@@ -777,7 +777,7 @@ app.use(express.static(path.join(__dirname, '../dist'), {
 // Fallback to frontend for non-API routes
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
-    if (req.path.startsWith('/staff') || req.path.startsWith('/login')) {
+    if (req.path.startsWith('/staff') || req.path.startsWith('/login') || req.path === '/admin.html') {
       res.sendFile(path.join(__dirname, '../dist/admin.html'));
     } else {
       res.sendFile(path.join(__dirname, '../dist/index.html'));

@@ -114,7 +114,7 @@ const LoginPage: React.FC<{ onLogin: (role: UserRole, pin: string) => void }> = 
           </div>
         </div>
 
-        <a href="/" className="block text-center mt-6 text-stone-500 text-sm hover:text-white">
+        <a href="/" className="block text-center mt-6 text-stone-500 text-sm hover:text-white" onClick={(e) => { e.preventDefault(); window.location.href = '/'; }}>
           ← Volver al sitio público
         </a>
       </div>
@@ -176,7 +176,7 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (currentPath === '/staff' || currentPath === '/login') {
+    if (currentPath === '/staff' || currentPath === '/login' || currentPath === '/admin.html') {
       if (isAuthenticated) {
         navigate('/');
         return null;
