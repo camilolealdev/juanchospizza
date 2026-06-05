@@ -1,13 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line,
-} from 'recharts';
 
-const predictionMessages = [
-  'Basado en análisis de los últimos 30 días, se proyecta un incremento del 18% en ventas para este fin de semana. Sugerimos aumentar inventario de ingredientes para Pizza Especial en un 30%.',
-  'Los patrones de consumo indican un aumento del 22% en pedidos para el próximo jueves. Recomendamos preparar personal adicional para turno nocturno.',
-  'El análisis de tendencias semanales muestra una disminución del 5% en ticket promedio. Sugerimos implementar promociones cruzadas para incrementar valor por orden.',
+import React, { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+const topProductos = [
+  { rank: 1, name: 'Pizza Especial', amount: 156 },
+  { rank: 2, name: 'Lasaña', amount: 98 },
+  { rank: 3, name: 'Hamburguesa', amount: 72 },
+  { rank: 4, name: 'Spaghetti', amount: 54 },
+  { rank: 5, name: 'Alitas', amount: 41 },
+];
+
+const clientesRecientes = [
+  { name: 'Carlos Mendoza', total: '$124,500', lastOrder: 'Hoy 19:30' },
+  { name: 'Ana García', total: '$89,200', lastOrder: 'Hoy 18:45' },
+  { name: 'Luis Fernández', total: '$245,000', lastOrder: 'Hoy 17:20' },
+  { name: 'María Torres', total: '$67,800', lastOrder: 'Ayer 21:10' },
+  { name: 'Pedro Sánchez', total: '$156,300', lastOrder: 'Ayer 20:05' },
 ];
 
 const generateWeeklyData = () => [
@@ -19,24 +27,6 @@ const generateWeeklyData = () => [
   { name: 'Sab', ventas: Math.floor(Math.random() * 1200000) + 2800000, pedidos: Math.floor(Math.random() * 20) + 48 },
   { name: 'Dom', ventas: Math.floor(Math.random() * 800000) + 2000000, pedidos: Math.floor(Math.random() * 15) + 36 },
 ];
-
-const generateTopProductos = () => [
-  { rank: 1, name: 'Pizza Especial', amount: Math.floor(Math.random() * 80) + 120 },
-  { rank: 2, name: 'Lasaña', amount: Math.floor(Math.random() * 60) + 70 },
-  { rank: 3, name: 'Hamburguesa', amount: Math.floor(Math.random() * 40) + 50 },
-  { rank: 4, name: 'Spaghetti', amount: Math.floor(Math.random() * 30) + 35 },
-  { rank: 5, name: 'Alitas', amount: Math.floor(Math.random() * 25) + 25 },
-];
-
-const generateClientesRecientes = () => [
-  { name: 'Carlos Mendoza', total: `$${Math.floor(Math.random() * 150 + 100).toLocaleString('es-CO')},500`, lastOrder: 'Hoy 19:30' },
-  { name: 'Ana García', total: `$${Math.floor(Math.random() * 120 + 70).toLocaleString('es-CO')},200`, lastOrder: 'Hoy 18:45' },
-  { name: 'Luis Fernández', total: `$${Math.floor(Math.random() * 250 + 150).toLocaleString('es-CO')},000`, lastOrder: 'Hoy 17:20' },
-  { name: 'María Torres', total: `$${Math.floor(Math.random() * 80 + 50).toLocaleString('es-CO')},800`, lastOrder: 'Ayer 21:10' },
-  { name: 'Pedro Sánchez', total: `$${Math.floor(Math.random() * 200 + 100).toLocaleString('es-CO')},300`, lastOrder: 'Ayer 20:05' },
-];
-
-const dayMap: Record<number, number> = { 0: 6, 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -55,49 +45,59 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 const GastroProDashboard: React.FC = () => {
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
-  const [topProductos, setTopProductos] = useState<any[]>([]);
-  const [clientesRecientes, setClientesRecientes] = useState<any[]>([]);
+  const [pedidosHoy, setPedidosHoy] = useState(48);
   const [predictionUpdating, setPredictionUpdating] = useState(false);
-  const [predictionMessage, setPredictionMessage] = useState(predictionMessages[0]);
 
   useEffect(() => {
-    const data = generateWeeklyData();
-    setWeeklyData(data);
-    setTopProductos(generateTopProductos());
-    setClientesRecientes(generateClientesRecientes());
+    const savedVentas = localStorage.getItem('gastropro_ventas');
+    const savedPedidos = localStorage.getItem('gastropro_pedidos');
+
+    if (savedVentas) {
+      try {
+        const parsed = JSON.parse(savedVentas);
+        if (Array.isArray(parsed) && parsed.length === 7) {
+          setWeeklyData(parsed);
+        } else {
+          const data = generateWeeklyData();
+          setWeeklyData(data);
+          localStorage.setItem('gastropro_ventas', JSON.stringify(data));
+        }
+      } catch {
+        const data = generateWeeklyData();
+        setWeeklyData(data);
+        localStorage.setItem('gastropro_ventas', JSON.stringify(data));
+      }
+    } else {
+      const data = generateWeeklyData();
+      setWeeklyData(data);
+      localStorage.setItem('gastropro_ventas', JSON.stringify(data));
+    }
+
+    if (savedPedidos) {
+      try {
+        setPedidosHoy(JSON.parse(savedPedidos));
+      } catch {
+        setPedidosHoy(48);
+        localStorage.setItem('gastropro_pedidos', JSON.stringify(48));
+      }
+    } else {
+      localStorage.setItem('gastropro_pedidos', JSON.stringify(48));
+    }
   }, []);
-
-  const refreshData = useCallback(() => {
-    setWeeklyData(generateWeeklyData());
-    setTopProductos(generateTopProductos());
-    setClientesRecientes(generateClientesRecientes());
-  }, []);
-
-  const todayIndex = dayMap[new Date().getDay()];
-  const ventasHoy = weeklyData.length > 0 ? weeklyData[todayIndex]?.ventas ?? 0 : 0;
-  const pedidosHoy = weeklyData.length > 0 ? weeklyData[todayIndex]?.pedidos ?? 0 : 0;
-  const ticketPromedio = pedidosHoy > 0 ? Math.round(ventasHoy / pedidosHoy) : 0;
-  const utilidadNeta = Math.round(ventasHoy * 0.28);
-
-  const totalVentas = weeklyData.length > 0
-    ? weeklyData.reduce((acc: number, d: any) => acc + d.ventas, 0)
-    : 0;
-
-  const maxProducto = topProductos.length > 0
-    ? Math.max(...topProductos.map((p: any) => p.amount))
-    : 1;
 
   const handleUpdatePrediction = () => {
     setPredictionUpdating(true);
     setTimeout(() => {
-      const randomIndex = Math.floor(Math.random() * predictionMessages.length);
-      setPredictionMessage(predictionMessages[randomIndex]);
       setPredictionUpdating(false);
-    }, 1500);
+    }, 2000);
   };
 
+  const totalVentas = weeklyData.length === 7
+    ? weeklyData.reduce((acc, d) => acc + d.ventas, 0)
+    : 16900000;
+
   return (
-    <div className="p-8 md:p-12 space-y-12 pb-40 overflow-y-auto">
+    <div className="p-8 md:p-12 space-y-12 pb-40">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="flex items-center gap-6">
           <h1 className="text-5xl md:text-6xl font-brand text-white">Dashboard Ejecutivo</h1>
@@ -106,13 +106,6 @@ const GastroProDashboard: React.FC = () => {
             <span className="text-[10px] font-black text-orange-500 uppercase tracking-[0.3em]">Tiempo Real</span>
           </div>
         </div>
-        <button
-          onClick={refreshData}
-          className="flex items-center gap-3 px-6 py-3 rounded-[2rem] bg-orange-600 hover:bg-orange-500 text-white font-black text-[10px] uppercase tracking-[0.3em] transition-all active:scale-[0.98]"
-        >
-          <i className="fas fa-rotate"></i>
-          REFRESCAR DATOS
-        </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -123,7 +116,7 @@ const GastroProDashboard: React.FC = () => {
               <i className="fas fa-arrow-trend-up text-lg"></i>
             </div>
           </div>
-          <p className="text-4xl font-black text-white mb-2">${ventasHoy.toLocaleString('es-CO')}</p>
+          <p className="text-4xl font-black text-white mb-2">$2,450,000</p>
           <div className="flex items-center gap-2">
             <i className="fas fa-arrow-up text-green-500 text-xs"></i>
             <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">+18% vs ayer</span>
@@ -150,7 +143,7 @@ const GastroProDashboard: React.FC = () => {
               <i className="fas fa-wallet text-lg"></i>
             </div>
           </div>
-          <p className="text-4xl font-black text-white mb-2">${ticketPromedio.toLocaleString('es-CO')}</p>
+          <p className="text-4xl font-black text-white mb-2">$51,042</p>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Por orden</span>
           </div>
@@ -163,7 +156,7 @@ const GastroProDashboard: React.FC = () => {
               <i className="fas fa-coins text-lg"></i>
             </div>
           </div>
-          <p className="text-4xl font-black text-white mb-2">${utilidadNeta.toLocaleString('es-CO')}</p>
+          <p className="text-4xl font-black text-white mb-2">$687,000</p>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">28% Margen</span>
           </div>
@@ -215,7 +208,7 @@ const GastroProDashboard: React.FC = () => {
         <div className="bg-stone-900/40 p-8 rounded-[2.5rem] border border-stone-800/50">
           <h3 className="text-[10px] font-black text-stone-500 uppercase tracking-[0.3em] mb-6">Productos Más Vendidos</h3>
           <div className="space-y-5">
-            {topProductos.map((p: any) => (
+            {topProductos.map((p) => (
               <div key={p.rank} className="flex items-center gap-4">
                 <span className="text-xs font-black text-stone-600 w-5">{String(p.rank).padStart(2, '0')}</span>
                 <div className="flex-1">
@@ -226,7 +219,7 @@ const GastroProDashboard: React.FC = () => {
                   <div className="h-1.5 bg-stone-950 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-orange-800 to-orange-500 rounded-full transition-all duration-700"
-                      style={{ width: `${(p.amount / maxProducto) * 100}%` }}
+                      style={{ width: `${(p.amount / 156) * 100}%` }}
                     />
                   </div>
                 </div>
@@ -238,7 +231,7 @@ const GastroProDashboard: React.FC = () => {
         <div className="bg-stone-900/40 p-8 rounded-[2.5rem] border border-stone-800/50">
           <h3 className="text-[10px] font-black text-stone-500 uppercase tracking-[0.3em] mb-6">Clientes Recientes</h3>
           <div className="space-y-4">
-            {clientesRecientes.map((c: any, i: number) => (
+            {clientesRecientes.map((c, i) => (
               <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-orange-600/20 flex items-center justify-center">
@@ -265,21 +258,14 @@ const GastroProDashboard: React.FC = () => {
               <span className="text-[10px] font-black text-purple-400 uppercase tracking-[0.3em]">Predicción IA</span>
             </div>
             <p className="text-sm text-white/80 leading-relaxed mb-6 flex-1">
-              {predictionMessage}
+              Basado en análisis de los últimos 30 días, se proyecta un incremento del 18% en ventas para este fin de semana. Sugerimos aumentar inventario de ingredientes para Pizza Especial en un 30%.
             </p>
             <button
               onClick={handleUpdatePrediction}
               disabled={predictionUpdating}
               className="w-full flex items-center justify-center gap-3 py-4 rounded-[2rem] bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 disabled:text-purple-400 text-white font-black text-[10px] uppercase tracking-[0.3em] transition-all active:scale-[0.98]"
             >
-              {predictionUpdating ? (
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              ) : (
-                <i className="fas fa-rotate"></i>
-              )}
+              <i className={`fas fa-rotate ${predictionUpdating ? 'fa-spin' : ''}`}></i>
               {predictionUpdating ? 'Actualizando...' : 'Actualizar Predicción'}
             </button>
           </div>

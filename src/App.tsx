@@ -38,7 +38,6 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [gastroModule, setGastroModule] = useState<GastroModule>('dashboard');
-  const [showMenuInteligente, setShowMenuInteligente] = useState(false);
 
   const login = (selectedRole: UserRole, pin?: string): boolean => {
     const userKey = Object.keys(TEST_USERS).find(k => TEST_USERS[k].role === selectedRole);
@@ -71,48 +70,21 @@ const App: React.FC = () => {
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
-      {/* Bottom-left buttons */}
-      <div className="fixed bottom-6 left-6 z-[9999] flex flex-col gap-3">
-        <button
-          onClick={() => isAuthenticated ? logout() : setShowLogin(true)}
-          className="w-14 h-14 rounded-2xl bg-stone-950/90 backdrop-blur-xl border border-white/10 text-stone-400 hover:text-white hover:border-orange-500/50 flex items-center justify-center shadow-2xl transition-all group"
-          title={isAuthenticated ? 'Cerrar sesión' : 'Panel Administrativo'}
-        >
-          <i className={`fas ${isAuthenticated ? 'fa-right-from-bracket' : 'fa-crown'} text-xl transition-transform group-hover:scale-110`}></i>
-        </button>
-        <button
-          onClick={() => setShowMenuInteligente(true)}
-          className="w-14 h-14 rounded-2xl bg-orange-600/90 backdrop-blur-xl border border-orange-500/30 text-white flex items-center justify-center shadow-2xl transition-all hover:bg-orange-500 group"
-          title="Menú Inteligente"
-        >
-          <i className="fas fa-book text-xl transition-transform group-hover:scale-110"></i>
-        </button>
-      </div>
+      {/* Floating admin button - always visible */}
+      <button
+        onClick={() => isAuthenticated ? logout() : setShowLogin(true)}
+        className="fixed bottom-6 left-6 z-[9999] w-14 h-14 rounded-2xl bg-stone-950/90 backdrop-blur-xl border border-white/10 text-stone-400 hover:text-white hover:border-orange-500/50 flex items-center justify-center shadow-2xl transition-all group"
+        title={isAuthenticated ? 'Cerrar sesión' : 'Panel Administrativo'}
+      >
+        <i className={`fas ${isAuthenticated ? 'fa-right-from-bracket' : 'fa-crown'} text-xl transition-transform group-hover:scale-110`}></i>
+      </button>
 
       {/* Login Modal */}
       {showLogin && !isAuthenticated && <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />}
 
-      {/* Menu Inteligente Overlay */}
-      {showMenuInteligente && (
-        <div className="fixed inset-0 z-[9998] bg-stone-950 overflow-y-auto animate-fade-in">
-          <div className="sticky top-0 z-10 bg-stone-950/90 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-6 py-4">
-            <h2 className="text-xl font-black text-white">Menú Inteligente</h2>
-            <button
-              onClick={() => setShowMenuInteligente(false)}
-              className="w-10 h-10 rounded-xl bg-stone-900 flex items-center justify-center text-stone-400 hover:text-white hover:bg-stone-800 transition-all"
-            >
-              <i className="fas fa-times"></i>
-            </button>
-          </div>
-          <div className="p-4 md:p-8">
-            <MenuInteligente />
-          </div>
-        </div>
-      )}
-
       {/* Admin CRM Overlay */}
       {isAuthenticated && role === UserRole.ADMIN && (
-        <div className="fixed inset-0 z-[9997] animate-fade-in">
+        <div className="fixed inset-0 z-[9998] animate-fade-in">
           <AdminLayout
             module={gastroModule}
             onModuleChange={setGastroModule}
@@ -145,7 +117,7 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => boolean; 
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="w-full max-w-md bg-stone-950 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl animate-zoom-in relative">
+      <div className="w-full max-w-md bg-stone-950 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl animate-zoom-in">
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-900/30">
             <i className="fas fa-pizza-slice text-2xl text-white"></i>
@@ -153,11 +125,15 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => boolean; 
           <h2 className="text-2xl font-black text-white">GastroPro</h2>
           <p className="text-stone-500 text-sm mt-1">CRM Gastronómico</p>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block">Rol</label>
-            <select value={selectedRole} onChange={(e) => { setSelectedRole(e.target.value); setError(''); }}
-              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold focus:border-orange-600/50 outline-none transition-colors">
+            <select
+              value={selectedRole}
+              onChange={(e) => { setSelectedRole(e.target.value); setError(''); }}
+              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold focus:border-orange-600/50 outline-none transition-colors"
+            >
               <option value="">Seleccionar rol</option>
               <option value={UserRole.ADMIN}>Administrador</option>
               <option value={UserRole.OPERATOR}>Cocina</option>
@@ -165,21 +141,34 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => boolean; 
               <option value={UserRole.MARKETING}>Marketing</option>
             </select>
           </div>
+
           <div>
             <label className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block">PIN</label>
-            <input type="password" value={pin} onChange={(e) => { setPin(e.target.value); setError(''); }}
-              maxLength={4} placeholder="••••"
-              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-center text-2xl tracking-[0.5em] font-bold focus:border-orange-600/50 outline-none transition-colors" />
+            <input
+              type="password"
+              value={pin}
+              onChange={(e) => { setPin(e.target.value); setError(''); }}
+              maxLength={4}
+              placeholder="••••"
+              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-center text-2xl tracking-[0.5em] font-bold focus:border-orange-600/50 outline-none transition-colors"
+            />
           </div>
+
           {error && <p className="text-red-500 text-xs text-center font-bold">{error}</p>}
-          <button type="submit"
-            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs transition-all shadow-lg shadow-orange-900/30 active:scale-[0.98]">
+
+          <button
+            type="submit"
+            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs transition-all shadow-lg shadow-orange-900/30 active:scale-[0.98]"
+          >
             Entrar
           </button>
         </form>
+
         <div className="mt-4 text-center">
-          <button onClick={() => setShowHint(!showHint)}
-            className="text-[10px] text-stone-600 hover:text-stone-400 uppercase tracking-widest font-bold transition-colors">
+          <button
+            onClick={() => setShowHint(!showHint)}
+            className="text-[10px] text-stone-600 hover:text-stone-400 uppercase tracking-widest font-bold transition-colors"
+          >
             {showHint ? 'Ocultar' : '¿Olvidaste el PIN?'}
           </button>
           {showHint && (
@@ -191,8 +180,11 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => boolean; 
             </div>
           )}
         </div>
-        <button onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center text-stone-500 hover:text-white hover:bg-stone-800 transition-colors">
+
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center text-stone-500 hover:text-white hover:bg-stone-800 transition-colors"
+        >
           <i className="fas fa-times text-xs"></i>
         </button>
       </div>
