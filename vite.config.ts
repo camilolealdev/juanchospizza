@@ -22,6 +22,11 @@ export default defineConfig(({ mode }) => {
       },
       build: {
         manifest: true,
-      }
+        rollupOptions: {
+          input: {
+            admin: path.resolve(__dirname, 'admin.html'),
+          },
+        },
+      },
     };
 });

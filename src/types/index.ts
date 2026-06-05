@@ -113,3 +113,178 @@ export interface Campaign {
   conversions: number;
   budget: number;
 }
+
+// ===================== GASTROPRO CRM TYPES =====================
+
+export type GastroModule =
+  | 'dashboard'
+  | 'menu'
+  | 'inventario'
+  | 'clientes'
+  | 'fidelizacion'
+  | 'campanas'
+  | 'finanzas'
+  | 'reportes';
+
+export interface Client {
+  id: string;
+  nombre: string;
+  telefono: string;
+  email?: string;
+  direccion?: string;
+  notas?: string;
+  totalCompras: number;
+  totalGastado: number;
+  frecuenciaCompra: number;
+  ultimaCompra: string;
+  creado: string;
+  vip: boolean;
+  puntos: number;
+  nivel: string;
+  tags: string[];
+  estado: 'activo' | 'inactivo' | 'perdido';
+  cumpleanos?: string;
+}
+
+export interface LoyaltyLevel {
+  id: string;
+  nombre: string;
+  puntosMinimos: number;
+  descuento: number;
+  color: string;
+  icono: string;
+  beneficios: string[];
+}
+
+export interface LoyaltyReward {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  puntosCosto: number;
+  tipo: 'cupon' | 'producto' | 'descuento' | 'envio';
+  valor: number;
+  vigente: boolean;
+}
+
+export interface LoyaltyChallenge {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  objetivo: number;
+  progreso: number;
+  recompensa: string;
+  inicia: string;
+  termina: string;
+  activo: boolean;
+}
+
+export interface InventoryItem {
+  id: string;
+  nombre: string;
+  categoria: string;
+  stockActual: number;
+  stockMinimo: number;
+  stockMaximo: number;
+  unidad: string;
+  costoUnitario: number;
+  proveedor?: string;
+  lote?: string;
+  fechaVencimiento?: string;
+  ubicacion?: string;
+  activo: boolean;
+}
+
+export interface InventoryMovement {
+  id: string;
+  itemId: string;
+  tipo: 'entrada' | 'salida' | 'ajuste' | 'merma';
+  cantidad: number;
+  saldoAnterior: number;
+  saldoNuevo: number;
+  motivo: string;
+  referencia?: string;
+  creado: string;
+  usuario: string;
+}
+
+export interface Recipe {
+  id: string;
+  nombre: string;
+  productoId: string;
+  porciones: number;
+  ingredientes: RecipeIngredient[];
+  costoTotal: number;
+  instrucciones?: string;
+}
+
+export interface RecipeIngredient {
+  itemId: string;
+  nombre: string;
+  cantidad: number;
+  unidad: string;
+  costo: number;
+}
+
+export interface Expense {
+  id: string;
+  categoria: string;
+  descripcion: string;
+  monto: number;
+  fecha: string;
+  metodo: string;
+  proveedor?: string;
+  factura?: string;
+  notas?: string;
+  recurrente: boolean;
+}
+
+export interface CashFlow {
+  fecha: string;
+  ingresos: number;
+  egresos: number;
+  saldo: number;
+}
+
+export interface ReportFilter {
+  desde: string;
+  hasta: string;
+  tipo: string;
+  agrupacion: 'dia' | 'semana' | 'mes';
+}
+
+export interface MenuVariant {
+  id: string;
+  productoId: string;
+  nombre: string;
+  precioModificador: number;
+  activo: boolean;
+}
+
+export interface Combo {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  productos: { productoId: string; cantidad: number }[];
+  precioTotal: number;
+  ahorro: number;
+  imagen?: string;
+  activo: boolean;
+  horarios?: number[];
+}
+
+export interface Promotion {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  tipo: 'porcentaje' | 'fijo' | 'compre_lleve' | 'envio_gratis';
+  valor: number;
+  productoId?: string;
+  categoriaId?: string;
+  montoMinimo?: number;
+  inicia: string;
+  termina: string;
+  horarios?: number[];
+  activo: boolean;
+  usado: number;
+  limite: number;
+}

@@ -125,8 +125,166 @@ async function initDB() {
         budget INTEGER
       )
     `);
-    
-    console.log('✅ Database initialized');
+
+    // === GASTROPRO CRM TABLES ===
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id TEXT PRIMARY KEY,
+        nombre TEXT NOT NULL,
+        telefono TEXT,
+        email TEXT,
+        direccion TEXT,
+        notas TEXT,
+        totalCompras INTEGER DEFAULT 0,
+        totalGastado INTEGER DEFAULT 0,
+        frecuenciaCompra INTEGER DEFAULT 0,
+        ultimaCompra TEXT,
+        creado TEXT DEFAULT (datetime('now')),
+        vip INTEGER DEFAULT 0,
+        puntos INTEGER DEFAULT 0,
+        nivel TEXT DEFAULT 'bronce',
+        tags TEXT DEFAULT '[]',
+        estado TEXT DEFAULT 'activo',
+        cumpleanos TEXT
+      )
+    `);
+
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS inventory_items (
+        id TEXT PRIMARY KEY,
+        nombre TEXT NOT NULL,
+        categoria TEXT,
+        stockActual INTEGER DEFAULT 0,
+        stockMinimo INTEGER DEFAULT 10,
+        stockMaximo INTEGER DEFAULT 100,
+        unidad TEXT DEFAULT 'unidad',
+        costoUnitario INTEGER DEFAULT 0,
+        proveedor TEXT,
+        lote TEXT,
+        fechaVencimiento TEXT,
+        ubicacion TEXT,
+        activo INTEGER DEFAULT 1
+      )
+    `);
+
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS inventory_movements (
+        id TEXT PRIMARY KEY,
+        itemId TEXT,
+        tipo TEXT,
+        cantidad INTEGER,
+        saldoAnterior INTEGER,
+        saldoNuevo INTEGER,
+        motivo TEXT,
+        referencia TEXT,
+        creado TEXT DEFAULT (datetime('now')),
+        usuario TEXT
+      )
+    `);
+
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS recipes (
+        id TEXT PRIMARY KEY,
+        nombre TEXT,
+        productoId TEXT,
+        porciones INTEGER DEFAULT 1,
+        costoTotal INTEGER DEFAULT 0,
+        instrucciones TEXT
+      )
+    `);
+
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS recipe_ingredients (
+        id TEXT PRIMARY KEY,
+        recipeId TEXT,
+        itemId TEXT,
+        nombre TEXT,
+        cantidad REAL DEFAULT 0,
+        unidad TEXT DEFAULT 'unidad',
+        costo INTEGER DEFAULT 0
+      )
+    `);
+
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS expenses (
+        id TEXT PRIMARY KEY,
+        categoria TEXT,
+        descripcion TEXT,
+        monto INTEGER,
+        fecha TEXT DEFAULT (datetime('now')),
+        metodo TEXT,
+        proveedor TEXT,
+        factura TEXT,
+        notas TEXT,
+        recurrente INTEGER DEFAULT 0
+      )
+    `);
+
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS loyalty_points (
+        id TEXT PRIMARY KEY,
+        clientId TEXT,
+        puntos INTEGER,
+        concepto TEXT,
+        referencia TEXT,
+        creado TEXT DEFAULT (datetime('now'))
+      )
+    `);
+
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS loyalty_rewards (
+        id TEXT PRIMARY KEY,
+        nombre TEXT,
+        descripcion TEXT,
+        puntosCosto INTEGER,
+        tipo TEXT,
+        valor INTEGER,
+        vigente INTEGER DEFAULT 1
+      )
+    `);
+
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS menu_variants (
+        id TEXT PRIMARY KEY,
+        productoId TEXT,
+        nombre TEXT,
+        precioModificador INTEGER DEFAULT 0,
+        activo INTEGER DEFAULT 1
+      )
+    `);
+
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS menu_combos (
+        id TEXT PRIMARY KEY,
+        nombre TEXT,
+        descripcion TEXT,
+        productos TEXT,
+        precioTotal INTEGER,
+        ahorro INTEGER DEFAULT 0,
+        imagen TEXT,
+        activo INTEGER DEFAULT 1
+      )
+    `);
+
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS menu_promotions (
+        id TEXT PRIMARY KEY,
+        nombre TEXT,
+        descripcion TEXT,
+        tipo TEXT,
+        valor INTEGER,
+        productoId TEXT,
+        categoriaId TEXT,
+        montoMinimo INTEGER,
+        inicia TEXT,
+        termina TEXT,
+        activo INTEGER DEFAULT 1,
+        usado INTEGER DEFAULT 0,
+        limite INTEGER DEFAULT 100
+      )
+    `);
+
+    console.log('✅ Database initialized with GastroPro CRM tables');
   } catch (error) {
     console.error('❌ DB init error:', error.message);
   }
@@ -364,6 +522,217 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
+// ===================== GASTROPRO CRM API ROUTES =====================
+
+// --- CLIENTS ---
+app.get('/api/clients', async (req, res) => {
+  try {
+    const { estado, search } = req.query;
+    let query = 'SELECT * FROM clients';
+    const params = [];
+    const conditions = [];
+    if (estado && estado !== 'todos') { conditions.push('estado = ?'); params.push(estado); }
+    if (search) { conditions.push("(nombre LIKE ? OR telefono LIKE ?)"); params.push(`%${search}%`, `%${search}%`); }
+    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+    query += ' ORDER BY totalGastado DESC';
+    const result = await turso.execute({ sql: query, args: params });
+    res.json(result.rows.map(r => ({ ...r, tags: JSON.parse(r.tags || '[]'), vip: !!r.vip })));
+  } catch (e) { res.status(500).json({ error: 'Error fetching clients' }); }
+});
+
+app.get('/api/clients/:id', async (req, res) => {
+  try {
+    const result = await turso.execute({ sql: 'SELECT * FROM clients WHERE id = ?', args: [req.params.id] });
+    if (result.rows.length) {
+      const client = { ...result.rows[0], tags: JSON.parse(result.rows[0].tags || '[]'), vip: !!result.rows[0].vip };
+      res.json(client);
+    } else res.status(404).json({ error: 'Client not found' });
+  } catch (e) { res.status(500).json({ error: 'Error fetching client' }); }
+});
+
+app.post('/api/clients', async (req, res) => {
+  try {
+    const { nombre, telefono, email, direccion, notas, cumpleanos } = req.body;
+    const id = `cli_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+    await turso.execute({
+      sql: `INSERT INTO clients (id, nombre, telefono, email, direccion, notas, cumpleanos, creado) VALUES (?,?,?,?,?,?,?, datetime('now'))`,
+      args: [id, nombre?.slice(0,100), telefono?.slice(0,20), email?.slice(0,100), direccion?.slice(0,200), notas?.slice(0,500), cumpleanos]
+    });
+    res.status(201).json({ id, nombre, telefono, email, direccion, notas, cumpleanos });
+  } catch (e) { res.status(500).json({ error: 'Error creating client' }); }
+});
+
+app.patch('/api/clients/:id', async (req, res) => {
+  try {
+    const { vip, notas, tags, estado } = req.body;
+    const updates = []; const params = [];
+    if (vip !== undefined) { updates.push('vip = ?'); params.push(vip ? 1 : 0); }
+    if (notas !== undefined) { updates.push('notas = ?'); params.push(notas); }
+    if (tags !== undefined) { updates.push('tags = ?'); params.push(JSON.stringify(tags)); }
+    if (estado !== undefined) { updates.push('estado = ?'); params.push(estado); }
+    if (updates.length) {
+      params.push(req.params.id);
+      await turso.execute({ sql: `UPDATE clients SET ${updates.join(', ')} WHERE id = ?`, args: params });
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: 'Error updating client' }); }
+});
+
+// --- INVENTORY ---
+app.get('/api/inventory', async (req, res) => {
+  try {
+    const result = await turso.execute('SELECT * FROM inventory_items ORDER BY nombre');
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: 'Error fetching inventory' }); }
+});
+
+app.post('/api/inventory', async (req, res) => {
+  try {
+    const { nombre, categoria, stockActual, stockMinimo, stockMaximo, unidad, costoUnitario, proveedor, lote, fechaVencimiento, ubicacion } = req.body;
+    const id = `inv_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+    await turso.execute({
+      sql: `INSERT INTO inventory_items (id, nombre, categoria, stockActual, stockMinimo, stockMaximo, unidad, costoUnitario, proveedor, lote, fechaVencimiento, ubicacion) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      args: [id, nombre, categoria, stockActual||0, stockMinimo||10, stockMaximo||100, unidad||'unidad', costoUnitario||0, proveedor, lote, fechaVencimiento, ubicacion]
+    });
+    res.status(201).json({ id, nombre });
+  } catch (e) { res.status(500).json({ error: 'Error creating inventory item' }); }
+});
+
+app.post('/api/inventory/movement', async (req, res) => {
+  try {
+    const { itemId, tipo, cantidad, motivo, referencia, usuario } = req.body;
+    const item = await turso.execute({ sql: 'SELECT * FROM inventory_items WHERE id = ?', args: [itemId] });
+    if (!item.rows.length) return res.status(404).json({ error: 'Item not found' });
+    const saldoAnterior = item.rows[0].stockActual;
+    const saldoNuevo = tipo === 'entrada' ? saldoAnterior + cantidad : saldoAnterior - cantidad;
+    const movId = `mov_${Date.now()}`;
+    await turso.execute({
+      sql: `INSERT INTO inventory_movements (id, itemId, tipo, cantidad, saldoAnterior, saldoNuevo, motivo, referencia, usuario) VALUES (?,?,?,?,?,?,?,?,?)`,
+      args: [movId, itemId, tipo, cantidad, saldoAnterior, saldoNuevo, motivo, referencia, usuario||'sistema']
+    });
+    await turso.execute({ sql: 'UPDATE inventory_items SET stockActual = ? WHERE id = ?', args: [saldoNuevo, itemId] });
+    res.status(201).json({ id: movId, saldoNuevo });
+  } catch (e) { res.status(500).json({ error: 'Error registering movement' }); }
+});
+
+app.get('/api/inventory/movements', async (req, res) => {
+  try {
+    const result = await turso.execute('SELECT * FROM inventory_movements ORDER BY creado DESC LIMIT 50');
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: 'Error fetching movements' }); }
+});
+
+// --- RECIPES ---
+app.get('/api/recipes', async (req, res) => {
+  try {
+    const recipes = await turso.execute('SELECT * FROM recipes');
+    const result = [];
+    for (const recipe of recipes.rows) {
+      const ingredients = await turso.execute({ sql: 'SELECT * FROM recipe_ingredients WHERE recipeId = ?', args: [recipe.id] });
+      result.push({ ...recipe, ingredientes: ingredients.rows });
+    }
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: 'Error fetching recipes' }); }
+});
+
+// --- EXPENSES ---
+app.get('/api/expenses', async (req, res) => {
+  try {
+    const { desde, hasta } = req.query;
+    let query = 'SELECT * FROM expenses';
+    const params = [];
+    if (desde && hasta) { query += ' WHERE fecha >= ? AND fecha <= ?'; params.push(desde, hasta); }
+    query += ' ORDER BY fecha DESC LIMIT 100';
+    const result = await turso.execute({ sql: query, args: params });
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: 'Error fetching expenses' }); }
+});
+
+app.post('/api/expenses', async (req, res) => {
+  try {
+    const { categoria, descripcion, monto, fecha, metodo, proveedor, factura, notas, recurrente } = req.body;
+    const id = `exp_${Date.now()}`;
+    await turso.execute({
+      sql: `INSERT INTO expenses (id, categoria, descripcion, monto, fecha, metodo, proveedor, factura, notas, recurrente) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      args: [id, categoria, descripcion?.slice(0,200), monto, fecha||new Date().toISOString(), metodo, proveedor, factura, notas, recurrente?1:0]
+    });
+    res.status(201).json({ id });
+  } catch (e) { res.status(500).json({ error: 'Error creating expense' }); }
+});
+
+// --- LOYALTY ---
+app.get('/api/loyalty/rewards', async (req, res) => {
+  try {
+    const result = await turso.execute('SELECT * FROM loyalty_rewards WHERE vigente = 1');
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: 'Error fetching rewards' }); }
+});
+
+app.post('/api/loyalty/points', async (req, res) => {
+  try {
+    const { clientId, puntos, concepto, referencia } = req.body;
+    const id = `lpt_${Date.now()}`;
+    await turso.execute({
+      sql: `INSERT INTO loyalty_points (id, clientId, puntos, concepto, referencia) VALUES (?,?,?,?,?)`,
+      args: [id, clientId, puntos, concepto, referencia]
+    });
+    await turso.execute({ sql: `UPDATE clients SET puntos = puntos + ? WHERE id = ?`, args: [puntos, clientId] });
+    res.status(201).json({ id });
+  } catch (e) { res.status(500).json({ error: 'Error adding points' }); }
+});
+
+// --- MENU VARIANTS ---
+app.get('/api/menu/variants', async (req, res) => {
+  try {
+    const result = await turso.execute('SELECT * FROM menu_variants WHERE activo = 1');
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: 'Error fetching variants' }); }
+});
+
+app.get('/api/menu/combos', async (req, res) => {
+  try {
+    const result = await turso.execute('SELECT * FROM menu_combos WHERE activo = 1');
+    res.json(result.rows.map(r => ({ ...r, productos: JSON.parse(r.productos || '[]') })));
+  } catch (e) { res.status(500).json({ error: 'Error fetching combos' }); }
+});
+
+app.get('/api/menu/promotions', async (req, res) => {
+  try {
+    const result = await turso.execute('SELECT * FROM menu_promotions ORDER BY activo DESC');
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: 'Error fetching promotions' }); }
+});
+
+// --- FINANCE REPORTS ---
+app.get('/api/finance/summary', async (req, res) => {
+  try {
+    const ingresos = await turso.execute("SELECT COALESCE(SUM(total),0) as total FROM orders WHERE status != 'CANCELLED'");
+    const egresos = await turso.execute("SELECT COALESCE(SUM(monto),0) as total FROM expenses");
+    const ordenes = await turso.execute('SELECT COUNT(*) as count FROM orders');
+    const clientes = await turso.execute('SELECT COUNT(*) as count FROM clients');
+    const gastosCat = await turso.execute('SELECT categoria, COALESCE(SUM(monto),0) as total FROM expenses GROUP BY categoria');
+    res.json({
+      ingresos: ingresos.rows[0]?.total || 0,
+      egresos: egresos.rows[0]?.total || 0,
+      utilidad: (ingresos.rows[0]?.total || 0) - (egresos.rows[0]?.total || 0),
+      totalOrdenes: ordenes.rows[0]?.count || 0,
+      totalClientes: clientes.rows[0]?.count || 0,
+      gastosPorCategoria: gastosCat.rows
+    });
+  } catch (e) { res.status(500).json({ error: 'Error fetching finance summary' }); }
+});
+
+// --- CLIENT HISTORY ---
+app.get('/api/clients/:id/orders', async (req, res) => {
+  try {
+    const result = await turso.execute({
+      sql: "SELECT * FROM orders WHERE customerName = (SELECT nombre FROM clients WHERE id = ?) ORDER BY createdAt DESC LIMIT 20",
+      args: [req.params.id]
+    });
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: 'Error fetching client orders' }); }
+});
+
 // Seed data endpoint
 app.post('/api/seed', async (req, res) => {
   try {
@@ -408,7 +777,11 @@ app.use(express.static(path.join(__dirname, '../dist'), {
 // Fallback to frontend for non-API routes
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
+    if (req.path.startsWith('/staff') || req.path.startsWith('/login')) {
+      res.sendFile(path.join(__dirname, '../dist/admin.html'));
+    } else {
+      res.sendFile(path.join(__dirname, '../dist/index.html'));
+    }
   }
 });
 

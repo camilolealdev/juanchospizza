@@ -1,6 +1,6 @@
 
 import React, { useState, createContext, useContext, useEffect } from 'react';
-import { UserRole } from './types';
+import { UserRole, GastroModule } from './types';
 import CustomerView from './views/roles/CustomerView';
 import AdminDashboard from './views/roles/AdminDashboard';
 import KitchenView from './views/roles/KitchenView';
@@ -8,6 +8,15 @@ import RepartidorView from './views/roles/RepartidorView';
 import MarketingView from './views/roles/MarketingView';
 import ProfileView from './views/roles/ProfileView';
 import AIChatWidget from './components/AIChatWidget';
+import AdminLayout from './components/AdminLayout';
+import GastroProDashboard from './views/roles/GastroProDashboard';
+import MenuInteligente from './views/roles/MenuInteligente';
+import InventarioView from './views/roles/InventarioView';
+import ClientesView from './views/roles/ClientesView';
+import FidelizacionView from './views/roles/FidelizacionView';
+import CampanasView from './views/roles/CampanasView';
+import FinanzasView from './views/roles/FinanzasView';
+import ReportesView from './views/roles/ReportesView';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -118,6 +127,7 @@ const App: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentPath, setCurrentPath] = useState('/');
+  const [gastroModule, setGastroModule] = useState<GastroModule>('dashboard');
 
   useEffect(() => {
     const handleNavigation = () => {
@@ -152,6 +162,19 @@ const App: React.FC = () => {
     navigate('/');
   };
 
+  const renderGastroModule = () => {
+    switch (gastroModule) {
+      case 'menu': return <MenuInteligente />;
+      case 'inventario': return <InventarioView />;
+      case 'clientes': return <ClientesView />;
+      case 'fidelizacion': return <FidelizacionView />;
+      case 'campanas': return <CampanasView />;
+      case 'finanzas': return <FinanzasView />;
+      case 'reportes': return <ReportesView />;
+      default: return <GastroProDashboard />;
+    }
+  };
+
   const renderContent = () => {
     if (currentPath === '/staff' || currentPath === '/login') {
       if (isAuthenticated) {
@@ -162,7 +185,16 @@ const App: React.FC = () => {
     }
 
     switch (role) {
-      case UserRole.ADMIN: return <AdminDashboard />;
+      case UserRole.ADMIN: return (
+        <AdminLayout
+          module={gastroModule}
+          onModuleChange={setGastroModule}
+          userName={TEST_USERS['admin']?.name || 'Admin'}
+          onLogout={logout}
+        >
+          {renderGastroModule()}
+        </AdminLayout>
+      );
       case UserRole.OPERATOR: return <KitchenView />;
       case UserRole.REPARTIDOR: return <RepartidorView />;
       case UserRole.MARKETING: return <MarketingView />;

@@ -1,0 +1,274 @@
+
+import React, { useState } from 'react';
+import { LoyaltyLevel, LoyaltyReward, LoyaltyChallenge } from '../../types';
+
+const NIVELES: LoyaltyLevel[] = [
+  { id: 'bronce', nombre: 'Bronce', puntosMinimos: 0, descuento: 0, color: 'bronze', icono: 'fa-shield', beneficios: ['Acceso a promociones generales', 'Notificaciones de ofertas'] },
+  { id: 'plata', nombre: 'Plata', puntosMinimos: 500, descuento: 3, color: 'silver', icono: 'fa-shield', beneficios: ['3% descuento en todas tus órdenes', 'Prioridad en pedidos', 'Acceso a menú exclusivo'] },
+  { id: 'oro', nombre: 'Oro', puntosMinimos: 2000, descuento: 7, color: 'gold', icono: 'fa-crown', beneficios: ['7% descuento en todas tus órdenes', 'Envío gratis ilimitado', 'Postre sorpresa cada 5 pedidos', 'Soporte prioritario'] },
+  { id: 'platino', nombre: 'Platino', puntosMinimos: 5000, descuento: 15, color: 'platinum', icono: 'fa-gem', beneficios: ['15% descuento en todas tus órdenes', 'Envío gratis ilimitado', 'Pizza Personal Gratis cada mes', 'Acceso a eventos VIP', 'Deduplicador de puntos'] },
+];
+
+const RECOMPENSAS: LoyaltyReward[] = [
+  { id: 'r1', nombre: 'Pizza Personal Gratis', descripcion: 'Canjea por una pizza personal clásica', puntosCosto: 200, tipo: 'producto', valor: 0, vigente: true },
+  { id: 'r2', nombre: '15% Off', descripcion: 'Descuento en tu próxima orden', puntosCosto: 150, tipo: 'descuento', valor: 15, vigente: true },
+  { id: 'r3', nombre: 'Bebida Gratis', descripcion: 'Bebida de hasta $8,000', puntosCosto: 80, tipo: 'producto', valor: 0, vigente: true },
+  { id: 'r4', nombre: 'Lasaña Gratis', descripcion: 'Lasaña clásica de la casa', puntosCosto: 300, tipo: 'producto', valor: 0, vigente: true },
+  { id: 'r5', nombre: 'Envío Gratis', descripcion: 'Sin costo de domicilio', puntosCosto: 50, tipo: 'envio', valor: 0, vigente: true },
+  { id: 'r6', nombre: 'Postre Sorpresa', descripcion: 'Postre dulce seleccionado por el chef', puntosCosto: 100, tipo: 'producto', valor: 0, vigente: true },
+];
+
+const RETOS: LoyaltyChallenge[] = [
+  { id: 'ch1', nombre: 'Pizza Legend', descripcion: 'Pide 4 pizzas este mes', objetivo: 4, progreso: 3, recompensa: '500pts extra', inicia: '2026-06-01', termina: '2026-06-30', activo: true },
+  { id: 'ch2', nombre: 'Family Feast', descripcion: '3 pedidos mayores a $50,000', objetivo: 3, progreso: 1, recompensa: 'Pizza Grande Gratis', inicia: '2026-06-01', termina: '2026-06-30', activo: true },
+  { id: 'ch3', nombre: 'Weekend Warrior', descripcion: 'Pide viernes o sábado', objetivo: 2, progreso: 2, recompensa: '200pts extra', inicia: '2026-06-05', termina: '2026-06-07', activo: true },
+];
+
+interface CanjeRecord {
+  cliente: string;
+  recompensa: string;
+  puntos: number;
+  fecha: string;
+}
+
+const CANJES_RECIENTES: CanjeRecord[] = [
+  { cliente: 'María López', recompensa: 'Pizza Personal Gratis', puntos: 200, fecha: '04 Jun 2026' },
+  { cliente: 'Carlos Ruiz', recompensa: 'Bebida Gratis', puntos: 80, fecha: '03 Jun 2026' },
+  { cliente: 'Ana Martínez', recompensa: 'Envío Gratis', puntos: 50, fecha: '02 Jun 2026' },
+  { cliente: 'Pedro Gómez', recompensa: 'Postre Sorpresa', puntos: 100, fecha: '01 Jun 2026' },
+  { cliente: 'Laura Jiménez', recompensa: '15% Off', puntos: 150, fecha: '31 May 2026' },
+];
+
+const LEVEL_BORDER: Record<string, string> = {
+  bronze: 'border-amber-700/60 bg-gradient-to-br from-amber-900/10 to-stone-900',
+  silver: 'border-stone-400/40 bg-gradient-to-br from-stone-400/10 to-stone-900',
+  gold: 'border-yellow-500/50 bg-gradient-to-br from-yellow-500/10 to-stone-900',
+  platinum: 'border-sky-300/40 bg-gradient-to-br from-sky-300/10 to-stone-900',
+};
+
+const LEVEL_BADGE: Record<string, string> = {
+  bronze: 'bg-amber-700/20 text-amber-400 border-amber-700/30',
+  silver: 'bg-stone-400/20 text-stone-300 border-stone-400/30',
+  gold: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  platinum: 'bg-sky-300/20 text-sky-300 border-sky-300/30',
+};
+
+const LEVEL_ACCENT: Record<string, string> = {
+  bronze: 'text-amber-500',
+  silver: 'text-stone-400',
+  gold: 'text-yellow-500',
+  platinum: 'text-sky-300',
+};
+
+const REWARD_TYPE_BADGE: Record<string, string> = {
+  cupon: 'bg-purple-900/30 text-purple-400 border-purple-500/20',
+  producto: 'bg-orange-900/30 text-orange-400 border-orange-500/20',
+  descuento: 'bg-green-900/30 text-green-400 border-green-500/20',
+  envio: 'bg-blue-900/30 text-blue-400 border-blue-500/20',
+};
+
+const REWARD_TYPE_LABEL: Record<string, string> = {
+  cupon: 'Cupón',
+  producto: 'Producto',
+  descuento: 'Descuento',
+  envio: 'Envío',
+};
+
+const FidelizacionView: React.FC = () => {
+  const [recompensas] = useState<LoyaltyReward[]>(RECOMPENSAS);
+  const [retos] = useState<LoyaltyChallenge[]>(RETOS);
+
+  return (
+    <div className="p-10 space-y-12 pb-40">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div>
+          <h1 className="text-5xl font-brand">Fidelización</h1>
+          <p className="text-stone-500 mt-4 max-w-xl">Programa de lealtad, puntos y recompensas</p>
+        </div>
+        <button className="bg-orange-600 hover:bg-orange-500 px-10 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4 w-full md:w-auto justify-center">
+          <i className="fas fa-plus-circle"></i> CREAR RECOMPENSA
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
+        {[
+          { label: 'Puntos Activos', value: '12,450', icon: 'star', color: 'text-orange-500' },
+          { label: 'Clientes en Programa', value: '218', icon: 'users', color: 'text-blue-500' },
+          { label: 'Cashback Entregado', value: '$1,240,000', icon: 'wallet', color: 'text-green-500' },
+        ].map((stat, i) => (
+          <div key={i} className="bg-stone-900/40 p-10 rounded-[4rem] border border-stone-800/50 shadow-2xl group hover:border-orange-500/40 transition-all">
+            <div className="flex justify-between items-start mb-6">
+              <span className="text-stone-600 text-[11px] uppercase font-black tracking-[0.4em]">{stat.label}</span>
+              <div className={`w-12 h-12 rounded-2xl bg-stone-950 flex items-center justify-center border border-white/5 ${stat.color}`}>
+                <i className={`fas fa-${stat.icon} text-xl`}></i>
+              </div>
+            </div>
+            <p className="text-5xl font-black text-white tracking-tighter">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <section className="space-y-8">
+        <div className="flex justify-between items-end border-b border-white/5 pb-8">
+          <div>
+            <h2 className="text-4xl font-brand">Niveles VIP</h2>
+            <p className="text-stone-600 text-xs mt-2 uppercase tracking-[0.4em] font-bold">Más puntos, más beneficios</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {NIVELES.map((nivel) => (
+            <div key={nivel.id} className={`${LEVEL_BORDER[nivel.color]} p-8 rounded-[3rem] border shadow-2xl relative overflow-hidden group transition-all hover:scale-[1.02]`}>
+              <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl opacity-5 bg-white"></div>
+              <div className="flex items-center gap-4 mb-6">
+                <div className={`w-14 h-14 rounded-2xl ${LEVEL_BADGE[nivel.color]} flex items-center justify-center border text-2xl`}>
+                  <i className={`fas ${nivel.icono}`}></i>
+                </div>
+                <div>
+                  <h3 className={`text-2xl font-black ${LEVEL_ACCENT[nivel.color]}`}>{nivel.nombre}</h3>
+                  <p className="text-stone-500 text-[10px] uppercase tracking-[0.2em] font-bold">{nivel.puntosMinimos.toLocaleString()} pts mínimo</p>
+                </div>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl font-black text-white">{nivel.descuento}%</span>
+                <span className="text-stone-500 text-sm ml-2 font-bold">OFF</span>
+              </div>
+              <ul className="space-y-3">
+                {nivel.beneficios.map((b, i) => (
+                  <li key={i} className="flex items-start gap-3 text-stone-400 text-sm">
+                    <i className={`fas fa-check-circle mt-0.5 text-xs ${LEVEL_ACCENT[nivel.color]}`}></i>
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-8">
+        <div className="flex justify-between items-end border-b border-white/5 pb-8">
+          <div>
+            <h2 className="text-4xl font-brand">Recompensas</h2>
+            <p className="text-stone-600 text-xs mt-2 uppercase tracking-[0.4em] font-bold">Canjea tus puntos</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {recompensas.map((r) => (
+            <div key={r.id} className="bg-stone-900/40 p-8 rounded-[3.5rem] border border-stone-800 hover:border-orange-500/40 transition-all group shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 blur-3xl opacity-5 bg-orange-500 group-hover:opacity-10 transition-opacity"></div>
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-14 h-14 rounded-2xl bg-stone-950 flex items-center justify-center border border-white/5 text-orange-500 text-2xl group-hover:scale-110 transition-transform">
+                  <i className={`fas ${r.tipo === 'descuento' ? 'fa-percent' : r.tipo === 'envio' ? 'fa-truck' : 'fa-pizza-slice'}`}></i>
+                </div>
+                <span className={`text-[8px] font-black uppercase px-4 py-2 rounded-full border ${REWARD_TYPE_BADGE[r.tipo]}`}>
+                  {REWARD_TYPE_LABEL[r.tipo]}
+                </span>
+              </div>
+              <h4 className="font-black text-xl text-white mb-2">{r.nombre}</h4>
+              <p className="text-stone-500 text-sm mb-8">{r.descripcion}</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <i className="fas fa-coins text-yellow-500 text-lg"></i>
+                  <span className="text-2xl font-black text-yellow-500">{r.puntosCosto}</span>
+                  <span className="text-stone-500 text-[10px] uppercase font-bold tracking-wider">pts</span>
+                </div>
+                <button className="bg-orange-600 hover:bg-orange-500 px-6 py-3 rounded-[2rem] font-black text-[9px] uppercase tracking-widest transition-all shadow-xl disabled:opacity-30 disabled:cursor-not-allowed">
+                  CANJEAR
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-8">
+        <div className="flex justify-between items-end border-b border-white/5 pb-8">
+          <div>
+            <h2 className="text-4xl font-brand">Retos Mensuales</h2>
+            <p className="text-stone-600 text-xs mt-2 uppercase tracking-[0.4em] font-bold">Completa retos y gana puntos extra</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {retos.map((reto) => {
+            const pct = Math.min(Math.round((reto.progreso / reto.objetivo) * 100), 100);
+            return (
+              <div key={reto.id} className="bg-stone-900/40 p-8 rounded-[3.5rem] border border-stone-800 hover:border-orange-500/40 transition-all group shadow-2xl relative overflow-hidden">
+                <div className="absolute -top-6 -right-6 w-40 h-40 blur-3xl opacity-5 bg-orange-500 rounded-full"></div>
+                <div className="flex items-start justify-between mb-8">
+                  <div>
+                    <h4 className="font-black text-xl text-white mb-1">{reto.nombre}</h4>
+                    <p className="text-stone-500 text-sm">{reto.descripcion}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-stone-950 flex items-center justify-center border border-white/5 text-orange-500 text-lg shrink-0">
+                    <i className="fas fa-fire"></i>
+                  </div>
+                </div>
+                <div className="mb-6">
+                  <div className="flex justify-between text-sm mb-3">
+                    <span className="text-stone-400 font-bold">{reto.progreso}/{reto.objetivo}</span>
+                    <span className="text-stone-600 font-black text-[10px] uppercase tracking-wider">{pct}%</span>
+                  </div>
+                  <div className="h-3 bg-stone-950 rounded-full overflow-hidden border border-white/5 p-0.5">
+                    <div
+                      className="h-full bg-gradient-to-r from-orange-800 to-orange-500 rounded-full transition-all duration-700"
+                      style={{ width: `${pct}%` }}
+                    ></div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 pt-4 border-t border-white/5">
+                  <i className="fas fa-gift text-yellow-500 text-sm"></i>
+                  <span className="text-stone-300 text-sm font-bold">Reward: </span>
+                  <span className="text-yellow-500 text-sm font-black">{reto.recompensa}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="space-y-8">
+        <div className="flex justify-between items-end border-b border-white/5 pb-8">
+          <div>
+            <h2 className="text-4xl font-brand">Últimos Canjes</h2>
+            <p className="text-stone-600 text-xs mt-2 uppercase tracking-[0.4em] font-bold">Actividad reciente del programa</p>
+          </div>
+        </div>
+        <div className="bg-stone-900/40 rounded-[4rem] border border-stone-800 shadow-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="text-left text-[10px] font-black text-stone-600 uppercase tracking-[0.4em] px-10 py-6">Cliente</th>
+                  <th className="text-left text-[10px] font-black text-stone-600 uppercase tracking-[0.4em] px-10 py-6">Recompensa</th>
+                  <th className="text-left text-[10px] font-black text-stone-600 uppercase tracking-[0.4em] px-10 py-6">Puntos</th>
+                  <th className="text-left text-[10px] font-black text-stone-600 uppercase tracking-[0.4em] px-10 py-6">Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {CANJES_RECIENTES.map((canje, i) => (
+                  <tr key={i} className="border-b border-white/5 last:border-none hover:bg-stone-900/60 transition-colors">
+                    <td className="px-10 py-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-stone-950 flex items-center justify-center border border-white/5 text-stone-500">
+                          <i className="fas fa-user text-sm"></i>
+                        </div>
+                        <span className="text-white font-bold text-sm">{canje.cliente}</span>
+                      </div>
+                    </td>
+                    <td className="px-10 py-6 text-stone-300 text-sm font-medium">{canje.recompensa}</td>
+                    <td className="px-10 py-6">
+                      <span className="text-yellow-500 font-black">{canje.puntos} pts</span>
+                    </td>
+                    <td className="px-10 py-6 text-stone-500 text-sm">{canje.fecha}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+export default FidelizacionView;
