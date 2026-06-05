@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { LoyaltyLevel, LoyaltyReward, LoyaltyChallenge } from '../../types';
 
@@ -74,27 +73,159 @@ const REWARD_TYPE_LABEL: Record<string, string> = {
   envio: 'Envío',
 };
 
+const CLIENTES = ['María López', 'Carlos Ruiz', 'Ana Martínez', 'Pedro Gómez', 'Laura Jiménez', 'Diego Ramírez', 'Sofía Torres'];
+
 const FidelizacionView: React.FC = () => {
-  const [recompensas] = useState<LoyaltyReward[]>(RECOMPENSAS);
+  const [recompensas, setRecompensas] = useState<LoyaltyReward[]>(RECOMPENSAS);
   const [retos] = useState<LoyaltyChallenge[]>(RETOS);
+  const [puntosActivos, setPuntosActivos] = useState(12450);
+  const [clientesCount] = useState(218);
+  const [cashbackTotal] = useState(1240000);
+  const [canjes, setCanjes] = useState<CanjeRecord[]>(CANJES_RECIENTES);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({ nombre: '', descripcion: '', puntosCosto: 0, tipo: 'producto', valor: 0 });
+  const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
+
+  const showToastMessage = (message: string) => {
+    setToast({ message, visible: true });
+    setTimeout(() => setToast({ message: '', visible: false }), 3000);
+  };
+
+  const handleCanjear = (r: LoyaltyReward) => {
+    if (puntosActivos < r.puntosCosto) {
+      showToastMessage('❌ No tienes suficientes puntos');
+      return;
+    }
+    const cliente = CLIENTES[Math.floor(Math.random() * CLIENTES.length)];
+    const newCanje: CanjeRecord = {
+      cliente,
+      recompensa: r.nombre,
+      puntos: r.puntosCosto,
+      fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' '),
+    };
+    setPuntosActivos((p) => p - r.puntosCosto);
+    setCanjes((prev) => [newCanje, ...prev]);
+    showToastMessage(`✅ ${r.nombre} canjeado por ${cliente}`);
+  };
+
+  const handleCrearRecompensa = () => {
+    if (!formData.nombre || !formData.descripcion || formData.puntosCosto <= 0) {
+      showToastMessage('❌ Completa todos los campos requeridos');
+      return;
+    }
+    const newReward: LoyaltyReward = {
+      id: `r${Date.now()}`,
+      nombre: formData.nombre,
+      descripcion: formData.descripcion,
+      puntosCosto: formData.puntosCosto,
+      tipo: formData.tipo as LoyaltyReward['tipo'],
+      valor: formData.valor,
+      vigente: true,
+    };
+    setRecompensas((prev) => [...prev, newReward]);
+    setShowForm(false);
+    setFormData({ nombre: '', descripcion: '', puntosCosto: 0, tipo: 'producto', valor: 0 });
+    showToastMessage('✅ Recompensa creada exitosamente');
+  };
 
   return (
     <div className="p-10 space-y-12 pb-40">
+      {toast.visible && (
+        <div className="fixed top-6 right-6 z-50 bg-stone-900 border border-stone-700 text-white px-8 py-4 rounded-2xl shadow-2xl text-sm font-bold">
+          {toast.message}
+        </div>
+      )}
+
+      {showForm && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-stone-900 border border-stone-700 rounded-[3rem] p-10 w-full max-w-lg mx-4 shadow-2xl">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-black text-white">Nueva Recompensa</h3>
+              <button onClick={() => setShowForm(false)} className="w-10 h-10 rounded-xl bg-stone-800 flex items-center justify-center text-stone-400 hover:text-white transition-colors">
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-stone-400 text-xs font-bold uppercase tracking-wider mb-2">Nombre</label>
+                <input
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                  className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-orange-500 transition-colors"
+                  placeholder="Ej: Pizza Personal Gratis"
+                />
+              </div>
+              <div>
+                <label className="block text-stone-400 text-xs font-bold uppercase tracking-wider mb-2">Descripción</label>
+                <textarea
+                  value={formData.descripcion}
+                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                  className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-orange-500 transition-colors resize-none h-24"
+                  placeholder="Describe la recompensa"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-stone-400 text-xs font-bold uppercase tracking-wider mb-2">Puntos Requeridos</label>
+                  <input
+                    type="number"
+                    value={formData.puntosCosto}
+                    onChange={(e) => setFormData({ ...formData, puntosCosto: Number(e.target.value) })}
+                    className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-orange-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-stone-400 text-xs font-bold uppercase tracking-wider mb-2">Valor</label>
+                  <input
+                    type="number"
+                    value={formData.valor}
+                    onChange={(e) => setFormData({ ...formData, valor: Number(e.target.value) })}
+                    className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-orange-500 transition-colors"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-stone-400 text-xs font-bold uppercase tracking-wider mb-2">Tipo</label>
+                <select
+                  value={formData.tipo}
+                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                  className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-orange-500 transition-colors"
+                >
+                  <option value="cupon">Cupón</option>
+                  <option value="producto">Producto</option>
+                  <option value="descuento">Descuento</option>
+                  <option value="envio">Envío</option>
+                </select>
+              </div>
+              <button
+                onClick={handleCrearRecompensa}
+                className="w-full bg-orange-600 hover:bg-orange-500 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all shadow-xl text-white"
+              >
+                <i className="fas fa-plus-circle mr-3"></i> CREAR RECOMPENSA
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
           <h1 className="text-5xl font-brand">Fidelización</h1>
           <p className="text-stone-500 mt-4 max-w-xl">Programa de lealtad, puntos y recompensas</p>
         </div>
-        <button className="bg-orange-600 hover:bg-orange-500 px-10 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4 w-full md:w-auto justify-center">
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-orange-600 hover:bg-orange-500 px-10 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4 w-full md:w-auto justify-center"
+        >
           <i className="fas fa-plus-circle"></i> CREAR RECOMPENSA
         </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
         {[
-          { label: 'Puntos Activos', value: '12,450', icon: 'star', color: 'text-orange-500' },
-          { label: 'Clientes en Programa', value: '218', icon: 'users', color: 'text-blue-500' },
-          { label: 'Cashback Entregado', value: '$1,240,000', icon: 'wallet', color: 'text-green-500' },
+          { label: 'Puntos Activos', value: puntosActivos.toLocaleString(), icon: 'star', color: 'text-orange-500' },
+          { label: 'Clientes en Programa', value: clientesCount.toLocaleString(), icon: 'users', color: 'text-blue-500' },
+          { label: 'Cashback Entregado', value: `$${cashbackTotal.toLocaleString()}`, icon: 'wallet', color: 'text-green-500' },
         ].map((stat, i) => (
           <div key={i} className="bg-stone-900/40 p-10 rounded-[4rem] border border-stone-800/50 shadow-2xl group hover:border-orange-500/40 transition-all">
             <div className="flex justify-between items-start mb-6">
@@ -172,7 +303,11 @@ const FidelizacionView: React.FC = () => {
                   <span className="text-2xl font-black text-yellow-500">{r.puntosCosto}</span>
                   <span className="text-stone-500 text-[10px] uppercase font-bold tracking-wider">pts</span>
                 </div>
-                <button className="bg-orange-600 hover:bg-orange-500 px-6 py-3 rounded-[2rem] font-black text-[9px] uppercase tracking-widest transition-all shadow-xl disabled:opacity-30 disabled:cursor-not-allowed">
+                <button
+                  onClick={() => handleCanjear(r)}
+                  disabled={puntosActivos < r.puntosCosto}
+                  className="bg-orange-600 hover:bg-orange-500 px-6 py-3 rounded-[2rem] font-black text-[9px] uppercase tracking-widest transition-all shadow-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                >
                   CANJEAR
                 </button>
               </div>
@@ -245,7 +380,7 @@ const FidelizacionView: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {CANJES_RECIENTES.map((canje, i) => (
+                {canjes.map((canje, i) => (
                   <tr key={i} className="border-b border-white/5 last:border-none hover:bg-stone-900/60 transition-colors">
                     <td className="px-10 py-6">
                       <div className="flex items-center gap-4">

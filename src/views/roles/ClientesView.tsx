@@ -33,19 +33,39 @@ const formatCurrency = (n: number) => '$' + n.toLocaleString('es-CO');
 
 const formatDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 
+const stripPhone = (phone: string) => phone.replace(/[^\d]/g, '');
+
+const getClientOrders = (clientId: string) => {
+  const items = [
+    { items: 'Pizza Margherita + Postre Tiramisú', total: 98000 },
+    { items: 'Pizza Pepperoni + Bebida 2L', total: 85000 },
+    { items: 'Combo Familiar + Postre 3 Leches', total: 156000 },
+    { items: '2x Pizza Tradicional + Entrada', total: 132000 },
+    { items: 'Pizza Premium D.O.P + Vino', total: 215000 },
+  ];
+  return items.map((item, i) => ({
+    id: `ORD-${clientId}-${String(i + 1).padStart(3, '0')}`,
+    fecha: new Date(Date.now() - i * 7 * 86400000).toISOString().split('T')[0],
+    ...item,
+  }));
+};
+
 const ClientesView: React.FC = () => {
+  const [clients, setClients] = useState<Client[]>(SAMPLE_CLIENTS);
   const [search, setSearch] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('todos');
   const [sortBy, setSortBy] = useState('nombre');
   const [segmentFilter, setSegmentFilter] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [newClient, setNewClient] = useState({ nombre: '', telefono: '', email: '', direccion: '' });
 
   const kpis = useMemo(() => [
-    { label: 'Total Clientes', value: '346', icon: 'users', color: 'text-blue-400', bg: 'bg-blue-600/10 border-blue-600/20' },
-    { label: 'Clientes VIP', value: '28', icon: 'crown', color: 'text-yellow-400', bg: 'bg-yellow-600/10 border-yellow-600/20' },
-    { label: 'Clientes Inactivos', value: '53', icon: 'user-clock', color: 'text-red-400', bg: 'bg-red-600/10 border-red-600/20' },
-    { label: 'LTV Promedio', value: '$287,000', icon: 'chart-line', color: 'text-green-400', bg: 'bg-green-600/10 border-green-600/20' },
-  ], []);
+    { label: 'Total Clientes', value: String(clients.length), icon: 'users', color: 'text-blue-400', bg: 'bg-blue-600/10 border-blue-600/20' },
+    { label: 'Clientes VIP', value: String(clients.filter(c => c.vip).length), icon: 'crown', color: 'text-yellow-400', bg: 'bg-yellow-600/10 border-yellow-600/20' },
+    { label: 'Clientes Inactivos', value: String(clients.filter(c => c.estado === 'inactivo').length), icon: 'user-clock', color: 'text-red-400', bg: 'bg-red-600/10 border-red-600/20' },
+    { label: 'LTV Promedio', value: formatCurrency(Math.round(clients.reduce((s, c) => s + c.totalGastado, 0) / clients.length)), icon: 'chart-line', color: 'text-green-400', bg: 'bg-green-600/10 border-green-600/20' },
+  ], [clients]);
 
   const segments = useMemo(() => [
     { id: 'alta-frecuencia', label: 'Alta Frecuencia', count: 42, desc: '> 3 compras en el último mes', icon: 'rocket', color: 'text-emerald-400', border: 'border-emerald-500/30' },
@@ -55,7 +75,7 @@ const ClientesView: React.FC = () => {
   ], []);
 
   const filteredClients = useMemo(() => {
-    let result = [...SAMPLE_CLIENTS];
+    let result = [...clients];
 
     if (segmentFilter === 'alta-frecuencia') result = result.filter(c => c.frecuenciaCompra >= 3);
     if (segmentFilter === 'alto-gasto') result = result.filter(c => (c.totalGastado / c.totalCompras) > 150000);
@@ -89,15 +109,7 @@ const ClientesView: React.FC = () => {
     });
 
     return result;
-  }, [search, estadoFilter, sortBy, segmentFilter]);
-
-  const sampleOrders = [
-    { id: 'ORD-001', fecha: '2026-06-01', items: 'Pizza Margherita + Postre Tiramisú', total: 98000 },
-    { id: 'ORD-002', fecha: '2026-05-25', items: 'Pizza Pepperoni + Bebida 2L', total: 85000 },
-    { id: 'ORD-003', fecha: '2026-05-18', items: 'Combo Familiar + Postre 3 Leches', total: 156000 },
-    { id: 'ORD-004', fecha: '2026-05-10', items: '2x Pizza Tradicional + Entrada', total: 132000 },
-    { id: 'ORD-005', fecha: '2026-05-02', items: 'Pizza Premium D.O.P + Vino', total: 215000 },
-  ];
+  }, [search, estadoFilter, sortBy, segmentFilter, clients]);
 
   const renderKPIs = () => (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
@@ -219,9 +231,78 @@ const ClientesView: React.FC = () => {
     </button>
   );
 
+  const handleToggleVip = (clientId: string) => {
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, vip: !c.vip } : c));
+    setSelectedClient(prev => prev && prev.id === clientId ? { ...prev, vip: !prev.vip } : prev);
+  };
+
+  const handleNewClientSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = String(Date.now());
+    const entry: Client = {
+      id,
+      nombre: newClient.nombre,
+      telefono: newClient.telefono,
+      email: newClient.email,
+      direccion: newClient.direccion,
+      totalCompras: 0,
+      totalGastado: 0,
+      frecuenciaCompra: 0,
+      ultimaCompra: new Date().toISOString().split('T')[0],
+      creado: new Date().toISOString().split('T')[0],
+      vip: false,
+      puntos: 0,
+      nivel: 'Bronce',
+      tags: [],
+      estado: 'activo',
+    };
+    setClients(prev => [...prev, entry]);
+    setNewClient({ nombre: '', telefono: '', email: '', direccion: '' });
+    setShowNewForm(false);
+  };
+
+  const renderNewClientModal = () => {
+    if (!showNewForm) return null;
+    const isValid = newClient.nombre.trim().length > 0 && newClient.telefono.trim().length > 0;
+    return (
+      <div className="fixed inset-0 z-[200] bg-stone-950/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowNewForm(false)}>
+        <div className="bg-stone-900/95 backdrop-blur-2xl rounded-[3rem] border border-white/10 max-w-lg w-full p-8 shadow-2xl shadow-black/50" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-black text-white">Nuevo Cliente</h2>
+            <button onClick={() => setShowNewForm(false)} className="w-12 h-12 rounded-2xl bg-stone-800 flex items-center justify-center text-stone-400 hover:text-white transition-all">
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+          <form onSubmit={handleNewClientSubmit} className="space-y-5">
+            <div>
+              <label className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em] block mb-2">Nombre *</label>
+              <input type="text" value={newClient.nombre} onChange={e => setNewClient(p => ({ ...p, nombre: e.target.value }))} className="w-full bg-stone-800/50 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:border-orange-600/50 transition-all outline-none" placeholder="Nombre completo" />
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em] block mb-2">Teléfono *</label>
+              <input type="text" value={newClient.telefono} onChange={e => setNewClient(p => ({ ...p, telefono: e.target.value }))} className="w-full bg-stone-800/50 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:border-orange-600/50 transition-all outline-none" placeholder="+57 300 000 0000" />
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em] block mb-2">Email</label>
+              <input type="email" value={newClient.email} onChange={e => setNewClient(p => ({ ...p, email: e.target.value }))} className="w-full bg-stone-800/50 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:border-orange-600/50 transition-all outline-none" placeholder="cliente@email.com" />
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em] block mb-2">Dirección</label>
+              <input type="text" value={newClient.direccion} onChange={e => setNewClient(p => ({ ...p, direccion: e.target.value }))} className="w-full bg-stone-800/50 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:border-orange-600/50 transition-all outline-none" placeholder="Dirección" />
+            </div>
+            <button type="submit" disabled={!isValid} className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg">
+              <i className="fas fa-plus mr-2"></i>Registrar Cliente
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
   const renderModal = () => {
     if (!selectedClient) return null;
     const c = selectedClient;
+    const clientOrders = getClientOrders(c.id);
 
     return (
       <div className="fixed inset-0 z-[200] bg-stone-950/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedClient(null)}>
@@ -300,8 +381,8 @@ const ClientesView: React.FC = () => {
             <div className="space-y-3">
               <h4 className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em]">Historial de Compras</h4>
               <div className="bg-stone-800/30 rounded-2xl border border-white/5 overflow-hidden">
-                {sampleOrders.map((o, i) => (
-                  <div key={o.id} className={`flex items-center justify-between p-4 md:p-5 ${i < sampleOrders.length - 1 ? 'border-b border-white/5' : ''} hover:bg-stone-800/50 transition-colors`}>
+                {clientOrders.map((o, i) => (
+                  <div key={o.id} className={`flex items-center justify-between p-4 md:p-5 ${i < clientOrders.length - 1 ? 'border-b border-white/5' : ''} hover:bg-stone-800/50 transition-colors`}>
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-stone-800 flex items-center justify-center text-stone-500">
                         <i className="fas fa-receipt"></i>
@@ -328,13 +409,22 @@ const ClientesView: React.FC = () => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-              <button className="flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg">
+              <button
+                onClick={() => window.open(`https://wa.me/${stripPhone(c.telefono)}`, '_blank')}
+                className="flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg"
+              >
                 <i className="fab fa-whatsapp text-lg"></i>Enviar WhatsApp
               </button>
-              <button className="flex items-center justify-center gap-3 bg-orange-600 hover:bg-orange-500 text-white font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg">
+              <button
+                onClick={() => alert(`Cupón asignado a ${c.nombre}`)}
+                className="flex items-center justify-center gap-3 bg-orange-600 hover:bg-orange-500 text-white font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg"
+              >
                 <i className="fas fa-ticket-alt text-lg"></i>Asignar Cupón
               </button>
-              <button className={`flex items-center justify-center gap-3 font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg ${c.vip ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-600/30' : 'bg-stone-800 text-stone-300 hover:bg-yellow-600/20 hover:text-yellow-400 hover:border-yellow-500/30 border border-white/5'}`}>
+              <button
+                onClick={() => handleToggleVip(c.id)}
+                className={`flex items-center justify-center gap-3 font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg ${c.vip ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-600/30' : 'bg-stone-800 text-stone-300 hover:bg-yellow-600/20 hover:text-yellow-400 hover:border-yellow-500/30 border border-white/5'}`}
+              >
                 <i className="fas fa-crown text-lg"></i>{c.vip ? 'Quitar VIP' : 'Marcar como VIP'}
               </button>
             </div>
@@ -347,13 +437,17 @@ const ClientesView: React.FC = () => {
   return (
     <div className="p-6 md:p-10 space-y-8 pb-40">
       {renderModal()}
+      {renderNewClientModal()}
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
           <h1 className="text-4xl md:text-5xl font-brand tracking-tight text-white">CRM de Clientes</h1>
           <p className="text-stone-500 mt-3 max-w-xl">Gestión inteligente de la base de clientes GastroPro. Segmenta, analiza y fideliza.</p>
         </div>
-        <button className="bg-orange-600 hover:bg-orange-500 px-8 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4 w-full md:w-auto justify-center">
+        <button
+          onClick={() => setShowNewForm(true)}
+          className="bg-orange-600 hover:bg-orange-500 px-8 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4 w-full md:w-auto justify-center"
+        >
           <i className="fas fa-plus"></i>+ NUEVO CLIENTE
         </button>
       </div>

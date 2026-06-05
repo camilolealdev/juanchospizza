@@ -28,6 +28,12 @@ const generateWeeklyData = () => [
   { name: 'Dom', ventas: Math.floor(Math.random() * 800000) + 2000000, pedidos: Math.floor(Math.random() * 15) + 36 },
 ];
 
+const predictions = [
+  'Basado en análisis de los últimos 30 días, se proyecta un incremento del 18% en ventas para este fin de semana. Sugerimos aumentar inventario de ingredientes para Pizza Especial en un 30%.',
+  'Los patrones de consumo indican un aumento del 22% en pedidos para el próximo jueves. Recomendamos preparar personal adicional para el turno nocturno.',
+  'El análisis estacional muestra una tendencia al alza del 15% en ventas de Lasaña. Considere promocionar este plato durante los próximos días.',
+];
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -47,6 +53,9 @@ const GastroProDashboard: React.FC = () => {
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [pedidosHoy, setPedidosHoy] = useState(48);
   const [predictionUpdating, setPredictionUpdating] = useState(false);
+  const [predictionMessage, setPredictionMessage] = useState(
+    'Basado en análisis de los últimos 30 días, se proyecta un incremento del 18% en ventas para este fin de semana. Sugerimos aumentar inventario de ingredientes para Pizza Especial en un 30%.'
+  );
 
   useEffect(() => {
     const savedVentas = localStorage.getItem('gastropro_ventas');
@@ -85,13 +94,28 @@ const GastroProDashboard: React.FC = () => {
     }
   }, []);
 
+  const handleRefresh = () => {
+    const data = generateWeeklyData();
+    setWeeklyData(data);
+    const newPedidos = Math.floor(Math.random() * 20) + 36;
+    setPedidosHoy(newPedidos);
+    localStorage.setItem('gastropro_ventas', JSON.stringify(data));
+    localStorage.setItem('gastropro_pedidos', JSON.stringify(newPedidos));
+  };
+
   const handleUpdatePrediction = () => {
     setPredictionUpdating(true);
     setTimeout(() => {
+      const randomIndex = Math.floor(Math.random() * predictions.length);
+      setPredictionMessage(predictions[randomIndex]);
       setPredictionUpdating(false);
     }, 2000);
   };
 
+  const todayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+  const ventasHoy = weeklyData.length === 7 ? weeklyData[todayIndex].ventas : 0;
+  const ticketPromedio = pedidosHoy > 0 ? Math.round(ventasHoy / pedidosHoy) : 0;
+  const utilidadNeta = Math.round(ventasHoy * 0.28);
   const totalVentas = weeklyData.length === 7
     ? weeklyData.reduce((acc, d) => acc + d.ventas, 0)
     : 16900000;
@@ -106,6 +130,13 @@ const GastroProDashboard: React.FC = () => {
             <span className="text-[10px] font-black text-orange-500 uppercase tracking-[0.3em]">Tiempo Real</span>
           </div>
         </div>
+        <button
+          onClick={handleRefresh}
+          className="flex items-center gap-3 py-3 px-6 rounded-[2rem] bg-stone-800 hover:bg-stone-700 text-white font-black text-[10px] uppercase tracking-[0.3em] transition-all active:scale-[0.98]"
+        >
+          <i className="fas fa-rotate"></i>
+          Refrescar Datos
+        </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -116,7 +147,7 @@ const GastroProDashboard: React.FC = () => {
               <i className="fas fa-arrow-trend-up text-lg"></i>
             </div>
           </div>
-          <p className="text-4xl font-black text-white mb-2">$2,450,000</p>
+          <p className="text-4xl font-black text-white mb-2">${ventasHoy.toLocaleString('es-CO')}</p>
           <div className="flex items-center gap-2">
             <i className="fas fa-arrow-up text-green-500 text-xs"></i>
             <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">+18% vs ayer</span>
@@ -143,7 +174,7 @@ const GastroProDashboard: React.FC = () => {
               <i className="fas fa-wallet text-lg"></i>
             </div>
           </div>
-          <p className="text-4xl font-black text-white mb-2">$51,042</p>
+          <p className="text-4xl font-black text-white mb-2">${ticketPromedio.toLocaleString('es-CO')}</p>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Por orden</span>
           </div>
@@ -156,7 +187,7 @@ const GastroProDashboard: React.FC = () => {
               <i className="fas fa-coins text-lg"></i>
             </div>
           </div>
-          <p className="text-4xl font-black text-white mb-2">$687,000</p>
+          <p className="text-4xl font-black text-white mb-2">${utilidadNeta.toLocaleString('es-CO')}</p>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">28% Margen</span>
           </div>
@@ -258,7 +289,7 @@ const GastroProDashboard: React.FC = () => {
               <span className="text-[10px] font-black text-purple-400 uppercase tracking-[0.3em]">Predicción IA</span>
             </div>
             <p className="text-sm text-white/80 leading-relaxed mb-6 flex-1">
-              Basado en análisis de los últimos 30 días, se proyecta un incremento del 18% en ventas para este fin de semana. Sugerimos aumentar inventario de ingredientes para Pizza Especial en un 30%.
+              {predictionMessage}
             </p>
             <button
               onClick={handleUpdatePrediction}

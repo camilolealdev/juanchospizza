@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 const kpis = [
@@ -31,7 +31,7 @@ interface Gasto {
   factura: string;
 }
 
-const gastos: Gasto[] = [
+const gastosData: Gasto[] = [
   { categoria: 'Ingredientes', descripcion: 'Harina Trigo Panadero 50kg', monto: 2850000, fecha: '2026-06-04', metodoPago: 'Transferencia', proveedor: 'Harinas del Valle S.A.S.', factura: 'FV-2026-4891' },
   { categoria: 'Nómina', descripcion: 'Pago quincenal cocina y domicilios', monto: 4200000, fecha: '2026-06-03', metodoPago: 'Nómina', proveedor: 'Staff Operativo', factura: 'NOM-0626-01' },
   { categoria: 'Servicios', descripcion: 'Recibo energía eléctrica local Suba', monto: 890000, fecha: '2026-06-02', metodoPago: 'Débito', proveedor: 'Enel Colombia', factura: 'E-84219-06' },
@@ -51,7 +51,63 @@ const distribucionData = [
   { name: 'Otros', value: 10, color: '#44403c' },
 ];
 
+const categorias = ['Ingredientes', 'Nómina', 'Servicios', 'Marketing', 'Mantenimiento', 'Transporte', 'Empaques', 'Varios'];
+
+const CustomBarTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div className="bg-stone-900 border border-stone-800 rounded-2xl px-5 py-4 shadow-2xl">
+      <p className="text-stone-400 font-bold text-[11px] uppercase tracking-wider mb-2">{label}</p>
+      {payload.map((entry: any, i: number) => (
+        <p key={i} className="font-bold text-sm" style={{ color: entry.color }}>
+          {entry.name}: {formatCOP(entry.value)}
+        </p>
+      ))}
+    </div>
+  );
+};
+
+const CustomPieTooltip = ({ active, payload }: any) => {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div className="bg-stone-900 border border-stone-800 rounded-2xl px-5 py-4 shadow-2xl">
+      {payload.map((entry: any, i: number) => (
+        <p key={i} className="font-bold text-sm text-stone-200">
+          {entry.name}: {entry.value}%
+        </p>
+      ))}
+    </div>
+  );
+};
+
 const FinanzasView: React.FC = () => {
+  const [gastos, setGastos] = useState(gastosData);
+  const [showModal, setShowModal] = useState(false);
+  const [nuevoGasto, setNuevoGasto] = useState<Gasto>({
+    categoria: 'Ingredientes',
+    descripcion: '',
+    monto: 0,
+    fecha: '',
+    metodoPago: '',
+    proveedor: '',
+    factura: '',
+  });
+
+  const handleChange = (field: keyof Gasto, value: string | number) => {
+    setNuevoGasto(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = () => {
+    if (!nuevoGasto.descripcion || !nuevoGasto.monto || !nuevoGasto.fecha || !nuevoGasto.metodoPago || !nuevoGasto.proveedor || !nuevoGasto.factura) return;
+    setGastos(prev => [...prev, { ...nuevoGasto }]);
+    setShowModal(false);
+    setNuevoGasto({ categoria: 'Ingredientes', descripcion: '', monto: 0, fecha: '', metodoPago: '', proveedor: '', factura: '' });
+  };
+
+  const eliminarGasto = (index: number) => {
+    setGastos(prev => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <div className="p-8 md:p-12 space-y-16 pb-40 animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-10">
@@ -59,10 +115,56 @@ const FinanzasView: React.FC = () => {
           <h1 className="text-6xl md:text-7xl font-brand">Gestión Financiera</h1>
           <p className="text-stone-500 max-w-xl text-lg italic opacity-80">Flujo de caja, gastos y estado de resultados</p>
         </div>
-        <button className="w-full md:w-auto flex items-center justify-center gap-6 px-12 py-6 rounded-[3rem] font-black text-[11px] uppercase tracking-[0.3em] bg-orange-600 text-white hover:bg-orange-500 shadow-2xl shadow-orange-900/40 transition-all active:scale-95">
+        <button onClick={() => setShowModal(true)} className="w-full md:w-auto flex items-center justify-center gap-6 px-12 py-6 rounded-[3rem] font-black text-[11px] uppercase tracking-[0.3em] bg-orange-600 text-white hover:bg-orange-500 shadow-2xl shadow-orange-900/40 transition-all active:scale-95">
           <i className="fas fa-plus-circle"></i> REGISTRAR GASTO
         </button>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowModal(false)}>
+          <div className="bg-stone-900 border border-stone-800 rounded-[2rem] p-10 w-full max-w-lg max-h-screen overflow-y-auto shadow-2xl mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-2xl font-brand mb-8">Nuevo Gasto</h3>
+            <div className="space-y-5">
+              <div>
+                <label className="block text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-2">Categoría</label>
+                <select value={nuevoGasto.categoria} onChange={e => handleChange('categoria', e.target.value)} className="w-full bg-stone-800/60 border border-stone-700 rounded-2xl px-5 py-4 text-sm text-stone-200 outline-none focus:border-orange-500">
+                  {categorias.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-2">Descripción</label>
+                <input type="text" value={nuevoGasto.descripcion} onChange={e => handleChange('descripcion', e.target.value)} className="w-full bg-stone-800/60 border border-stone-700 rounded-2xl px-5 py-4 text-sm text-stone-200 outline-none focus:border-orange-500" placeholder="Descripción del gasto" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-2">Monto ($)</label>
+                <input type="number" value={nuevoGasto.monto || ''} onChange={e => handleChange('monto', Number(e.target.value))} className="w-full bg-stone-800/60 border border-stone-700 rounded-2xl px-5 py-4 text-sm text-stone-200 outline-none focus:border-orange-500" placeholder="0" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-2">Fecha</label>
+                <input type="date" value={nuevoGasto.fecha} onChange={e => handleChange('fecha', e.target.value)} className="w-full bg-stone-800/60 border border-stone-700 rounded-2xl px-5 py-4 text-sm text-stone-200 outline-none focus:border-orange-500" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-2">Método de Pago</label>
+                <input type="text" value={nuevoGasto.metodoPago} onChange={e => handleChange('metodoPago', e.target.value)} className="w-full bg-stone-800/60 border border-stone-700 rounded-2xl px-5 py-4 text-sm text-stone-200 outline-none focus:border-orange-500" placeholder="Efectivo, Tarjeta, Transferencia..." />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-2">Proveedor</label>
+                <input type="text" value={nuevoGasto.proveedor} onChange={e => handleChange('proveedor', e.target.value)} className="w-full bg-stone-800/60 border border-stone-700 rounded-2xl px-5 py-4 text-sm text-stone-200 outline-none focus:border-orange-500" placeholder="Nombre del proveedor" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-2">Factura</label>
+                <input type="text" value={nuevoGasto.factura} onChange={e => handleChange('factura', e.target.value)} className="w-full bg-stone-800/60 border border-stone-700 rounded-2xl px-5 py-4 text-sm text-stone-200 outline-none focus:border-orange-500" placeholder="N° factura" />
+              </div>
+            </div>
+            <div className="flex gap-4 mt-10">
+              <button onClick={() => setShowModal(false)} className="flex-1 py-4 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.3em] bg-stone-800 text-stone-400 hover:bg-stone-700 transition-all">Cancelar</button>
+              <button onClick={handleSubmit} className="flex-1 py-4 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.3em] bg-orange-600 text-white hover:bg-orange-500 transition-all">Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
         {kpis.map((kpi, i) => (
@@ -106,8 +208,7 @@ const FinanzasView: React.FC = () => {
                 <YAxis stroke="#57534e" fontSize={10} axisLine={false} tickLine={false} tickFormatter={(v: number) => '$' + (v / 1000000).toFixed(1) + 'M'} />
                 <Tooltip
                   cursor={{ fill: '#ffffff08' }}
-                  contentStyle={{ backgroundColor: '#1c1917', border: '1px solid #292524', borderRadius: '16px', color: '#e7e5e4' }}
-                  formatter={(value: number) => [formatCOP(value), '']}
+                  content={<CustomBarTooltip />}
                   labelStyle={{ color: '#a8a29e', fontWeight: 700, fontSize: 11 }}
                 />
                 <Bar dataKey="ingresos" fill="#22c55e" radius={[8, 8, 0, 0]} barSize={28} />
@@ -136,7 +237,8 @@ const FinanzasView: React.FC = () => {
                   <th className="p-6">Fecha</th>
                   <th className="p-6">Método Pago</th>
                   <th className="p-6">Proveedor</th>
-                  <th className="p-6 pr-10">Factura</th>
+                  <th className="p-6">Factura</th>
+                  <th className="p-6 pr-10"></th>
                 </tr>
               </thead>
               <tbody>
@@ -152,8 +254,13 @@ const FinanzasView: React.FC = () => {
                       <span className="text-[10px] font-black text-stone-400 uppercase tracking-wider">{g.metodoPago}</span>
                     </td>
                     <td className="p-6 text-stone-400 text-xs">{g.proveedor}</td>
-                    <td className="p-6 pr-10">
+                    <td className="p-6">
                       <span className="font-mono text-[11px] text-stone-500">{g.factura}</span>
+                    </td>
+                    <td className="p-6 pr-10">
+                      <button onClick={() => eliminarGasto(i)} className="text-stone-600 hover:text-red-400 transition-colors" title="Eliminar">
+                        <i className="fas fa-trash-can"></i>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -188,10 +295,7 @@ const FinanzasView: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1c1917', border: '1px solid #292524', borderRadius: '16px', color: '#e7e5e4' }}
-                  formatter={(value: number) => [`${value}%`, 'Porcentaje']}
-                />
+                <Tooltip content={<CustomPieTooltip />} />
                 <Legend
                   verticalAlign="bottom"
                   height={48}

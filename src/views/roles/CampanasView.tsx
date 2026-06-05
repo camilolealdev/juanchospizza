@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -20,7 +19,7 @@ const kpiData = [
   { label: 'ROI General', value: '340%', icon: 'fa-chart-line', color: 'text-blue-500', trend: '+28% vs Q1' },
 ];
 
-const campaigns = [
+const campaignsData = [
   { name: 'Recuperación Clientes Inactivos', channels: ['WhatsApp'], status: 'Active', reach: 1200, conversions: 89 },
   { name: 'Cumpleaños Feliz', channels: ['WhatsApp', 'Email'], status: 'Active', reach: 450, conversions: 120 },
   { name: 'Flash Viernes', channels: ['SMS', 'WhatsApp'], status: 'Scheduled', reach: 0, conversions: 0 },
@@ -48,19 +47,123 @@ const triggerOptions = ['Cliente Inactivo 30 días', 'Cumpleaños', 'Compra > $5
 const segmentOptions = ['Todos los Clientes', 'Clientes VIP', 'Inactivos >30 días', 'Alta Frecuencia', 'Cumpleaños Este Mes'];
 const actionOptions = ['Enviar WhatsApp', 'Enviar Email', 'Enviar SMS', 'Asignar Cupón'];
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-stone-900 border border-stone-700 rounded-2xl px-5 py-3">
+        <p className="text-stone-400 text-xs font-bold uppercase tracking-widest">{label}</p>
+        <p className="text-orange-500 text-lg font-black">{payload[0].value} conversiones</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 const CampanasView: React.FC = () => {
+  const [campaigns, setCampaigns] = useState(campaignsData);
   const [selectedTrigger, setSelectedTrigger] = useState(triggerOptions[0]);
   const [selectedSegment, setSelectedSegment] = useState(segmentOptions[0]);
   const [selectedAction, setSelectedAction] = useState(actionOptions[0]);
+  const [showModal, setShowModal] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+
+  const [formNombre, setFormNombre] = useState('');
+  const [formCanales, setFormCanales] = useState<string[]>([]);
+  const [formStatus, setFormStatus] = useState<'Active' | 'Scheduled' | 'Draft'>('Draft');
+  const [formPresupuesto, setFormPresupuesto] = useState('');
+
+  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const toggleCanal = (canal: string) => {
+    setFormCanales(prev =>
+      prev.includes(canal) ? prev.filter(c => c !== canal) : [...prev, canal]
+    );
+  };
+
+  const handleNewCampaign = () => {
+    setFormNombre('');
+    setFormCanales([]);
+    setFormStatus('Draft');
+    setFormPresupuesto('');
+    setShowModal(true);
+  };
+
+  const handleSubmitCampaign = () => {
+    if (!formNombre.trim()) return;
+    const newCampaign = {
+      name: formNombre,
+      channels: formCanales.length > 0 ? formCanales : ['WhatsApp'],
+      status: formStatus,
+      reach: 0,
+      conversions: 0,
+    };
+    setCampaigns(prev => [newCampaign, ...prev]);
+    setShowModal(false);
+    showToast(`Campaña "${formNombre}" creada exitosamente`);
+  };
 
   return (
     <div className="p-10 space-y-16 pb-40 animate-fade-in">
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 px-8 py-4 rounded-2xl shadow-2xl border text-sm font-bold uppercase tracking-widest animate-fade-in ${toast.type === 'success' ? 'bg-green-900/90 border-green-500/30 text-green-400' : 'bg-blue-900/90 border-blue-500/30 text-blue-400'}`}>
+          <i className={`fas ${toast.type === 'success' ? 'fa-check-circle' : 'fa-info-circle'} mr-3`}></i>
+          {toast.message}
+        </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowModal(false)}>
+          <div className="bg-stone-900 p-10 rounded-[3rem] border border-stone-700 shadow-2xl max-w-lg w-full mx-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-2xl font-brand mb-8">Nueva Campaña</h3>
+            <div className="space-y-6">
+              <div>
+                <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-2">Nombre</label>
+                <input className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-orange-500 transition-colors" value={formNombre} onChange={e => setFormNombre(e.target.value)} placeholder="Ej: Promo Verano" />
+              </div>
+              <div>
+                <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-3">Canales</label>
+                <div className="flex gap-4">
+                  {['WhatsApp', 'Email', 'SMS'].map(c => (
+                    <label key={c} className={`flex items-center gap-2 px-5 py-3 rounded-2xl border cursor-pointer transition-colors text-xs font-bold uppercase tracking-widest ${formCanales.includes(c) ? 'border-orange-500/40 bg-orange-600/10 text-orange-400' : 'border-stone-700 text-stone-500 hover:border-stone-500'}`}>
+                      <input type="checkbox" className="hidden" checked={formCanales.includes(c)} onChange={() => toggleCanal(c)} />
+                      {c}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-2">Estado</label>
+                <div className="relative">
+                  <i className="fas fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-stone-600 pointer-events-none text-xs"></i>
+                  <select className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-5 py-4 text-xs font-bold appearance-none cursor-pointer focus:outline-none focus:border-orange-500 transition-colors" value={formStatus} onChange={e => setFormStatus(e.target.value as 'Active' | 'Scheduled' | 'Draft')}>
+                    <option value="Active">Activa</option>
+                    <option value="Scheduled">Programada</option>
+                    <option value="Draft">Borrador</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-2">Presupuesto</label>
+                <input className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-orange-500 transition-colors" value={formPresupuesto} onChange={e => setFormPresupuesto(e.target.value)} placeholder="Ej: $500,000" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-4 mt-10">
+              <button className="px-8 py-4 rounded-2xl border border-stone-700 text-xs font-black uppercase tracking-widest text-stone-500 hover:border-stone-500 transition-colors" onClick={() => setShowModal(false)}>Cancelar</button>
+              <button className="px-8 py-4 rounded-2xl bg-orange-600 hover:bg-orange-500 text-xs font-black uppercase tracking-widest transition-colors shadow-xl" onClick={handleSubmitCampaign}>Crear Campaña</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
           <h1 className="text-5xl font-brand">Campañas Automatizadas</h1>
           <p className="text-stone-500 mt-4 max-w-xl">WhatsApp, Email, SMS y flujos visuales</p>
         </div>
-        <button className="bg-orange-600 hover:bg-orange-500 px-10 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4 w-full md:w-auto justify-center">
+        <button className="bg-orange-600 hover:bg-orange-500 px-10 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4 w-full md:w-auto justify-center" onClick={handleNewCampaign}>
           <i className="fas fa-plus"></i> NUEVA CAMPAÑA
         </button>
       </div>
@@ -171,7 +274,7 @@ const CampanasView: React.FC = () => {
               </div>
               <p className="text-3xl font-black text-white mb-2">{seg.count}</p>
               <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest">{seg.name}</p>
-              <button className="mt-5 text-[8px] font-black uppercase tracking-widest text-orange-600 hover:text-orange-500 transition-colors">
+              <button className="mt-5 text-[8px] font-black uppercase tracking-widest text-orange-600 hover:text-orange-500 transition-colors" onClick={() => showToast(`Segmento ${seg.name} seleccionado`, 'info')}>
                 <i className="fas fa-arrow-right mr-1.5"></i> USAR SEGMENTO
               </button>
             </div>
@@ -256,7 +359,7 @@ const CampanasView: React.FC = () => {
           </div>
 
           <div className="flex justify-center mt-10">
-            <button className="bg-orange-600 hover:bg-orange-500 px-12 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4">
+            <button className="bg-orange-600 hover:bg-orange-500 px-12 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4" onClick={() => showToast(`Flujo activado: ${selectedTrigger} → ${selectedSegment} → ${selectedAction}`)}>
               <i className="fas fa-play"></i> ACTIVAR FLUJO
             </button>
           </div>
@@ -278,7 +381,7 @@ const CampanasView: React.FC = () => {
               <BarChart data={chartData}>
                 <XAxis dataKey="name" stroke="#444" fontSize={9} axisLine={false} tickLine={false} />
                 <YAxis stroke="#444" fontSize={9} axisLine={false} tickLine={false} />
-                <Tooltip cursor={{ fill: '#ffffff05' }} contentStyle={{ backgroundColor: '#1c1917', border: '1px solid #333', borderRadius: '16px' }} />
+                <Tooltip cursor={{ fill: '#ffffff05' }} content={<CustomTooltip />} />
                 <Bar dataKey="conversion" radius={[10, 10, 0, 0]} barSize={48} fill="#ea580c" />
               </BarChart>
             </ResponsiveContainer>

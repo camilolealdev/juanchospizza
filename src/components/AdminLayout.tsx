@@ -1,24 +1,25 @@
 
-import React, { useState } from 'react';
-import { GastroModule } from '../types';
+import React, { useState, useMemo } from 'react';
+import { GastroModule, UserRole } from '../types';
 
 interface AdminLayoutProps {
   module: GastroModule;
   onModuleChange: (m: GastroModule) => void;
   children: React.ReactNode;
   userName?: string;
+  userRole?: UserRole;
   onLogout?: () => void;
 }
 
-const NAV_ITEMS: { module: GastroModule; label: string; icon: string }[] = [
-  { module: 'dashboard', label: 'Dashboard', icon: 'chart-simple' },
-  { module: 'menu', label: 'Menú Inteligente', icon: 'book' },
-  { module: 'inventario', label: 'Inventario', icon: 'warehouse' },
-  { module: 'clientes', label: 'Clientes', icon: 'users' },
-  { module: 'fidelizacion', label: 'Fidelización', icon: 'gift' },
-  { module: 'campanas', label: 'Campañas', icon: 'bullhorn' },
-  { module: 'finanzas', label: 'Finanzas', icon: 'coins' },
-  { module: 'reportes', label: 'Reportes', icon: 'chart-line' },
+const ALL_NAV: { module: GastroModule; label: string; icon: string; roles: UserRole[] }[] = [
+  { module: 'dashboard', label: 'Dashboard', icon: 'chart-simple', roles: [UserRole.ADMIN, UserRole.OPERATOR, UserRole.REPARTIDOR, UserRole.MARKETING] },
+  { module: 'menu', label: 'Menú Inteligente', icon: 'book', roles: [UserRole.ADMIN, UserRole.OPERATOR, UserRole.MARKETING] },
+  { module: 'inventario', label: 'Inventario', icon: 'warehouse', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
+  { module: 'clientes', label: 'Clientes', icon: 'users', roles: [UserRole.ADMIN, UserRole.MARKETING] },
+  { module: 'fidelizacion', label: 'Fidelización', icon: 'gift', roles: [UserRole.ADMIN, UserRole.MARKETING] },
+  { module: 'campanas', label: 'Campañas', icon: 'bullhorn', roles: [UserRole.ADMIN, UserRole.MARKETING] },
+  { module: 'finanzas', label: 'Finanzas', icon: 'coins', roles: [UserRole.ADMIN] },
+  { module: 'reportes', label: 'Reportes', icon: 'chart-line', roles: [UserRole.ADMIN, UserRole.MARKETING] },
 ];
 
 const MODULE_TITLES: Record<GastroModule, string> = {
@@ -32,14 +33,25 @@ const MODULE_TITLES: Record<GastroModule, string> = {
   reportes: 'Reportes',
 };
 
+const ROLE_LABELS: Record<UserRole, string> = {
+  [UserRole.ADMIN]: 'Administrador',
+  [UserRole.OPERATOR]: 'Cocina',
+  [UserRole.REPARTIDOR]: 'Repartidor',
+  [UserRole.MARKETING]: 'Marketing',
+  [UserRole.CLIENT]: 'Cliente',
+};
+
 const AdminLayout: React.FC<AdminLayoutProps> = ({
   module,
   onModuleChange,
   children,
   userName = 'Admin',
+  userRole = UserRole.ADMIN,
   onLogout,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navItems = useMemo(() => ALL_NAV.filter(item => item.roles.includes(userRole)), [userRole]);
 
   const handleModuleChange = (m: GastroModule) => {
     onModuleChange(m);
@@ -82,7 +94,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const isActive = module === item.module;
             return (
               <button
@@ -123,7 +135,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white truncate">{userName}</p>
-              <p className="text-[9px] font-bold text-stone-500 uppercase tracking-wider">Administrador</p>
+              <p className="text-[9px] font-bold text-stone-500 uppercase tracking-wider">{ROLE_LABELS[userRole]}</p>
             </div>
           </div>
           {onLogout && (
@@ -175,7 +187,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

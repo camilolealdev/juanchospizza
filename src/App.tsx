@@ -103,12 +103,13 @@ const App: React.FC = () => {
       {showLogin && !isAuthenticated && <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />}
 
       {/* Admin CRM Overlay */}
-      {isAuthenticated && role === UserRole.ADMIN && (
+      {isAuthenticated && (role === UserRole.ADMIN || role === UserRole.OPERATOR || role === UserRole.MARKETING || role === UserRole.REPARTIDOR) && (
         <div className="fixed inset-0 z-[9998] animate-fade-in">
           <AdminLayout
             module={gastroModule}
             onModuleChange={setGastroModule}
-            userName={TEST_USERS['admin']?.name || 'Admin'}
+            userName={Object.values(TEST_USERS).find(u => u.role === role)?.name || role}
+            userRole={role}
             onLogout={logout}
           >
             {renderGastroModule()}
