@@ -336,7 +336,6 @@
             </ul>
             <p class="product-description">"La insignia de la casa. Un balance perfecto entre crujido y suavidad artesanal."</p>
             <span class="price-tag">$24.900</span>
-            <div><button class="btn-primary add-to-order-btn">Añadir al Pedido <i class="fa-solid fa-plus"></i></button></div>
         </div>
     </section>
     <section class="product-section type-b">
@@ -351,7 +350,6 @@
             </ul>
             <p class="product-description">"Dorada a la perfección con una capa crujiente de queso parmesano por encima."</p>
             <span class="price-tag">$18.500</span>
-            <div><button class="btn-primary add-to-order-btn">Añadir al Pedido <i class="fa-solid fa-plus"></i></button></div>
         </div>
     </section>
     <section class="product-section">
@@ -366,7 +364,6 @@
             </ul>
             <p class="product-description">"El verdadero confort food de barrio. Sabor denso, casero y entrañable."</p>
             <span class="price-tag">$15.900</span>
-            <div><button class="btn-primary add-to-order-btn">Añadir al Pedido <i class="fa-solid fa-plus"></i></button></div>
         </div>
     </section>
     <section class="product-section type-b">
@@ -381,7 +378,6 @@
             </ul>
             <p class="product-description">"Grande, jugosa y pecaminosa. Hecha con fuego, pasión y mística urbana."</p>
             <span class="price-tag">$13.500</span>
-            <div><button class="btn-primary add-to-order-btn">Añadir al Pedido <i class="fa-solid fa-plus"></i></button></div>
         </div>
     </section>
 </main>
@@ -837,18 +833,6 @@ if (navToggle && navMenu) {
     navToggle.addEventListener('click', () => navMenu.classList.toggle('active'));
     document.querySelectorAll('.nav-links a').forEach(link => link.addEventListener('click', () => navMenu.classList.remove('active')));
 }
-
-// Menu product buttons
-document.querySelectorAll('.add-to-order-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        itemsInCart++;
-        cartCounter.textContent = itemsInCart;
-        localStorage.setItem('juanchos_cart', itemsInCart.toString());
-        this.innerHTML = '¡Añadido! <i class="fa-solid fa-check"></i>';
-        this.style.backgroundColor = '#27AE60';
-        setTimeout(() => { this.innerHTML = 'Añadir al Pedido <i class="fa-solid fa-plus"></i>'; this.style.backgroundColor = ''; }, 1500);
-    });
-});
 
 // Init
 cartCounter.textContent = itemsInCart;
