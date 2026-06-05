@@ -309,7 +309,7 @@
     <div class="hamburger" id="navToggle"><i class="fa-solid fa-bars"></i></div>
     <ul class="nav-links" id="navMenu">
         <li><a href="#inicio">Inicio</a></li>
-        <li><a href="#menu-digital" id="navMenuBtn" onclick="document.getElementById('menu-digital')?.scrollIntoView({behavior:'smooth'});return false">Menú</a></li>
+        <li><a href="#" id="navMenuBtn" onclick="event.preventDefault();window.dispatchEvent(new CustomEvent('open-digital-menu'))">Menú</a></li>
         <li><a href="#crea-tu-pizza">Crea tu Pizza</a></li>
         <li><a href="#domicilios">Domicilios</a></li>
         <li class="nav-actions">

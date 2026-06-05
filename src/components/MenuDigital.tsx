@@ -115,7 +115,7 @@ const BADGE_STYLES: Record<string, string> = {
   'Clásica': 'bg-stone-600 text-white',
 };
 
-const MenuDigital: React.FC<{ id?: string }> = ({ id }) => {
+const MenuDigital: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [activeCategory, setActiveCategory] = useState('pizzas');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('todos');
@@ -194,19 +194,29 @@ const MenuDigital: React.FC<{ id?: string }> = ({ id }) => {
   }, []);
 
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (showPizzaBuilder) setShowPizzaBuilder(null); else if (showCart) setShowCart(false); } };
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (showPizzaBuilder) setShowPizzaBuilder(null); else if (showCart) setShowCart(false); else onClose(); } };
     window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [showPizzaBuilder, showCart]);
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', handleEsc); document.body.style.overflow = ''; };
+  }, [onClose, showPizzaBuilder, showCart]);
 
   const crossSellItems = CROSS_SELL[activeCategory] || CROSS_SELL.default;
 
   return (
-    <section id={id} className="bg-[#F4EFEA] border-t border-[#8B572A]/10" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9995] bg-[#F4EFEA] overflow-y-auto"
+      style={{ fontFamily: "'Poppins', sans-serif" }}
+    >
       {/* Top Bar */}
       <div className="sticky top-0 z-20 bg-[#F4EFEA]/95 backdrop-blur-xl border-b border-[#8B572A]/10">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <button onClick={onClose} className="w-10 h-10 rounded-xl bg-[#8B572A]/10 flex items-center justify-center text-[#8B572A] hover:bg-[#8B572A]/20 transition-all">
+              <i className="fas fa-arrow-left text-sm"></i>
+            </button>
             <div>
               <h1 className="text-xl font-black text-[#1A1A1A]" style={{ fontFamily: "'Bitter', serif" }}>Nuestro Menú</h1>
               <p className="text-[10px] text-[#8B572A]/70 font-semibold uppercase tracking-widest">Descubre y pide desde aquí</p>
@@ -634,7 +644,7 @@ const MenuDigital: React.FC<{ id?: string }> = ({ id }) => {
           </motion.div>
         )}
       </AnimatePresence>
-    </section>
+    </motion.div>
   );
 };
 

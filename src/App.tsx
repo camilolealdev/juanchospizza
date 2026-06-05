@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { UserRole, GastroModule } from './types';
 import AdminLayout from './components/AdminLayout';
 import MenuDigital from './components/MenuDigital';
@@ -40,7 +40,13 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [gastroModule, setGastroModule] = useState<GastroModule>('dashboard');
-  // MenuDigital is always rendered inline; nav link scrolls directly to it
+  const [showDigitalMenu, setShowDigitalMenu] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setShowDigitalMenu(true);
+    window.addEventListener('open-digital-menu', handler);
+    return () => window.removeEventListener('open-digital-menu', handler);
+  }, []);
 
   const login = (selectedRole: UserRole, pin?: string): boolean => {
     const userKey = Object.keys(TEST_USERS).find(k => TEST_USERS[k].role === selectedRole);
@@ -101,8 +107,8 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* MenuDigital inline section — always rendered in page flow */}
-        <MenuDigital id="menu-digital" />
+        {/* MenuDigital Overlay */}
+        {showDigitalMenu && <MenuDigital onClose={() => setShowDigitalMenu(false)} />}
       </AuthContext.Provider>
     </CartProvider>
   );
