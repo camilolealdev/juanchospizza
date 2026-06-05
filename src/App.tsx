@@ -1,7 +1,8 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import { UserRole, GastroModule } from './types';
 import AdminLayout from './components/AdminLayout';
 import MenuDigital from './components/MenuDigital';
+import { CartProvider } from './context/CartContext';
 import GastroProDashboard from './views/roles/GastroProDashboard';
 import MenuInteligente from './views/roles/MenuInteligente';
 import InventarioView from './views/roles/InventarioView';
@@ -39,13 +40,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [gastroModule, setGastroModule] = useState<GastroModule>('dashboard');
-  const [showDigitalMenu, setShowDigitalMenu] = useState(false);
-
-  useEffect(() => {
-    const handler = () => setShowDigitalMenu(true);
-    window.addEventListener('open-digital-menu', handler);
-    return () => window.removeEventListener('open-digital-menu', handler);
-  }, []);
+  // MenuDigital is always rendered inline; nav link scrolls directly to it
 
   const login = (selectedRole: UserRole, pin?: string): boolean => {
     const userKey = Object.keys(TEST_USERS).find(k => TEST_USERS[k].role === selectedRole);
@@ -77,37 +72,39 @@ const App: React.FC = () => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
-      {/* Floating admin button - always visible */}
-      <button
-        onClick={() => isAuthenticated ? logout() : setShowLogin(true)}
-        className="fixed bottom-6 left-6 z-[9999] w-14 h-14 rounded-2xl bg-stone-950/90 backdrop-blur-xl border border-white/10 text-stone-400 hover:text-white hover:border-orange-500/50 flex items-center justify-center shadow-2xl transition-all group"
-        title={isAuthenticated ? 'Cerrar sesión' : 'Panel Administrativo'}
-      >
-        <i className={`fas ${isAuthenticated ? 'fa-right-from-bracket' : 'fa-crown'} text-xl transition-transform group-hover:scale-110`}></i>
-      </button>
+    <CartProvider>
+      <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
+        {/* Floating admin button - always visible */}
+        <button
+          onClick={() => isAuthenticated ? logout() : setShowLogin(true)}
+          className="fixed bottom-6 left-6 z-[9999] w-14 h-14 rounded-2xl bg-stone-950/90 backdrop-blur-xl border border-white/10 text-stone-400 hover:text-white hover:border-orange-500/50 flex items-center justify-center shadow-2xl transition-all group"
+          title={isAuthenticated ? 'Cerrar sesión' : 'Panel Administrativo'}
+        >
+          <i className={`fas ${isAuthenticated ? 'fa-right-from-bracket' : 'fa-crown'} text-xl transition-transform group-hover:scale-110`}></i>
+        </button>
 
-      {/* Menu Digital Overlay */}
-      {showDigitalMenu && <MenuDigital onClose={() => setShowDigitalMenu(false)} />}
+        {/* Login Modal */}
+        {showLogin && !isAuthenticated && <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />}
 
-      {/* Login Modal */}
-      {showLogin && !isAuthenticated && <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />}
+        {/* Admin CRM Overlay */}
+        {isAuthenticated && (role === UserRole.ADMIN || role === UserRole.OPERATOR || role === UserRole.MARKETING || role === UserRole.REPARTIDOR) && (
+          <div className="fixed inset-0 z-[9998] animate-fade-in">
+            <AdminLayout
+              module={gastroModule}
+              onModuleChange={setGastroModule}
+              userName={Object.values(TEST_USERS).find(u => u.role === role)?.name || role}
+              userRole={role}
+              onLogout={logout}
+            >
+              {renderGastroModule()}
+            </AdminLayout>
+          </div>
+        )}
 
-      {/* Admin CRM Overlay */}
-      {isAuthenticated && (role === UserRole.ADMIN || role === UserRole.OPERATOR || role === UserRole.MARKETING || role === UserRole.REPARTIDOR) && (
-        <div className="fixed inset-0 z-[9998] animate-fade-in">
-          <AdminLayout
-            module={gastroModule}
-            onModuleChange={setGastroModule}
-            userName={Object.values(TEST_USERS).find(u => u.role === role)?.name || role}
-            userRole={role}
-            onLogout={logout}
-          >
-            {renderGastroModule()}
-          </AdminLayout>
-        </div>
-      )}
-    </AuthContext.Provider>
+        {/* MenuDigital inline section — always rendered in page flow */}
+        <MenuDigital id="menu-digital" />
+      </AuthContext.Provider>
+    </CartProvider>
   );
 };
 

@@ -51,16 +51,18 @@
             font-size: .7rem; width: 20px; height: 20px; border-radius: 50%;
             display: inline-flex; align-items: center; justify-content: center;
         }
-        .nav-chatbot {
-            background: linear-gradient(135deg,#25D366,#1ebd58); color: var(--blanco-puro) !important;
-            padding: 8px 16px; border-radius: 50px; font-weight: 600 !important; font-size: .85rem;
-            box-shadow: 0 4px 15px rgba(37,211,102,.3); transition: var(--transition-smooth); text-decoration: none;
-            display: inline-flex; align-items: center; gap: 6px;
+        .floating-chatbot {
+            position: fixed; bottom: 30px; right: 30px; z-index: 999;
+            background: linear-gradient(135deg,#25D366,#1ebd58); color: var(--blanco-puro);
+            width: 60px; height: 60px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; box-shadow: 0 4px 20px rgba(37,211,102,.4);
+            transition: var(--transition-smooth); text-decoration: none;
         }
-        .nav-chatbot:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(37,211,102,.4); }
+        .floating-chatbot:hover { transform: scale(1.1); box-shadow: 0 6px 25px rgba(37,211,102,.5); }
         @media(max-width:768px) {
             .nav-actions { flex-direction: column; width: 100%; }
-            .nav-cart, .nav-chatbot { width: 100%; justify-content: center; }
+            .nav-cart { width: 100%; justify-content: center; }
         }
 
         header {
@@ -307,7 +309,7 @@
     <div class="hamburger" id="navToggle"><i class="fa-solid fa-bars"></i></div>
     <ul class="nav-links" id="navMenu">
         <li><a href="#inicio">Inicio</a></li>
-        <li><a href="#" id="navMenuBtn" onclick="event.preventDefault();window.dispatchEvent(new CustomEvent('open-digital-menu'))">Menú</a></li>
+        <li><a href="#menu-digital" id="navMenuBtn" onclick="document.getElementById('menu-digital')?.scrollIntoView({behavior:'smooth'});return false">Menú</a></li>
         <li><a href="#crea-tu-pizza">Crea tu Pizza</a></li>
         <li><a href="#domicilios">Domicilios</a></li>
         <li class="nav-actions">
@@ -315,12 +317,13 @@
                 <i class="fa-solid fa-basket-shopping"></i>
                 <span class="cart-count" id="cartCounter">0</span>
             </a>
-            <a href="https://wa.me/573117074843?text=Hola%2C%20quiero%20hacer%20un%20pedido" target="_blank" class="nav-chatbot">
-                <i class="fa-brands fa-whatsapp"></i> Chatbot
-            </a>
         </li>
     </ul>
 </header>
+
+<a href="https://wa.me/573117074843?text=Hola%2C%20quiero%20hacer%20un%20pedido" target="_blank" class="floating-chatbot" title="Chatea con nosotros">
+    <i class="fa-brands fa-whatsapp"></i>
+</a>
 
 <section id="inicio">
     <video class="hero-bg-video" autoplay loop muted playsinline src="/pizza-logo.mp4"></video>
@@ -819,9 +822,13 @@ document.getElementById('confirmBtn').addEventListener('click', function() {
         function getNames(ids) { return ids.map(id => { const i = getIng(id); return i ? i.nombre : ''; }).filter(Boolean).join(', '); }
         const details = ['Masa: ' + masa.nombre, selections.whole.length > 0 ? 'Toda: ' + getNames(selections.whole) : null, selections.left.length > 0 ? 'Izq: ' + getNames(selections.left) : null, selections.right.length > 0 ? 'Der: ' + getNames(selections.right) : null].filter(Boolean).join(' | ');
 
-        itemsInCart++;
-        cartCounter.textContent = itemsInCart;
-        localStorage.setItem('juanchos_cart', itemsInCart.toString());
+        if (window.__pizzaBuilderAddToCart) {
+            window.__pizzaBuilderAddToCart('Pizza Personalizada');
+        } else {
+            itemsInCart++;
+            cartCounter.textContent = itemsInCart;
+            localStorage.setItem('juanchos_cart', itemsInCart.toString());
+        }
 
         const scOverlay = document.getElementById('successOverlay');
         scOverlay.style.display = 'flex';
@@ -852,6 +859,11 @@ if (navToggle && navMenu) {
     navToggle.addEventListener('click', () => navMenu.classList.toggle('active'));
     document.querySelectorAll('.nav-links a').forEach(link => link.addEventListener('click', () => navMenu.classList.remove('active')));
 }
+
+// Listen for unified cart updates
+window.addEventListener('cart-updated', function(e) {
+    cartCounter.textContent = e.detail.toString();
+});
 
 // Init
 cartCounter.textContent = itemsInCart;

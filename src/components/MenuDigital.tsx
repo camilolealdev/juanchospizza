@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCart } from '../context/CartContext';
 
 interface MenuProduct {
   id: string;
@@ -114,11 +115,10 @@ const BADGE_STYLES: Record<string, string> = {
   'Clásica': 'bg-stone-600 text-white',
 };
 
-const MenuDigital: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const MenuDigital: React.FC<{ id?: string }> = ({ id }) => {
   const [activeCategory, setActiveCategory] = useState('pizzas');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('todos');
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [showPizzaBuilder, setShowPizzaBuilder] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState(PIZZA_SIZES[1]);
@@ -129,6 +129,8 @@ const MenuDigital: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [customerAddress, setCustomerAddress] = useState('');
   const [showCheckout, setShowCheckout] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
+
+  const { cart, cartCount, cartTotal, addToCart: contextAddToCart, removeFromCart, updateQuantity } = useCart();
 
   const filteredProducts = useMemo(() => {
     let items = PRODUCTS.filter(p => p.category === activeCategory);
@@ -149,30 +151,18 @@ const MenuDigital: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     return items;
   }, [activeCategory, searchQuery, activeFilter]);
 
-  const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.quantity, 0), [cart]);
-  const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
-
   const addToCart = useCallback((product: MenuProduct, size?: string, sabores?: string[], details?: string) => {
-    const id = product.id + '-' + Date.now();
     let price = product.price;
     if (size && product.sizes) {
       const sz = product.sizes.find(s => s.label === size);
       if (sz) price = sz.price;
     }
-    setCart(prev => [...prev, { id, productId: product.id, name: product.name, price, quantity: 1, details }]);
+    contextAddToCart({ productId: product.id, name: product.name, price, quantity: 1, details });
     setShowSuccess(product.name);
     setTimeout(() => setShowSuccess(''), 2000);
     setShowCrossSell(product.category);
     setTimeout(() => setShowCrossSell(null), 5000);
-  }, []);
-
-  const removeFromCart = useCallback((id: string) => {
-    setCart(prev => prev.filter(i => i.id !== id));
-  }, []);
-
-  const updateQuantity = useCallback((id: string, delta: number) => {
-    setCart(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i));
-  }, []);
+  }, [contextAddToCart]);
 
   const openPizzaBuilder = useCallback((product: MenuProduct) => {
     setShowPizzaBuilder(product.id);
@@ -204,29 +194,19 @@ const MenuDigital: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   }, []);
 
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (showPizzaBuilder) setShowPizzaBuilder(null); else if (showCart) setShowCart(false); else onClose(); } };
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (showPizzaBuilder) setShowPizzaBuilder(null); else if (showCart) setShowCart(false); } };
     window.addEventListener('keydown', handleEsc);
-    document.body.style.overflow = 'hidden';
-    return () => { window.removeEventListener('keydown', handleEsc); document.body.style.overflow = ''; };
-  }, [onClose, showPizzaBuilder, showCart]);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showPizzaBuilder, showCart]);
 
   const crossSellItems = CROSS_SELL[activeCategory] || CROSS_SELL.default;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9995] bg-[#F4EFEA] overflow-y-auto"
-      style={{ fontFamily: "'Poppins', sans-serif" }}
-    >
+    <section id={id} className="bg-[#F4EFEA] border-t border-[#8B572A]/10" style={{ fontFamily: "'Poppins', sans-serif" }}>
       {/* Top Bar */}
       <div className="sticky top-0 z-20 bg-[#F4EFEA]/95 backdrop-blur-xl border-b border-[#8B572A]/10">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={onClose} className="w-10 h-10 rounded-xl bg-[#8B572A]/10 flex items-center justify-center text-[#8B572A] hover:bg-[#8B572A]/20 transition-all">
-              <i className="fas fa-arrow-left text-sm"></i>
-            </button>
             <div>
               <h1 className="text-xl font-black text-[#1A1A1A]" style={{ fontFamily: "'Bitter', serif" }}>Nuestro Menú</h1>
               <p className="text-[10px] text-[#8B572A]/70 font-semibold uppercase tracking-widest">Descubre y pide desde aquí</p>
@@ -654,7 +634,7 @@ const MenuDigital: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </section>
   );
 };
 
