@@ -274,12 +274,21 @@ const InventarioView: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-6 pr-8 text-center">
-                        <button
-                          onClick={() => openEditModal(item)}
-                          className="px-4 py-2 rounded-xl bg-stone-800 hover:bg-orange-600 text-stone-400 hover:text-white text-[10px] font-black uppercase tracking-wider border border-stone-700 hover:border-orange-500 transition-all"
-                        >
-                          Editar
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => openEditModal(item)}
+                            className="px-4 py-2 rounded-xl bg-stone-800 hover:bg-orange-600 text-stone-400 hover:text-white text-[10px] font-black uppercase tracking-wider border border-stone-700 hover:border-orange-500 transition-all"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => setInventory(prev => prev.filter(i => i.id !== item.id))}
+                            className="px-4 py-2 rounded-xl bg-stone-800 hover:bg-red-600 text-stone-400 hover:text-white text-[10px] font-black uppercase tracking-wider border border-stone-700 hover:border-red-500 transition-all"
+                            title="Eliminar"
+                          >
+                            <i className="fas fa-trash-can"></i>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

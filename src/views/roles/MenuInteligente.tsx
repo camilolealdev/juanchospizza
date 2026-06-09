@@ -120,6 +120,9 @@ const MenuInteligente: React.FC = () => {
   const [activos, setActivos] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(PROMOCIONES.map(p => [p.id, p.activo]))
   );
+  const [toast, setToast] = useState('');
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
 
   const formatPrice = (price: number) =>
     '$' + price.toLocaleString('es-CO');
@@ -137,7 +140,7 @@ const MenuInteligente: React.FC = () => {
           <h1 className="text-5xl md:text-6xl font-brand">Menú Inteligente</h1>
           <p className="text-stone-500 text-sm md:text-base max-w-xl">Gestión de productos, variantes y promociones</p>
         </div>
-        <button className="w-full md:w-auto flex items-center justify-center gap-4 bg-orange-600 hover:bg-orange-500 px-10 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all active:scale-95">
+        <button onClick={() => showToast('Formulario de nuevo producto abierto')} className="w-full md:w-auto flex items-center justify-center gap-4 bg-orange-600 hover:bg-orange-500 px-10 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all active:scale-95">
           <i className="fas fa-plus"></i> NUEVO PRODUCTO
         </button>
       </div>
@@ -287,7 +290,7 @@ const MenuInteligente: React.FC = () => {
                   <span className="text-orange-500 font-black text-3xl">{formatPrice(c.precio)}</span>
                 </div>
 
-                <button className="w-full bg-orange-600 hover:bg-orange-500 py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95">
+                <button onClick={() => showToast(`Combo "${c.nombre}" activado`)} className="w-full bg-orange-600 hover:bg-orange-500 py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95">
                   <i className="fas fa-cart-plus mr-3"></i>
                   Activar Combo
                 </button>
@@ -406,7 +409,7 @@ const MenuInteligente: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                <button className="w-full flex items-center justify-between bg-stone-950/60 hover:bg-stone-950 px-8 py-6 rounded-[2rem] border border-white/5 group transition-all">
+                <button onClick={() => window.open('https://wa.me/?text=¡Mira nuestro menú digital!', '_blank')} className="w-full flex items-center justify-between bg-stone-950/60 hover:bg-stone-950 px-8 py-6 rounded-[2rem] border border-white/5 group transition-all">
                   <div className="flex items-center gap-5">
                     <div className="w-12 h-12 rounded-2xl bg-green-600/20 flex items-center justify-center text-green-500">
                       <i className="fab fa-whatsapp text-xl"></i>
@@ -419,7 +422,7 @@ const MenuInteligente: React.FC = () => {
                   <i className="fas fa-arrow-right text-stone-600 group-hover:text-orange-500 transition-all"></i>
                 </button>
 
-                <button className="w-full flex items-center justify-between bg-stone-950/60 hover:bg-stone-950 px-8 py-6 rounded-[2rem] border border-white/5 group transition-all">
+                <button onClick={() => showToast('Generando PDF del menú...')} className="w-full flex items-center justify-between bg-stone-950/60 hover:bg-stone-950 px-8 py-6 rounded-[2rem] border border-white/5 group transition-all">
                   <div className="flex items-center gap-5">
                     <div className="w-12 h-12 rounded-2xl bg-orange-600/20 flex items-center justify-center text-orange-500">
                       <i className="fas fa-file-pdf text-xl"></i>
@@ -432,7 +435,7 @@ const MenuInteligente: React.FC = () => {
                   <i className="fas fa-arrow-right text-stone-600 group-hover:text-orange-500 transition-all"></i>
                 </button>
 
-                <button className="w-full flex items-center justify-between bg-stone-950/60 hover:bg-stone-950 px-8 py-6 rounded-[2rem] border border-white/5 group transition-all">
+                <button onClick={() => { navigator.clipboard.writeText(window.location.origin + '/menu'); showToast('Enlace copiado al portapapeles'); }} className="w-full flex items-center justify-between bg-stone-950/60 hover:bg-stone-950 px-8 py-6 rounded-[2rem] border border-white/5 group transition-all">
                   <div className="flex items-center gap-5">
                     <div className="w-12 h-12 rounded-2xl bg-blue-600/20 flex items-center justify-center text-blue-500">
                       <i className="fas fa-link text-xl"></i>
@@ -454,6 +457,13 @@ const MenuInteligente: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-orange-600 text-white px-6 py-4 rounded-2xl shadow-2xl text-sm font-bold animate-fade-in">
+          {toast}
         </div>
       )}
     </div>

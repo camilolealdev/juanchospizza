@@ -68,11 +68,11 @@ const ClientesView: React.FC = () => {
   ], [clients]);
 
   const segments = useMemo(() => [
-    { id: 'alta-frecuencia', label: 'Alta Frecuencia', count: 42, desc: '> 3 compras en el último mes', icon: 'rocket', color: 'text-emerald-400', border: 'border-emerald-500/30' },
-    { id: 'alto-gasto', label: 'Alto Gasto', count: 28, desc: 'Ticket promedio > $150,000', icon: 'gem', color: 'text-purple-400', border: 'border-purple-500/30' },
-    { id: 'en-riesgo', label: 'En Riesgo', count: 53, desc: 'Sin compras en 45+ días', icon: 'exclamation-triangle', color: 'text-orange-400', border: 'border-orange-500/30' },
-    { id: 'nuevos', label: 'Nuevos', count: 67, desc: 'Primera compra < 30 días', icon: 'star', color: 'text-sky-400', border: 'border-sky-500/30' },
-  ], []);
+    { id: 'alta-frecuencia', label: 'Alta Frecuencia', count: clients.filter(c => c.frecuenciaCompra >= 3).length, desc: '> 3 compras en el último mes', icon: 'rocket', color: 'text-emerald-400', border: 'border-emerald-500/30' },
+    { id: 'alto-gasto', label: 'Alto Gasto', count: clients.filter(c => (c.totalGastado / c.totalCompras) > 150000).length, desc: 'Ticket promedio > $150,000', icon: 'gem', color: 'text-purple-400', border: 'border-purple-500/30' },
+    { id: 'en-riesgo', label: 'En Riesgo', count: clients.filter(c => (Date.now() - new Date(c.ultimaCompra + 'T00:00:00').getTime()) / 86400000 >= 45).length, desc: 'Sin compras en 45+ días', icon: 'exclamation-triangle', color: 'text-orange-400', border: 'border-orange-500/30' },
+    { id: 'nuevos', label: 'Nuevos', count: clients.filter(c => (Date.now() - new Date(c.creado + 'T00:00:00').getTime()) / 86400000 <= 30).length, desc: 'Primera compra < 30 días', icon: 'star', color: 'text-sky-400', border: 'border-sky-500/30' },
+  ], [clients]);
 
   const filteredClients = useMemo(() => {
     let result = [...clients];

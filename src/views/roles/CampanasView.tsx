@@ -214,7 +214,7 @@ const CampanasView: React.FC = () => {
                      c.status === 'Scheduled' ? <><i className="fas fa-clock mr-1.5 text-amber-500"></i> Programada</> :
                      <><i className="fas fa-pen mr-1.5"></i> Borrador</>}
                   </span>
-                  <button className="text-stone-700 hover:text-white transition-colors">
+                  <button onClick={() => showToast(`Opciones para: ${c.name}`, 'info')} className="text-stone-700 hover:text-white transition-colors">
                     <i className="fas fa-ellipsis-vertical"></i>
                   </button>
                 </div>
@@ -291,7 +291,7 @@ const CampanasView: React.FC = () => {
         </div>
 
         <div className="bg-stone-900/40 p-12 rounded-[4rem] border border-stone-800 shadow-2xl">
-          <div className="flex items-center justify-center gap-0">
+          <div className="flex items-center justify-center gap-0 flex-wrap overflow-x-auto pb-4" style={{ scrollbarWidth: 'none' }}>
             <div className="flex-1 bg-stone-950/80 p-8 rounded-[2.5rem] border border-orange-500/20 max-w-xs">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center text-white">

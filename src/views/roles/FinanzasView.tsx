@@ -2,13 +2,6 @@
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
-const kpis = [
-  { label: 'Ingresos Mes', value: '$18,450,000', icon: 'arrow-trend-up', color: 'text-green-500', trend: '+8.2%' },
-  { label: 'Egresos Mes', value: '$11,230,000', icon: 'arrow-trend-down', color: 'text-red-500', trend: '+3.1%' },
-  { label: 'Utilidad Neta', value: '$7,220,000', icon: 'sack-dollar', color: 'text-orange-500', trend: '+14.7%' },
-  { label: 'Punto Equilibrio', value: '$8,500,000', icon: 'scale-balanced', color: 'text-blue-500', trend: 'Estable' },
-];
-
 const cashFlowData = [
   { name: 'Ene', ingresos: 15400000, egresos: 9800000 },
   { name: 'Feb', ingresos: 16200000, egresos: 10200000 },
@@ -20,6 +13,8 @@ const cashFlowData = [
 
 const formatCOP = (value: number) =>
   '$' + value.toLocaleString('es-CO');
+
+const INGRESOS_ESTIMADO = 18450000;
 
 interface Gasto {
   categoria: string;
@@ -42,14 +37,11 @@ const gastosData: Gasto[] = [
   { categoria: 'Varios', descripcion: 'Papelería administrativa y útiles', monto: 210000, fecha: '2026-05-27', metodoPago: 'Efectivo', proveedor: 'Papelería Suba', factura: 'PS-887' },
 ];
 
-const distribucionData = [
-  { name: 'Ingredientes', value: 35, color: '#ea580c' },
-  { name: 'Nómina', value: 25, color: '#f97316' },
-  { name: 'Servicios', value: 12, color: '#fdba74' },
-  { name: 'Marketing', value: 10, color: '#64748b' },
-  { name: 'Transporte', value: 8, color: '#a8a29e' },
-  { name: 'Otros', value: 10, color: '#44403c' },
-];
+const gastosColors: Record<string, string> = {
+  Ingredientes: '#ea580c', Nómina: '#f97316', Servicios: '#fdba74',
+  Marketing: '#64748b', Mantenimiento: '#a8a29e', Transporte: '#d97706',
+  Empaques: '#44403c', Varios: '#78716c',
+};
 
 const categorias = ['Ingredientes', 'Nómina', 'Servicios', 'Marketing', 'Mantenimiento', 'Transporte', 'Empaques', 'Varios'];
 
@@ -92,6 +84,41 @@ const FinanzasView: React.FC = () => {
     proveedor: '',
     factura: '',
   });
+
+  const totalEgresos = gastos.reduce((s, g) => s + g.monto, 0);
+  const utilidadNeta = INGRESOS_ESTIMADO - totalEgresos;
+  const puntoEquilibrio = Math.round(INGRESOS_ESTIMADO * 0.46);
+
+  const computedKpis = [
+    { label: 'Ingresos Mes', value: formatCOP(INGRESOS_ESTIMADO), icon: 'arrow-trend-up', color: 'text-green-500', trend: '+8.2%' },
+    { label: 'Egresos Mes', value: formatCOP(totalEgresos), icon: 'arrow-trend-down', color: 'text-red-500', trend: totalEgresos > 11000000 ? '+3.1%' : '+1.2%' },
+    { label: 'Utilidad Neta', value: formatCOP(utilidadNeta), icon: 'sack-dollar', color: utilidadNeta > 0 ? 'text-orange-500' : 'text-red-500', trend: utilidadNeta > 0 ? '+14.7%' : 'Negativa' },
+    { label: 'Punto Equilibrio', value: formatCOP(puntoEquilibrio), icon: 'scale-balanced', color: 'text-blue-500', trend: totalEgresos < puntoEquilibrio ? 'Sobre meta' : 'Bajo meta' },
+  ];
+
+  const gastosPorCategoria = gastos.reduce<Record<string, number>>((acc, g) => {
+    acc[g.categoria] = (acc[g.categoria] || 0) + g.monto;
+    return acc;
+  }, {});
+  const totalPorCat = Object.values(gastosPorCategoria).reduce((a, b) => a + b, 0);
+  const computedDistribucion = Object.entries(gastosPorCategoria)
+    .filter(([_, m]) => m > 0)
+    .map(([cat, monto]) => ({
+      name: cat,
+      value: Math.round((monto / totalPorCat) * 100),
+      color: gastosColors[cat] || '#78716c',
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  const gastosPorMes = gastos.reduce<Record<string, number>>((acc, g) => {
+    const mes = g.fecha.slice(0, 7);
+    acc[mes] = (acc[mes] || 0) + g.monto;
+    return acc;
+  }, {});
+  const compCashFlow = cashFlowData.map(m => ({
+    ...m,
+    egresos: m.name === 'Jun' && gastosPorMes['2026-06'] ? Math.max(gastosPorMes['2026-06'], m.egresos) : m.egresos,
+  }));
 
   const handleChange = (field: keyof Gasto, value: string | number) => {
     setNuevoGasto(prev => ({ ...prev, [field]: value }));
@@ -167,7 +194,7 @@ const FinanzasView: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-        {kpis.map((kpi, i) => (
+        {computedKpis.map((kpi, i) => (
           <div key={i} className="bg-stone-900/40 p-10 rounded-[4rem] border border-stone-800/50 shadow-2xl group hover:border-orange-500/40 transition-all">
             <div className="flex justify-between items-start mb-6">
               <span className="text-stone-600 text-[11px] uppercase font-black tracking-[0.4em]">{kpi.label}</span>
@@ -203,7 +230,7 @@ const FinanzasView: React.FC = () => {
         <div className="bg-stone-900/40 p-10 rounded-[4rem] border border-stone-800 shadow-2xl">
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={cashFlowData} barGap={4} barCategoryGap="20%">
+              <BarChart data={compCashFlow} barGap={4} barCategoryGap="20%">
                 <XAxis dataKey="name" stroke="#57534e" fontSize={11} axisLine={false} tickLine={false} />
                 <YAxis stroke="#57534e" fontSize={10} axisLine={false} tickLine={false} tickFormatter={(v: number) => '$' + (v / 1000000).toFixed(1) + 'M'} />
                 <Tooltip
@@ -282,7 +309,7 @@ const FinanzasView: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={distribucionData}
+                  data={computedDistribucion}
                   cx="50%"
                   cy="45%"
                   innerRadius={80}
@@ -291,7 +318,7 @@ const FinanzasView: React.FC = () => {
                   dataKey="value"
                   stroke="none"
                 >
-                  {distribucionData.map((entry, index) => (
+                  {computedDistribucion.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
