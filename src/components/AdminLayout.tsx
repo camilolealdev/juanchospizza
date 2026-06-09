@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { GastroModule, UserRole } from '../types';
 
 interface AdminLayoutProps {
@@ -48,12 +48,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   onLogout,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
 
   const navItems = useMemo(() => ALL_NAV.filter(item => item.roles.includes(userRole)), [userRole]);
 
   const handleModuleChange = (m: GastroModule) => {
     onModuleChange(m);
     setMobileMenuOpen(false);
+    mainRef.current?.scrollTo(0, 0);
   };
 
   return (
@@ -157,7 +159,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full md:ml-0 min-w-0">
-        <main className="flex-1 overflow-y-auto max-h-full min-h-0 pt-16">
+        <main ref={mainRef} className="flex-1 overflow-y-auto max-h-full min-h-0 pt-16">
           {children}
         </main>
       </div>
