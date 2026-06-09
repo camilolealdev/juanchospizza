@@ -158,7 +158,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full md:ml-0 min-w-0">
         {/* Top Header */}
-        <header className="sticky top-0 z-20 bg-white/[0.03] backdrop-blur-2xl border-b border-white/[0.06] crm-noise crm-noise-subtle">
+        <header className="sticky top-0 z-20 bg-transparent backdrop-blur-2xl border-b border-white/[0.06] crm-noise crm-noise-subtle">
           <div className="relative z-10 flex items-center justify-between px-6 md:px-10 h-16">
             {/* Mobile Menu Toggle + Title */}
             <div className="flex items-center gap-4">
