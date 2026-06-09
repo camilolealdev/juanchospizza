@@ -15,6 +15,7 @@ interface MenuProduct {
   badges: string[];
   sizes?: { label: string; portions: number; sabores: number; price: number }[];
   sabores?: Sabor[];
+  baseSabor?: string;
 }
 
 interface Sabor {
@@ -55,10 +56,20 @@ const PIZZA_SIZES = [
 ];
 
 const PRODUCTS: MenuProduct[] = [
-  { id: 'p1', category: 'pizzas', name: 'Pizza Especial Juancho\'s', description: 'La insignia de la casa. Un balance perfecto entre crujido y suavidad artesanal.', price: 24900, image: 'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=600&q=80', ingredients: ['Salsa de tomate casera', 'Queso mozzarella', 'Pepperoni curado', 'Champiñones frescos', 'Aceitunas', 'Pimentón'], badges: ['Más Vendido', 'De la Casa'], sizes: PIZZA_SIZES, sabores: SABORES },
-  { id: 'p2', category: 'pizzas', name: 'Pizza Hawaiana', description: 'La clásica combinación tropical que nunca falla.', price: 22900, image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80', ingredients: ['Jamón', 'Piña', 'Queso mozzarella', 'Salsa de tomate'], badges: ['Clásica'], sizes: PIZZA_SIZES, sabores: SABORES },
-  { id: 'p3', category: 'pizzas', name: 'Pizza Mexicana', description: 'Un viaje de sabores intensos y picantes.', price: 26900, image: 'https://images.unsplash.com/photo-1555109307-f7d9da25c244?auto=format&fit=crop&w=600&q=80', ingredients: ['Carne Molida', 'Maíz', 'Tomate', 'Cilantro', 'Tostacos'], badges: ['Especial'], sizes: PIZZA_SIZES, sabores: SABORES },
-  { id: 'p4', category: 'pizzas', name: 'Pizza De La Casa', description: 'Nuestra creación estrella con ingredientes selectos.', price: 28900, image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=600&q=80', ingredients: ['Champiñones', 'Cebolla', 'Carne Desmechada', 'Queso mozzarella'], badges: ['Recomendado', 'De la Casa'], sizes: PIZZA_SIZES, sabores: SABORES },
+  { id: 'p-ej', category: 'pizzas', name: 'Pizza Especial Juancho\'s', description: 'La insignia de la casa. Un balance perfecto entre crujido y suavidad artesanal.', price: 30000, image: 'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=600&q=80', ingredients: ['Salsa de tomate casera', 'Queso mozzarella', 'Pepperoni curado', 'Champiñones frescos', 'Aceitunas', 'Pimentón'], badges: ['Más Vendido', 'De la Casa'], sizes: PIZZA_SIZES, sabores: SABORES },
+  { id: 'p-h', category: 'pizzas', name: 'Pizza Hawaiana', description: 'La clásica combinación tropical que nunca falla.', price: 30000, image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80', ingredients: ['Piña', 'Jamón'], badges: ['Clásica', 'Más Vendido'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Hawaiana' },
+  { id: 'p-pc', category: 'pizzas', name: 'Pizza Pollo y Champiñones', description: 'La combinación perfecta de pollo y champiñones.', price: 30000, image: 'https://images.unsplash.com/photo-1555109307-f7d9da25c244?auto=format&fit=crop&w=600&q=80', ingredients: ['Jamón', 'Champiñones', 'Pollo Desmechado'], badges: ['Recomendado'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Pollo y Champiñones' },
+  { id: 'p-c', category: 'pizzas', name: 'Pizza Carnes', description: 'Para los amantes de la carne, una explosión de sabor.', price: 30000, image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=600&q=80', ingredients: ['Jamón', 'Salami', 'Cábano'], badges: ['Especial'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Carnes' },
+  { id: 'p-cb', category: 'pizzas', name: 'Pizza Costillitas BBQ', description: 'Costillitas bañadas en BBQ con maíz tierno.', price: 30000, image: 'https://images.unsplash.com/photo-1566853923569-3c0eb2e79edf?auto=format&fit=crop&w=600&q=80', ingredients: ['Jamón', 'Costillas BBQ', 'Maíz Tierno'], badges: ['Especial'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Costillitas BBQ' },
+  { id: 'p-cr', category: 'pizzas', name: 'Pizza Criolla', description: 'El sabor criollo que nos identifica.', price: 30000, image: 'https://images.unsplash.com/photo-1594007654729-407eedc4be65?auto=format&fit=crop&w=600&q=80', ingredients: ['Carne Desmechada', 'Maíz Tierno'], badges: ['De la Casa'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Criolla' },
+  { id: 'p-m', category: 'pizzas', name: 'Pizza Mexicana', description: 'Un viaje de sabores intensos y picantes.', price: 30000, image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=600&q=80', ingredients: ['Carne Molida', 'Maíz', 'Tomate', 'Cilantro', 'Tostacos'], badges: ['Clásica', 'Especial'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Mexicana' },
+  { id: 'p-r', category: 'pizzas', name: 'Pizza Ranchera', description: 'El sabor del campo en cada rebanada.', price: 30000, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80', ingredients: ['Champiñones', 'Cebolla', 'Maíz', 'Chorizo'], badges: ['Recomendado'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Ranchera' },
+  { id: 'p-dlc', category: 'pizzas', name: 'Pizza De La Casa', description: 'Nuestra creación estrella con ingredientes selectos.', price: 30000, image: 'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?auto=format&fit=crop&w=600&q=80', ingredients: ['Champiñones', 'Cebolla', 'Carne Desmechada'], badges: ['Recomendado', 'De la Casa'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'De La Casa' },
+  { id: 'p-e', category: 'pizzas', name: 'Pizza Española', description: 'Un sabor mediterráneo con espinaca y tocineta.', price: 30000, image: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?auto=format&fit=crop&w=600&q=80', ingredients: ['Espinaca', 'Tocineta', 'Maíz', 'Champiñones'], badges: ['Especial'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Española' },
+  { id: 'p-n', category: 'pizzas', name: 'Pizza Napolitana', description: 'La sencillez perfecta: tomate y orégano.', price: 30000, image: 'https://images.unsplash.com/photo-1588315029754-2dd089d39a07?auto=format&fit=crop&w=600&q=80', ingredients: ['Tomate', 'Orégano'], badges: ['Clásica'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Napolitana' },
+  { id: 'p-v', category: 'pizzas', name: 'Pizza Vegetariana', description: 'La opción más fresca y saludable del menú.', price: 30000, image: 'https://images.unsplash.com/photo-1604917877934-07d8d248d396?auto=format&fit=crop&w=600&q=80', ingredients: ['Champiñones', 'Maíz', 'Cebolla'], badges: ['Vegetariano'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Vegetariana' },
+  { id: 'p-t', category: 'pizzas', name: 'Pizza Tropical', description: 'Dulce y salada, la combinación perfecta.', price: 30000, image: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=600&q=80', ingredients: ['Cerezas', 'Piña', 'Duraznos', 'Uvas Pasas'], badges: ['Especial'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Tropical' },
+  { id: 'p-qb', category: 'pizzas', name: 'Pizza Queso y Bocadillo', description: 'La combinación colombiana por excelencia.', price: 30000, image: 'https://images.unsplash.com/photo-1512152272829-e3139592d56f?auto=format&fit=crop&w=600&q=80', ingredients: ['Queso', 'Bocadillo'], badges: ['Clásica'], sizes: PIZZA_SIZES, sabores: SABORES, baseSabor: 'Queso y Bocadillo' },
   { id: 'h1', category: 'hamburguesas', subcategory: 'De La Casa', name: 'Hamburguesa de la Casa', description: 'Grande, jugosa y pecaminosa. Hecha con fuego, pasión y mística urbana.', price: 13500, priceCombo: 18500, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80', ingredients: ['Carne artesanal de res 150g', 'Queso cheddar doble', 'Vegetales frescos', 'Salsas especiales', 'Pan brioche'], badges: ['Más Vendido', 'De la Casa'] },
   { id: 'h2', category: 'hamburguesas', subcategory: 'Tradicionales', name: 'Hamburguesa Clásica', description: 'La tradicional de toda la vida con ingredientes frescos.', price: 10900, priceCombo: 15900, image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=600&q=80', ingredients: ['Carne de res', 'Lechuga', 'Tomate', 'Cebolla', 'Salsa de la casa'], badges: ['Clásica'] },
   { id: 'h3', category: 'hamburguesas', subcategory: 'Apanadas', name: 'Hamburguesa Apanada', description: 'Crujiente por fuera, jugosa por dentro. La favorita.', price: 14900, priceCombo: 19900, image: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=600&q=80', ingredients: ['Carne apanada', 'Queso', 'Lechuga', 'Tomate', 'Salsas especiales'], badges: ['Especial'] },
@@ -167,7 +178,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
   const openPizzaBuilder = useCallback((product: MenuProduct) => {
     setShowPizzaBuilder(product.id);
     setSelectedSize(PIZZA_SIZES[1]);
-    setSelectedSabores([]);
+    setSelectedSabores(product.baseSabor ? [product.baseSabor] : []);
   }, []);
 
   const handleAddPizza = useCallback(() => {
@@ -446,20 +457,23 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
                     {(product.sabores || SABORES).map((sabor) => {
+                      const isBase = sabor.name === product.baseSabor;
                       const isSelected = selectedSabores.includes(sabor.name);
                       const isMaxed = selectedSabores.length >= selectedSize.sabores && !isSelected;
+                      const isDisabled = !isBase && isMaxed && !isSelected;
                       return (
                         <button
                           key={sabor.name}
                           onClick={() => {
+                            if (isBase) return;
                             if (isSelected) setSelectedSabores(prev => prev.filter(s => s !== sabor.name));
                             else if (!isMaxed) setSelectedSabores(prev => [...prev, sabor.name]);
                           }}
-                          disabled={isMaxed}
+                          disabled={isDisabled}
                           className={`p-3 rounded-2xl border-2 text-left transition-all ${
                             isSelected
                               ? 'border-[#C0392B] bg-[#C0392B]/5'
-                              : isMaxed
+                              : isDisabled
                                 ? 'border-[#8B572A]/5 opacity-40'
                                 : 'border-[#8B572A]/10 hover:border-[#8B572A]/20'
                           }`}
@@ -473,6 +487,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
                             <div>
                               <div className="text-sm font-bold text-[#1A1A1A]">{sabor.name}</div>
                               <div className="text-[9px] text-[#8B572A]/60">{sabor.ingredients.join(' · ')}</div>
+                              {isBase && <span className="text-[8px] font-bold text-[#C0392B]">Sabor base</span>}
                             </div>
                           </div>
                         </button>

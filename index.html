@@ -268,7 +268,6 @@
         #domicilios {
             background: linear-gradient(160deg, #F4EFEA 0%, #f5e6d5 50%, #F4EFEA 100%);
             padding: 80px 5%; display: flex; gap: 50px; align-items: center;
-            border-top: 6px solid var(--marron-madera);
         }
         .delivery-info { width: 45%; }
         .delivery-info h2 { font-family: var(--font-headings); color: var(--negro-carbon); font-size: 2.8rem; margin-bottom: 20px; }
@@ -485,65 +484,465 @@
     </section>
 </div>
 
-<footer id="footer-premium" style="background:#1A1A1A;color:#F4EFEA;position:relative;overflow:hidden;">
-    <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#C0392B,#F9DC5C,#C0392B);"></div>
-    <div style="max-width:1200px;margin:0 auto;padding:80px 5% 40px;display:grid;grid-template-columns:1fr;gap:60px;">
-        <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:40px;align-items:center;">
-            <div style="background:linear-gradient(145deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:32px;backdrop-filter:blur(12px);transition:all .5s ease;position:relative;overflow:hidden;" onmouseover="this.style.borderColor='rgba(249,220,92,.2)';this.style.transform='translateY(-4px)';this.style.boxShadow='0 20px 60px rgba(0,0,0,.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)';this.style.transform='none';this.style.boxShadow='none'">
-                <div style="position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:radial-gradient(circle,rgba(249,220,92,.08) 0%,transparent 70%);border-radius:50%;pointer-events:none;"></div>
-                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
-                    <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#C0392B,#962D22);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(192,57,43,.25);"><span style="font-size:2rem;">🍕</span></div>
-                    <h3 style="font-family:'Bitter',serif;font-size:1.3rem;color:#F9DC5C;margin:0;text-transform:uppercase;letter-spacing:2px;">Juancho's</h3>
-                    <p style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:4px;font-weight:700;margin:0;">Nemocón</p>
-                </div>
-            </div>
-            <div style="text-align:center;position:relative;padding:20px 0;">
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;background:radial-gradient(circle,rgba(249,220,92,.04) 0%,transparent 70%);border-radius:50%;pointer-events:none;"></div>
-                <p style="font-family:'Bitter',serif;font-size:clamp(1.4rem,3vw,2rem);color:#F4EFEA;margin:0 0 12px;line-height:1.3;font-style:italic;">&ldquo;El sabor que une a <span style="color:#F9DC5C;font-weight:700;">Nemocón</span>&rdquo;</p>
-                <p style="font-size:12px;color:rgba(255,255,255,.35);max-width:400px;margin:0 auto;font-weight:300;letter-spacing:0.5px;">Hecho con pasión, tradición y los ingredientes más frescos desde la puerta de tu casa.</p>
-            </div>
-            <div style="display:flex;justify-content:center;">
-                <div style="width:100px;height:140px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:16px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;animation:tagSway 4s ease-in-out infinite;">
-                    <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;border:2px solid rgba(249,220,92,.3);background:transparent;"></div>
-                    <div style="position:absolute;top:-2px;left:50%;transform:translateX(-50%);width:1px;height:6px;background:rgba(249,220,92,.2);"></div>
-                    <span style="font-size:1.4rem;">🏷️</span>
-                    <span style="font-size:7px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:3px;font-weight:700;text-align:center;line-height:1.3;">Sabor<br>Artesanal</span>
-                </div>
-            </div>
+<!-- ===== PREMIUM DIGITAL CARD — Sección final de la web ===== -->
+<section id="premium-card">
+  <div class="premium-mist"></div>
+  <div class="premium-container">
+    <!-- Editorial geometric frame -->
+    <div class="premium-frame-t"></div>
+    <div class="premium-frame-b"></div>
+    <div class="premium-frame-l"></div>
+    <div class="premium-frame-r"></div>
+
+    <!-- Main grid: Brand Left + Info Right -->
+    <div class="premium-grid">
+      <!-- LEFT — Brand identity -->
+      <div class="premium-brand">
+        <div class="premium-logo-block">
+          <div class="premium-logo-icon"><span>🍕</span></div>
+          <h2 class="premium-logo-h2">JUANCHO'S</h2>
+          <span class="premium-logo-sub">PIZZA &amp; COMIDAS RÁPIDAS</span>
         </div>
-        <div style="text-align:center;border-top:1px solid rgba(255,255,255,.06);padding-top:40px;">
-            <p style="font-size:9px;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:6px;font-weight:700;margin:0 0 20px;">Síguenos</p>
-            <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;">
-                <a href="https://www.instagram.com/juanchospizzanemocon/" target="_blank" rel="noopener" style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.06);color:#F4EFEA;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.2rem;transition:all .4s cubic-bezier(.165,.84,.44,1);border:1px solid rgba(255,255,255,.06);" onmouseover="this.style.background='linear-gradient(135deg,#833AB4,#FD1D1D)';this.style.transform='translateY(-6px) scale(1.05)';this.style.boxShadow='0 12px 30px rgba(131,58,180,.3)';this.style.borderColor='transparent'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.transform='none';this.style.boxShadow='none';this.style.borderColor='rgba(255,255,255,.06)'" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
-                <a href="https://www.facebook.com/juanchospizzanemocon" target="_blank" rel="noopener" style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.06);color:#F4EFEA;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.2rem;transition:all .4s cubic-bezier(.165,.84,.44,1);border:1px solid rgba(255,255,255,.06);" onmouseover="this.style.background='#1877F2';this.style.transform='translateY(-6px) scale(1.05)';this.style.boxShadow='0 12px 30px rgba(24,119,242,.3)';this.style.borderColor='transparent'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.transform='none';this.style.boxShadow='none';this.style.borderColor='rgba(255,255,255,.06)'" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-                <a href="https://www.tiktok.com/@juanchospizzanemocon" target="_blank" rel="noopener" style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.06);color:#F4EFEA;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.2rem;transition:all .4s cubic-bezier(.165,.84,.44,1);border:1px solid rgba(255,255,255,.06);" onmouseover="this.style.background='linear-gradient(135deg,#00F2EA,#FF0050)';this.style.transform='translateY(-6px) scale(1.05)';this.style.boxShadow='0 12px 30px rgba(255,0,80,.25)';this.style.borderColor='transparent'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.transform='none';this.style.boxShadow='none';this.style.borderColor='rgba(255,255,255,.06)'" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
-                <a href="https://wa.me/573117074843?text=Hola%2C%20quiero%20hacer%20un%20pedido" target="_blank" rel="noopener" style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.06);color:#F4EFEA;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.2rem;transition:all .4s cubic-bezier(.165,.84,.44,1);border:1px solid rgba(255,255,255,.06);" onmouseover="this.style.background='#25D366';this.style.transform='translateY(-6px) scale(1.05)';this.style.boxShadow='0 12px 30px rgba(37,211,102,.3)';this.style.borderColor='transparent'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.transform='none';this.style.boxShadow='none';this.style.borderColor='rgba(255,255,255,.06)'" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-            </div>
+        <p class="premium-slogan">“En sabor y calidad no hay igual”</p>
+        <p class="premium-desc">Más que una pizzería, una experiencia gastronómica para compartir.</p>
+        <div class="premium-food-icons">
+          <span class="pfi">🍕</span><span class="pfi">🍔</span><span class="pfi">🌭</span>
+          <span class="pfi">🥔</span><span class="pfi">🍝</span><span class="pfi">🥤</span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;border-top:1px solid rgba(255,255,255,.06);padding-top:40px;">
-            <div style="text-align:center;"><div style="width:36px;height:36px;border-radius:12px;background:rgba(192,57,43,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;color:#C0392B;"><i class="fa-regular fa-clock" style="font-size:14px;"></i></div><p style="font-size:11px;font-weight:700;color:#F4EFEA;margin:0 0 4px;">Horario</p><p style="font-size:10px;color:rgba(255,255,255,.35);margin:0;">Lun&ndash;Dom 4:00 PM &ndash; 11:00 PM</p></div>
-            <div style="text-align:center;"><div style="width:36px;height:36px;border-radius:12px;background:rgba(192,57,43,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;color:#C0392B;"><i class="fa-solid fa-location-dot" style="font-size:14px;"></i></div><p style="font-size:11px;font-weight:700;color:#F4EFEA;margin:0 0 4px;">Ubicación</p><p style="font-size:10px;color:rgba(255,255,255,.35);margin:0;">Cra 6 No. 5-40, Nemocón</p></div>
-            <div style="text-align:center;"><div style="width:36px;height:36px;border-radius:12px;background:rgba(192,57,43,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;color:#C0392B;"><i class="fa-solid fa-phone" style="font-size:14px;"></i></div><p style="font-size:11px;font-weight:700;color:#F4EFEA;margin:0 0 4px;">Contacto</p><p style="font-size:10px;color:rgba(255,255,255,.35);margin:0;">311 707 4843</p></div>
+      </div>
+
+      <!-- RIGHT — Info cards -->
+      <div class="premium-info-grid">
+        <div class="premium-icard">
+          <div class="premium-icard-icon ic-red">☎</div>
+          <div class="premium-icard-text">
+            <h4>Pedidos</h4>
+            <p>311 707 4843</p>
+            <p>322 769 9056</p>
+          </div>
         </div>
-        <div style="border-top:1px solid rgba(255,255,255,.04);padding-top:24px;text-align:center;"><p style="font-size:9px;color:rgba(255,255,255,.15);margin:0;letter-spacing:2px;text-transform:uppercase;">&copy; 2026 Juancho's Pizza y Comidas R&aacute;pidas. Todos los derechos reservados.</p></div>
+        <div class="premium-icard">
+          <div class="premium-icard-icon ic-brown">📍</div>
+          <div class="premium-icard-text">
+            <h4>Dirección</h4>
+            <p>Cra 6 No. 5-40</p>
+            <p>Nemocón, Cundinamarca</p>
+          </div>
+        </div>
+        <div class="premium-icard">
+          <div class="premium-icard-icon ic-gold">🕒</div>
+          <div class="premium-icard-text">
+            <h4>Horarios</h4>
+            <p>Lun – Dom</p>
+            <p>4:00 PM – 11:00 PM</p>
+          </div>
+        </div>
+        <div class="premium-icard">
+          <div class="premium-icard-icon ic-green">🚚</div>
+          <div class="premium-icard-text">
+            <h4>Domicilios</h4>
+            <p>Rápidos en todo el sector</p>
+            <p>¡Tu comida bien caliente!</p>
+          </div>
+        </div>
+      </div>
     </div>
-</footer>
+
+    <!-- Social media band — floating mini cards -->
+    <div class="premium-social">
+      <span class="premium-social-label">CONÉCTATE CON NOSOTROS</span>
+      <div class="premium-social-cards">
+        <a href="https://www.instagram.com/juanchospizzanemocon/" target="_blank" rel="noopener" class="psc" data-brand="#E4405F"><i class="fa-brands fa-instagram"></i><span>Instagram</span></a>
+        <a href="https://www.facebook.com/juanchospizzanemocon" target="_blank" rel="noopener" class="psc" data-brand="#1877F2"><i class="fa-brands fa-facebook-f"></i><span>Facebook</span></a>
+        <a href="https://www.tiktok.com/@juanchospizzanemocon" target="_blank" rel="noopener" class="psc" data-brand="#000000"><i class="fa-brands fa-tiktok"></i><span>TikTok</span></a>
+        <a href="https://wa.me/573117074843?text=Hola%2C%20quiero%20hacer%20un%20pedido" target="_blank" rel="noopener" class="psc" data-brand="#25D366"><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a>
+      </div>
+    </div>
+
+    <!-- Bottom row: QR + Copyright -->
+    <div class="premium-bottom-row">
+      <div class="premium-qr-block">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=https://wa.me/573117074843" alt="QR Juancho's" loading="lazy" />
+        <div class="premium-qr-text">
+          <p>Escanea y ordena ahora</p>
+          <span>Menú · WhatsApp · Redes</span>
+        </div>
+      </div>
+      <div class="premium-copyright">
+        <p>© 2026 Juancho's Pizza y Comidas Rápidas</p>
+        <span>Nemocón — Tradición Artesanal</span>
+      </div>
+    </div>
+  </div>
+</section>
 
 <style>
-@keyframes tagSway {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(3deg); }
-    75% { transform: rotate(-3deg); }
+/* ========================
+   PREMIUM DIGITAL CARD CSS
+   ======================== */
+#premium-card {
+  position: relative;
+  overflow: hidden;
+  background: #0a0a0a;
+  color: #F4EFEA;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Seamless gradient transition from page content above */
+.premium-mist {
+  height: 100px;
+  background: linear-gradient(to bottom, #F4EFEA 0%, rgba(10,10,10,0) 70%, #0a0a0a 100%);
 }
 @media (max-width: 768px) {
-    #footer-premium > div > div:first-child {
-        grid-template-columns: 1fr !important;
-        gap: 32px !important;
-    }
-    #footer-premium [style*="100px;height:140px"] {
-        width: 80px !important;
-        height: 110px !important;
-    }
+  .premium-mist { height: 60px; }
+}
+
+.premium-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 5% 60px;
+  position: relative;
+}
+
+/* Editorial geometric frame — thin lines */
+.premium-frame-t,
+.premium-frame-b,
+.premium-frame-l,
+.premium-frame-r {
+  position: absolute;
+  pointer-events: none;
+  opacity: .12;
+}
+.premium-frame-t { top: 0; left: 5%; right: 5%; height: 1px; background: linear-gradient(90deg,transparent,#F9DC5C,transparent); }
+.premium-frame-b { bottom: 0; left: 5%; right: 5%; height: 1px; background: linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent); }
+.premium-frame-l { left: 0; top: 10%; bottom: 10%; width: 1px; background: linear-gradient(to bottom,transparent,rgba(249,220,92,.08),transparent); }
+.premium-frame-r { right: 0; top: 10%; bottom: 10%; width: 1px; background: linear-gradient(to bottom,transparent,rgba(255,255,255,.04),transparent); }
+
+/* Ambient warm glow */
+.premium-container::before {
+  content: '';
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle,rgba(192,57,43,.08) 0%,rgba(249,220,92,.03) 40%,transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ===== Grid: Brand left + Info right ===== */
+.premium-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+  position: relative;
+  z-index: 1;
+}
+@media (max-width: 768px) {
+  .premium-grid { grid-template-columns: 1fr; gap: 40px; }
+}
+
+/* LEFT — Brand */
+.premium-brand { text-align: center; }
+.premium-logo-block { margin-bottom: 20px; }
+.premium-logo-icon {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 16px;
+  background: linear-gradient(145deg,rgba(192,57,43,.2),rgba(192,57,43,.05));
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(192,57,43,.15);
+  box-shadow: 0 12px 40px rgba(192,57,43,.1);
+  transition: transform .5s ease, box-shadow .5s ease;
+}
+.premium-logo-icon span { font-size: 2.4rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,.2)); }
+.premium-logo-icon:hover { transform: scale(1.06) rotate(-3deg); box-shadow: 0 20px 60px rgba(192,57,43,.2); }
+.premium-logo-h2 {
+  font-family: 'Bitter', serif;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  color: #F9DC5C;
+  margin: 0;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+}
+.premium-logo-sub {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.25);
+  font-weight: 700;
+  margin-top: 4px;
+}
+.premium-slogan {
+  font-family: 'Bitter', serif;
+  font-size: clamp(1rem, 2.5vw, 1.3rem);
+  font-style: italic;
+  color: #F4EFEA;
+  margin: 16px 0 8px;
+  line-height: 1.4;
+}
+.premium-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,.35);
+  max-width: 340px;
+  margin: 0 auto 24px;
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+/* Food icons row — micro‑animations */
+.premium-food-icons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pfi {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 14px;
+  transition: all .4s cubic-bezier(.165,.84,.44,1);
+  animation: pfiFloat 3s ease-in-out infinite;
+  cursor: default;
+}
+.pfi:nth-child(2) { animation-delay: .15s; }
+.pfi:nth-child(3) { animation-delay: .3s; }
+.pfi:nth-child(4) { animation-delay: .45s; }
+.pfi:nth-child(5) { animation-delay: .6s; }
+.pfi:nth-child(6) { animation-delay: .75s; }
+@keyframes pfiFloat {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.pfi:hover {
+  background: rgba(192,57,43,.12);
+  border-color: rgba(192,57,43,.25);
+  transform: translateY(-8px) scale(1.1);
+  box-shadow: 0 8px 24px rgba(192,57,43,.15);
+}
+
+/* RIGHT — Info cards grid */
+.premium-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 480px) {
+  .premium-info-grid { grid-template-columns: 1fr; }
+}
+
+.premium-icard {
+  background: linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 18px;
+  padding: 18px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  transition: all .4s cubic-bezier(.165,.84,.44,1);
+  position: relative;
+  overflow: hidden;
+}
+.premium-icard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  opacity: 0;
+  transition: opacity .4s ease;
+  pointer-events: none;
+}
+.premium-icard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(249,220,92,.15);
+  box-shadow: 0 12px 40px rgba(0,0,0,.25);
+}
+.premium-icard:hover::before {
+  opacity: 1;
+  background: radial-gradient(ellipse at 50% 0%, rgba(249,220,92,.04), transparent 70%);
+}
+.premium-icard-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+.ic-red { background: linear-gradient(135deg,#C0392B,#962D22); }
+.ic-brown { background: linear-gradient(135deg,#8B572A,#6b4226); }
+.ic-gold { background: linear-gradient(135deg,#F9DC5C,#d4b84c); color:#1a1a1a; }
+.ic-green { background: linear-gradient(135deg,#25D366,#1ebd58); }
+.premium-icard-text h4 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,.5);
+  margin: 0 0 4px;
+}
+.premium-icard-text p {
+  font-size: 13px;
+  font-weight: 600;
+  color: #F4EFEA;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ===== Social media band ===== */
+.premium-social {
+  text-align: center;
+  margin: 60px 0 48px;
+  position: relative;
+  z-index: 1;
+}
+.premium-social-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.2);
+  margin-bottom: 20px;
+}
+.premium-social-cards {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.psc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 16px;
+  color: #F4EFEA;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all .4s cubic-bezier(.165,.84,.44,1);
+  position: relative;
+}
+.psc i { font-size: 1.2rem; }
+.psc::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 17px;
+  background: inherit;
+  opacity: 0;
+  transition: opacity .4s ease;
+  z-index: -1;
+}
+.psc:hover {
+  transform: translateY(-6px) scale(1.04);
+  background: rgba(255,255,255,.08);
+  border-color: transparent;
+  box-shadow: 0 12px 40px rgba(0,0,0,.3);
+}
+.psc:hover::before { opacity: 1; }
+/* Per‑brand hover glow via data-brand */
+.psc[data-brand="#E4405F"]:hover { box-shadow: 0 12px 40px rgba(228,64,95,.25), inset 0 0 20px rgba(228,64,95,.05); }
+.psc[data-brand="#1877F2"]:hover { box-shadow: 0 12px 40px rgba(24,119,242,.25), inset 0 0 20px rgba(24,119,242,.05); }
+.psc[data-brand="#000000"]:hover { box-shadow: 0 12px 40px rgba(255,255,255,.12), inset 0 0 20px rgba(255,255,255,.03); }
+.psc[data-brand="#25D366"]:hover { box-shadow: 0 12px 40px rgba(37,211,102,.25), inset 0 0 20px rgba(37,211,102,.05); }
+@media (max-width: 600px) {
+  .psc { padding: 10px 16px; font-size: 12px; }
+  .psc span { display: none; }
+  .psc i { font-size: 1.3rem; }
+}
+
+/* ===== Bottom row ===== */
+.premium-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(255,255,255,.04);
+  padding-top: 32px;
+  position: relative;
+  z-index: 1;
+}
+@media (max-width: 640px) {
+  .premium-bottom-row { flex-direction: column; text-align: center; }
+}
+
+/* QR block */
+.premium-qr-block {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 16px;
+  padding: 14px 20px;
+  transition: all .4s ease;
+}
+.premium-qr-block:hover {
+  background: rgba(255,255,255,.05);
+  border-color: rgba(249,220,92,.12);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,.15);
+}
+.premium-qr-block img {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  background: #fff;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+.premium-qr-text p {
+  font-size: 13px;
+  font-weight: 700;
+  color: #F4EFEA;
+  margin: 0 0 2px;
+}
+.premium-qr-text span {
+  font-size: 10px;
+  color: rgba(255,255,255,.25);
+  letter-spacing: 1px;
+}
+@media (max-width: 640px) {
+  .premium-qr-block { flex-direction: column; text-align: center; width: 100%; }
+}
+
+/* Copyright */
+.premium-copyright { text-align: right; }
+.premium-copyright p {
+  font-size: 11px;
+  color: rgba(255,255,255,.15);
+  margin: 0 0 2px;
+  letter-spacing: 1px;
+}
+.premium-copyright span {
+  font-size: 9px;
+  color: rgba(255,255,255,.08);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+@media (max-width: 640px) {
+  .premium-copyright { text-align: center; width: 100%; }
 }
 </style>
 

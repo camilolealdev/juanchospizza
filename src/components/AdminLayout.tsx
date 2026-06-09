@@ -59,7 +59,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-stone-950 flex selection:bg-orange-600 selection:text-white">
+    <div className="h-screen bg-stone-950 flex selection:bg-orange-600 selection:text-white">
       {/* Mobile Overlay */}
       {mobileMenuOpen && (
         <div
@@ -153,7 +153,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen md:ml-0 h-full">
+      <div className="flex-1 flex flex-col h-full md:ml-0">
         {/* Top Header */}
         <header className="sticky top-0 z-20 bg-stone-950/80 backdrop-blur-2xl border-b border-white/5">
           <div className="flex items-center justify-between px-6 md:px-10 h-16">
@@ -187,7 +187,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto max-h-full min-h-0">
           {children}
         </main>
       </div>
