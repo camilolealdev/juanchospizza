@@ -1,171 +1,96 @@
-# Guido Pizza Bogotá - Premium Pizza App
+# Juancho's Pizza — CRM Gastronómico & Landing Page
 
-Sistema integral de gestión para pizzería con múltiples vistas: Cliente, Cocina, Repartidor, Admin y Marketing.
+Sistema híbrido de alto rendimiento para **Juancho's Pizza y Comidas Rápidas**, con sedes en Nemocón y Zipaquirá. Combina una experiencia de cliente fluida con un CRM administrativo avanzado denominado **GastroPro**.
 
-## Características
+## 🏗️ Arquitectura del Sistema
 
-- **Vista Cliente**: Catálogo de pizzas, constructor visual de pizzas personalizadas, carrito de compras
-- **Vista Cocina**: Comanda digital para seguimiento de pedidos en tiempo real
-- **Vista Repartidor**: Gestión de entregas
-- **Vista Admin**: Dashboard con métricas y gestión de activos
-- **Vista Marketing**: Gestión de campañas promocionales
-- **AI Chat Widget**: Asistente virtual con Gemini AI
-- **Constructor Visual de Pizza**: Interfaz visual para personalizar pizzas con algoritmo de distribución orgánica
+El proyecto utiliza una arquitectura híbrida única:
 
-## Tecnologías
+1.  **Frontend Cliente (Landing Page):** Una interfaz estática de carga ultra-rápida integrada directamente en `index.html`.
+2.  **GastroPro CRM (Overlay React):** Una aplicación React 18 que se monta como una capa administrativa (Overlay) y portaliza componentes dinámicos (Menú Digital, Carrito) en la Landing Page.
+3.  **Backend API:** Servidor Express.js que gestiona la persistencia con Turso (SQLite en el edge).
 
-- React 18 + TypeScript
-- Vite
-- Tailwind CSS
-- Recharts (gráficos)
-- Gemini AI (generación de imágenes y chatbot)
-- Express.js (Backend API)
+## 🚀 Módulos de GastroPro CRM
 
-## Estructura del Proyecto
+El panel administrativo incluye herramientas avanzadas para la gestión total del negocio:
+
+-   **Dashboard Inteligente:** Métricas en tiempo real, mapa de calor de pedidos y proyecciones.
+-   **Menú Inteligente:** Gestión de productos, variantes, combos y promociones dinámicas.
+-   **Inventario & Recetas:** Control de existencias, cálculo de costos por receta y alertas de stock bajo.
+-   **CRM & Clientes:** Base de datos de clientes con historial de compras, tags y segmentación.
+-   **Fidelización:** Sistema de puntos, niveles VIP y retos para aumentar la retención.
+-   **Campañas & Marketing:** Gestión de campañas flash, cupones y promociones segmentadas.
+-   **Finanzas:** Control de ingresos, egresos, flujo de caja y rentabilidad.
+-   **Reportes Avanzados:** Generación de informes detallados para toma de decisiones.
+
+## 🛠️ Stack Tecnológico
+
+-   **Frontend:** React 18 + TypeScript + Vite.
+-   **Styling:** Tailwind CSS + Framer Motion.
+-   **Base de Datos:** Turso (libSQL edge SQLite).
+-   **IA:** Google Gemini (Asistente "Concierge" y generación visual).
+-   **Backend:** Node.js + Express.js.
+-   **Despliegue:** Vercel.
+
+## 📦 Estructura del Proyecto
 
 ```
 PIZZERIAv2/
 ├── src/
-│   ├── components/          # Componentes reutilizables
-│   │   ├── AIChatWidget.tsx
-│   │   ├── PizzaBuilder.tsx
+│   ├── components/          # Componentes del CRM y Portales
+│   │   ├── AdminLayout.tsx  # Layout del CRM
+│   │   ├── MenuDigital.tsx  # Componente portalizado
 │   │   └── VisualPizzaBuilder.tsx
-│   ├── views/               # Vistas principales
-│   │   └── roles/
-│   │       ├── AdminDashboard.tsx
-│   │       ├── CustomerView.tsx
-│   │       ├── KitchenView.tsx
-│   │       ├── MarketingView.tsx
-│   │       ├── OperatorView.tsx
-│   │       ├── ProfileView.tsx
-│   │       └── RepartidorView.tsx
-│   ├── services/            # Servicios externos
-│   │   └── geminiService.ts
-│   ├── constants/           # Datos estáticos (ingredientes, productos)
-│   ├── types/               # TypeScript types
-│   ├── hooks/              # React hooks
-│   ├── utils/              # Funciones utilitarias
-│   ├── context/            # React context
-│   ├── config/             # Configuraciones
-│   ├── App.tsx             # Componente principal
-│   ├── main.tsx            # Entry point
-│   └── index.css           # Estilos globales
-├── server/                 # Backend Express.js
-│   └── index.js
-├── public/                 # Archivos estáticos
-├── dist/                   # Build de producción
-├── tailwind.config.js      # Configuración de Tailwind
-├── postcss.config.js       # Configuración de PostCSS
-├── vite.config.ts          # Configuración de Vite
-└── package.json
+│   ├── views/roles/         # Vistas modulares del CRM
+│   │   ├── GastroProDashboard.tsx
+│   │   ├── InventarioView.tsx
+│   │   ├── ClientesView.tsx
+│   │   └── ... (otros módulos)
+│   ├── services/            # Lógica de negocio y API
+│   │   ├── api.ts           # Cliente API Turso
+│   │   └── geminiService.ts # Integración con IA
+│   ├── types/               # Definiciones TypeScript centralizadas
+│   └── context/             # Estados globales (Cart, Auth)
+├── server/                 # Backend Express
+│   ├── index.js             # API principal y DB Init
+│   └── auth.js              # Lógica de autenticación (PIN-based)
+├── public/                 # Activos estáticos y multimedia
+└── index.html              # Landing Page y Punto de entrada React
 ```
 
-## Instalación
+## ⚙️ Configuración e Instalación
 
-```bash
-npm install
-```
+1.  **Instalar dependencias:**
+    ```bash
+    npm install
+    ```
 
-## Desarrollo
+2.  **Variables de Entorno:**
+    Crea un `.env` basado en `.env.example`:
+    ```env
+    TURSO_DATABASE_URL=tu_url_de_turso
+    TURSO_AUTH_TOKEN=tu_token_de_turso
+    GEMINI_API_KEY=tu_api_key_de_google
+    ```
 
-Iniciar el servidor de desarrollo:
+3.  **Ejecutar en desarrollo:**
+    ```bash
+    npm run dev:all
+    ```
+    - Frontend: `http://localhost:3000`
+    - Backend: `http://localhost:3001`
 
-```bash
-npm run dev
-```
+## 🔐 Roles y Acceso
 
-Abre [http://localhost:3000](http://localhost:3000)
+El acceso al CRM se realiza mediante el botón de corona en la esquina inferior izquierda:
 
-## Desarrollo Completo (Frontend + Backend)
-
-```bash
-npm run dev:all
-```
-
-Esto iniciara:
-- Frontend en http://localhost:3000
-- Backend API en http://localhost:3001
-
-## Build Production
-
-```bash
-npm run build
-```
-
-## Configuración de Entorno
-
-Crea un archivo `.env` en la raíz del proyecto:
-
-```env
-# API Keys
-GEMINI_API_KEY=tu_api_key_de_gemini
-
-# Puerto del servidor
-PORT=3001
-NODE_ENV=development
-
-# URL del API
-VITE_API_URL=http://localhost:3001/api
-```
-
-Para obtener una API Key de Gemini:
-1. Ve a [Google AI Studio](https://aistudio.google.com/app/apikey) (requiere cuenta de Google)
-2. Crea una nueva API key
-3. Añádela a tu archivo `.env` (nunca hacer commit de valores reales)
-
-## Roles del Sistema
-
-- **CLIENT**: Vista de cliente
-- **ADMIN**: Dashboard administrativo
-- **OPERATOR**: Gestión de cocina
-- **REPARTIDOR**: Entregas
-- **MARKETING**: Campañas promocionales
-
-## Backend API
-
-El backend proporciona los siguientes endpoints:
-
-| Endpoint | Método | Descripción |
-|----------|--------|-------------|
-| `/api/health` | GET | Estado del servidor |
-| `/api/products` | GET | Lista de productos |
-| `/api/orders` | GET, POST | Gestión de pedidos |
-| `/api/ingredients` | GET | Catálogo de ingredientes |
-
-## Despliegue en Vercel
-
-La forma más fácil de hacer deploy es usando Vercel:
-
-1. Conecta tu repositorio en [vercel.com](https://vercel.com)
-2. Vercel detectará automáticamente Vite como framework
-3. Deployment automático en cada push
-
-O usando CLI:
-
-```bash
-npm i -g vercel
-vercel
-```
-
-## Notas
-
-- Los pedidos se almacenan en localStorage para persistencia (en desarrollo)
-- La generación de imágenes IA requiere API key de Gemini
-- El chat AI usa Gemini para respuestas conversacionales
-- Para producción, se recomienda usar una base de datos real
-
-## Créditos
-
-**Desarrollado por:**
-- Morcego de easy-marketing.xyz
-- contacto@easy-marketing.xyz
-
-**Tecnologías:**
-- React + TypeScript + Vite
-- Tailwind CSS
-- Gemini AI
-- Express.js
+| Rol | PIN por defecto | Acceso |
+|-----|-----------------|--------|
+| **Administrador** | `1234` | Acceso total a todos los módulos |
+| **Cocina** | `5678` | Gestión de pedidos y estados |
+| **Repartidor** | `0000` | Gestión de entregas |
+| **Marketing** | `9999` | Gestión de campañas y clientes |
 
 ---
 
-© 2024 Guido Pizza Bogotá. Todos los derechos reservados.
+© 2026 Juancho's Pizza. Desarrollado por easy-marketing.xyz.

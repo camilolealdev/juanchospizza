@@ -10,7 +10,7 @@ Esta carpeta centraliza las reglas, contexto y prompts para cualquier asistente 
 
 ## Cómo usar
 
-1. **Si eres una IA:** comienza por `shared/project-context.md` y luego el archivo específico de tu herramienta.
+1. **Si eres una IA:** comienza por `GEMINI.md` (en la raíz), luego `shared/project-context.md` y finalmente el archivo específico de tu herramienta.
 2. **Si eres un dev:** añade reglas específicas de tu herramienta en su carpeta.
 3. **Si modificas reglas:** edita el archivo en `shared/` para reglas comunes.
 

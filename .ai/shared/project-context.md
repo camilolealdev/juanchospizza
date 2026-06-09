@@ -1,41 +1,35 @@
-# Project Context — Guido Pizza
+# Project Context — Juancho's Pizza & GastroPro CRM
 
-## Qué es este proyecto
-Sistema de pedidos de pizza en línea con gestión multi-rol para una pizzería en Bogotá.
+## ¿Qué es este proyecto?
+Plataforma unificada para la gestión y operación de **Juancho's Pizza** (Nemocón & Zipaquirá). El sistema combina una landing page optimizada para clientes con un CRM interno de grado empresarial llamado **GastroPro**.
 
-## Stack
-- **Frontend:** React 18 + Vite + Tailwind CSS
-- **Backend:** Express.js + Node.js
-- **DB:** Turso (libSQL edge SQLite)
-- **AI:** Google Gemini (@google/generative-ai)
-- **Hosting:** Vercel
+### Sobre el Branding
+-   **Juancho's Pizza:** Marca comercial principal orientada al cliente.
+-   **Guido Pizza / Guido Bogotá:** Nombre interno del motor/ecosistema digital que impulsa la plataforma.
+-   **GastroPro:** Nombre de la suite CRM administrativa.
 
-## Arquitectura
-- **Multi-rol:** CLIENT, ADMIN, OPERATOR, REPARTIDOR, MARKETING
-- **Auth actual:** Pines hardcodeados (temporal)
-- **Estados de orden:** PENDING → CONFIRMED → PREPARING → READY → ASSIGNED → DELIVERING → COMPLETED
+## Stack Tecnológico
+-   **Frontend:** React 18 + Vite + Tailwind CSS + Framer Motion.
+-   **Backend:** Express.js + Node.js.
+-   **Base de Datos:** Turso (libSQL edge SQLite).
+-   **IA:** Google Gemini SDK (`@google/generative-ai`).
+-   **Hosting:** Vercel (Frontend & API).
 
-## Estructura clave
-- `src/` — Frontend React
-- `src/views/roles/` — Vistas por rol
-- `src/components/` — Componentes reutilizables
-- `src/services/` — API client, payments, AI
-- `server/` — Backend Express
-- `server/index.js` — API routes y DB init
+## Arquitectura de Aplicación
+-   **Híbrida:** El CRM se inyecta como un overlay sobre la landing page estática en `index.html`.
+-   **Portales:** Componentes React como `MenuDigital` se portalizan en nodos específicos del HTML estático (`#menu-mount`).
+-   **Multi-rol:** Soporte para CLIENT, ADMIN, OPERATOR (Cocina), REPARTIDOR y MARKETING.
 
-## Convenciones
-- Naming: camelCase (variables), PascalCase (componentes), kebab-case (archivos)
-- Tailwind: utility-first, clases responsive
-- API client: servicios en `src/services/api.ts`
-- Types: centralizados en `src/types/index.ts`
+## Estados de Pedidos
+PENDING → CONFIRMED → PREPARING → READY → ASSIGNED → DELIVERING → COMPLETED
 
-## Off-limits (no modificar)
-- `.env` — contiene secretos
-- `dist/` — build output
-- `node_modules/` — dependencias
+## Convenciones de Desarrollo
+-   **Naming:** camelCase para variables/funciones, PascalCase para componentes, kebab-case para archivos.
+-   **Tailwind:** Utility-first, con fuerte uso de clases dinámicas y responsive.
+-   **API:** Cliente centralizado en `src/services/api.ts`.
+-   **Types:** Definiciones centralizadas en `src/types/index.ts`.
 
-## Tech debt conocido
-1. Pines hardcodeados en App.tsx (AUTH-001)
-2. Sin ORM (DB-001)
-3. SQL directo en controladores
-4. Sin validación de inputs (SEC-004)
+## Deuda Técnica & Roadmap
+1.  **Auth:** Transicionar de PINs hardcodeados a JWT + DB Auth.
+2.  **Validación:** Implementar Zod para validación de esquemas en API.
+3.  **ORM:** Evaluar migración a Drizzle ORM para tipado seguro en queries SQL.
