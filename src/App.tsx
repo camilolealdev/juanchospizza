@@ -4,7 +4,6 @@ import { UserRole, GastroModule } from './types';
 import AdminLayout from './components/AdminLayout';
 import MenuDigital from './components/MenuDigital';
 import CartSection from './components/CartSection';
-import AIChatWidget from './components/AIChatWidget';
 import { CartProvider } from './context/CartContext';
 import GastroProDashboard from './views/roles/GastroProDashboard';
 import MenuInteligente from './views/roles/MenuInteligente';
@@ -109,9 +108,6 @@ const App: React.FC = () => {
 
         {/* CartSection — rendered as inline section via portal into #cart-mount */}
         {cartMount && createPortal(<CartSection />, cartMount)}
-
-        {/* Global AI Chatbot */}
-        <AIChatWidget />
       </AuthContext.Provider>
     </CartProvider>
   );
