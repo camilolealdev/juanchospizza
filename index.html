@@ -31,6 +31,9 @@
         #root { position: fixed; inset: 0; z-index: 9990; pointer-events: none; }
         #root > * { pointer-events: auto; }
 
+        .page-container { display: none; }
+        .page-container.active { display: block; }
+
         .btn-primary {
             background-color: var(--rrojo-acento); color: var(--blanco-puro); padding: 14px 28px; border: none; border-radius: 30px;
             font-family: var(--font-body); font-weight: 600; font-size: 1rem; cursor: pointer; text-decoration: none;
@@ -307,16 +310,16 @@
 <body>
 
 <header>
-    <a href="#inicio" class="logo"><img src="/logo.png" alt="Juancho's Pizza" class="logo-img"> Juancho's Pizza</a>
+    <a href="#" class="logo" onclick="event.preventDefault();showPage('inicio')"><img src="/logo.png" alt="Juancho's Pizza" class="logo-img"> Juancho's Pizza</a>
     <div class="hamburger" id="navToggle"><i class="fa-solid fa-bars"></i></div>
     <ul class="nav-links" id="navMenu">
-        <li><a href="#inicio">Inicio</a></li>
-        <li><a href="#" onclick="event.preventDefault();document.getElementById('crea-tu-pizza')?.scrollIntoView({behavior:'smooth'})">Crea tu Pizza</a></li>
-        <li><a href="#" onclick="event.preventDefault();document.getElementById('menu')?.scrollIntoView({behavior:'smooth'})">Menú</a></li>
-        <li><a href="#" onclick="event.preventDefault();document.getElementById('domicilios')?.scrollIntoView({behavior:'smooth'})">Domicilios</a></li>
-        <li><a href="#" onclick="event.preventDefault();document.getElementById('carrito')?.scrollIntoView({behavior:'smooth'})">Carrito</a></li>
+        <li><a href="#" onclick="event.preventDefault();showPage('inicio')">Inicio</a></li>
+        <li><a href="#" onclick="event.preventDefault();showPage('crea-tu-pizza')">Crea tu Pizza</a></li>
+        <li><a href="#" onclick="event.preventDefault();showPage('menu')">Menú</a></li>
+        <li><a href="#" onclick="event.preventDefault();showPage('domicilios')">Domicilios</a></li>
+        <li><a href="#" onclick="event.preventDefault();showPage('carrito')">Carrito</a></li>
         <li class="nav-actions">
-            <a href="#" id="navCartBtn" class="nav-cart" title="Carrito" onclick="event.preventDefault();document.getElementById('carrito')?.scrollIntoView({behavior:'smooth'})">
+            <a href="#" id="navCartBtn" class="nav-cart" title="Carrito" onclick="event.preventDefault();showPage('carrito')">
                 <i class="fa-solid fa-basket-shopping"></i>
                 <span class="cart-count" id="cartCounter">0</span>
             </a>
@@ -328,150 +331,159 @@
     <i class="fa-brands fa-whatsapp"></i>
 </a>
 
-<section id="inicio">
-    <video class="hero-bg-video" autoplay loop muted playsinline src="/pizza-logo.mp4"></video>
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-        <h1>En Sabor y Calidad, No Hay Igual</h1>
-        <p>Las mejores pizzas, lasañas y spaguettis de Nemocón directamente a tu puerta.</p>
-        <a href="#" class="btn-primary" onclick="event.preventDefault();document.getElementById('menu')?.scrollIntoView({behavior:'smooth'})">VER MENÚ Y ORDENAR <i class="fa-solid fa-arrow-down"></i></a>
-    </div>
-</section>
+<div class="page-container active" data-page="inicio">
+    <section id="inicio">
+        <video class="hero-bg-video" autoplay loop muted playsinline src="/pizza-logo.mp4"></video>
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h1>En Sabor y Calidad, No Hay Igual</h1>
+            <p>Las mejores pizzas, lasañas y spaguettis de Nemocón directamente a tu puerta.</p>
+            <a href="#" class="btn-primary" onclick="event.preventDefault();showPage('menu')">VER MENÚ Y ORDENAR <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+    </section>
 
-<div class="divider-banner">
-    <h2>Nuestros Destacados</h2>
-    <p>Explora nuestro menú completo haciendo clic en <strong>Menú</strong> arriba</p>
+    <div class="divider-banner">
+        <h2>Nuestros Destacados</h2>
+        <p>Navega hasta <strong>Menú</strong> para ver nuestro menú completo</p>
+    </div>
+    <main id="destacados">
+        <section class="product-section">
+            <div class="product-visual"><img src="https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=800&q=80" alt="Pizza Especial Juanchos"></div>
+            <div class="product-info">
+                <h2>Pizza Especial Juancho's</h2>
+                <ul class="ingredients-list">
+                    <li>Salsa de tomate casera secreta</li>
+                    <li>Queso mozzarella fundido premium</li>
+                    <li>Pepperoni curado madurado</li>
+                    <li>Champiñones frescos seleccionados, aceitunas y pimentón</li>
+                </ul>
+                <p class="product-description">"La insignia de la casa. Un balance perfecto entre crujido y suavidad artesanal."</p>
+                <span class="price-tag">$24.900</span>
+            </div>
+        </section>
+        <section class="product-section type-b">
+            <div class="product-visual"><img src="https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&w=800&q=80" alt="Lasaña Super Mixta"></div>
+            <div class="product-info">
+                <h2>Lasaña Súper Mixta</h2>
+                <ul class="ingredients-list">
+                    <li>Capas de pasta artesanal al huevo</li>
+                    <li>Carne boloñesa madurada a fuego lento</li>
+                    <li>Pollo desmechado jugoso</li>
+                    <li>Salsa bechamel tradicional y mucho queso gratinado</li>
+                </ul>
+                <p class="product-description">"Dorada a la perfección con una capa crujiente de queso parmesano por encima."</p>
+                <span class="price-tag">$18.500</span>
+            </div>
+        </section>
+        <section class="product-section">
+            <div class="product-visual"><img src="https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=800&q=80" alt="Spaguetti a la Boloñesa"></div>
+            <div class="product-info">
+                <h2>Spaguetti a la Boloñesa Casera</h2>
+                <ul class="ingredients-list">
+                    <li>Pasta italiana al dente</li>
+                    <li>Salsa de carne receta original de la casa</li>
+                    <li>Especias aromáticas y albahaca</li>
+                    <li>Lluvia abundante de queso parmesano</li>
+                </ul>
+                <p class="product-description">"El verdadero confort food de barrio. Sabor denso, casero y entrañable."</p>
+                <span class="price-tag">$15.900</span>
+            </div>
+        </section>
+        <section class="product-section type-b">
+            <div class="product-visual"><img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80" alt="Hamburguesa de la Casa"></div>
+            <div class="product-info">
+                <h2>Hamburguesa de la Casa</h2>
+                <ul class="ingredients-list">
+                    <li>Carne artesanal de res (150g) seleccionada</li>
+                    <li>Queso cheddar fundido doble</li>
+                    <li>Vegetales frescos de la huerta local</li>
+                    <li>Salsas especiales de la casa y pan brioche</li>
+                </ul>
+                <p class="product-description">"Grande, jugosa y pecaminosa. Hecha con fuego, pasión y mística urbana."</p>
+                <span class="price-tag">$13.500</span>
+            </div>
+        </section>
+    </main>
 </div>
-<main id="destacados">
-    <section class="product-section">
-        <div class="product-visual"><img src="https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=800&q=80" alt="Pizza Especial Juanchos"></div>
-        <div class="product-info">
-            <h2>Pizza Especial Juancho's</h2>
-            <ul class="ingredients-list">
-                <li>Salsa de tomate casera secreta</li>
-                <li>Queso mozzarella fundido premium</li>
-                <li>Pepperoni curado madurado</li>
-                <li>Champiñones frescos seleccionados, aceitunas y pimentón</li>
-            </ul>
-            <p class="product-description">"La insignia de la casa. Un balance perfecto entre crujido y suavidad artesanal."</p>
-            <span class="price-tag">$24.900</span>
-        </div>
-    </section>
-    <section class="product-section type-b">
-        <div class="product-visual"><img src="https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&w=800&q=80" alt="Lasaña Super Mixta"></div>
-        <div class="product-info">
-            <h2>Lasaña Súper Mixta</h2>
-            <ul class="ingredients-list">
-                <li>Capas de pasta artesanal al huevo</li>
-                <li>Carne boloñesa madurada a fuego lento</li>
-                <li>Pollo desmechado jugoso</li>
-                <li>Salsa bechamel tradicional y mucho queso gratinado</li>
-            </ul>
-            <p class="product-description">"Dorada a la perfección con una capa crujiente de queso parmesano por encima."</p>
-            <span class="price-tag">$18.500</span>
-        </div>
-    </section>
-    <section class="product-section">
-        <div class="product-visual"><img src="https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=800&q=80" alt="Spaguetti a la Boloñesa"></div>
-        <div class="product-info">
-            <h2>Spaguetti a la Boloñesa Casera</h2>
-            <ul class="ingredients-list">
-                <li>Pasta italiana al dente</li>
-                <li>Salsa de carne receta original de la casa</li>
-                <li>Especias aromáticas y albahaca</li>
-                <li>Lluvia abundante de queso parmesano</li>
-            </ul>
-            <p class="product-description">"El verdadero confort food de barrio. Sabor denso, casero y entrañable."</p>
-            <span class="price-tag">$15.900</span>
-        </div>
-    </section>
-    <section class="product-section type-b">
-        <div class="product-visual"><img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80" alt="Hamburguesa de la Casa"></div>
-        <div class="product-info">
-            <h2>Hamburguesa de la Casa</h2>
-            <ul class="ingredients-list">
-                <li>Carne artesanal de res (150g) seleccionada</li>
-                <li>Queso cheddar fundido doble</li>
-                <li>Vegetales frescos de la huerta local</li>
-                <li>Salsas especiales de la casa y pan brioche</li>
-            </ul>
-            <p class="product-description">"Grande, jugosa y pecaminosa. Hecha con fuego, pasión y mística urbana."</p>
-            <span class="price-tag">$13.500</span>
-        </div>
-    </section>
-</main>
 
-<!-- ====== CREA TU PIZZA ====== -->
-<section class="builder-section" id="crea-tu-pizza" style="scroll-margin-top:70px;">
-    <h2 class="section__title">Crea tu Obra Maestra</h2>
-    <p class="section__subtitle">Selecciona ingredientes y personaliza tu pizza artesanal</p>
-    <div class="builder-wrap" id="builderWrap">
-        <div class="builder-inner">
-            <div class="builder-preview">
-                <div class="size-selector" id="sizeSelector"></div>
-                <div class="pizza-circle-wrap" id="pizzaContainer">
-                    <div class="pizza-circle no-base" id="pizzaCircle">
-                        <div id="sauceLayer" class="pizza-layer" style="display:none"></div>
-                        <div id="cheeseLayer" class="pizza-layer" style="display:none"></div>
-                        <div class="pizza-toppings" id="toppingsLayer"></div>
-                        <div class="pizza-placeholder" id="pizzaPlaceholder"><p>Selecciona una base para comenzar</p></div>
+<div class="page-container" data-page="crea-tu-pizza">
+    <section class="builder-section" id="crea-tu-pizza">
+        <h2 class="section__title">Crea tu Obra Maestra</h2>
+        <p class="section__subtitle">Selecciona ingredientes y personaliza tu pizza artesanal</p>
+        <div class="builder-wrap" id="builderWrap">
+            <div class="builder-inner">
+                <div class="builder-preview">
+                    <div class="size-selector" id="sizeSelector"></div>
+                    <div class="pizza-circle-wrap" id="pizzaContainer">
+                        <div class="pizza-circle no-base" id="pizzaCircle">
+                            <div id="sauceLayer" class="pizza-layer" style="display:none"></div>
+                            <div id="cheeseLayer" class="pizza-layer" style="display:none"></div>
+                            <div class="pizza-toppings" id="toppingsLayer"></div>
+                            <div class="pizza-placeholder" id="pizzaPlaceholder"><p>Selecciona una base para comenzar</p></div>
+                        </div>
+                        <div class="dough-badge"><span id="doughName">Plato Vacío</span></div>
                     </div>
-                    <div class="dough-badge"><span id="doughName">Plato Vacío</span></div>
+                    <div class="price-display">
+                        <h2 id="priceDisplay">$0</h2>
+                        <p>Diseño Personalizado</p>
+                    </div>
                 </div>
-                <div class="price-display">
-                    <h2 id="priceDisplay">$0</h2>
-                    <p>Diseño Personalizado</p>
+                <div class="builder-controls">
+                    <div class="side-selector" id="sideSelector"></div>
+                    <div class="cat-scroll" id="catScroll"></div>
+                    <div class="ing-grid" id="ingGrid"></div>
+                    <button class="confirm-btn" id="confirmBtn" disabled><i class="fa-solid fa-fire-flame-curved"></i> Selecciona una Masa</button>
                 </div>
             </div>
-            <div class="builder-controls">
-                <div class="side-selector" id="sideSelector"></div>
-                <div class="cat-scroll" id="catScroll"></div>
-                <div class="ing-grid" id="ingGrid"></div>
-                <button class="confirm-btn" id="confirmBtn" disabled><i class="fa-solid fa-fire-flame-curved"></i> Selecciona una Masa</button>
+            <div id="builderOverlay" class="builder-overlay" style="display:none"></div>
+            <div id="successOverlay" class="success-overlay" style="display:none"></div>
+        </div>
+    </section>
+</div>
+
+<div class="page-container" data-page="menu">
+    <section id="menu" style="pointer-events:auto;min-height:100vh;background:#F4EFEA;padding:0;">
+        <div id="menu-mount"></div>
+    </section>
+</div>
+
+<div class="page-container" data-page="domicilios">
+    <section id="domicilios">
+        <div class="delivery-info">
+            <h2>Pide Sin Moverte de Casa</h2>
+            <div class="delivery-card">
+                <div class="delivery-item">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <div><p class="dlv-title">Nuestra Ubicación</p><p>Nemocón - Vía Principal (Cra 6 No. 5-40)</p></div>
+                </div>
+                <div class="delivery-item">
+                    <i class="fa-solid fa-phone-volume"></i>
+                    <div>
+                        <p class="dlv-title">Líneas de Atención Inmediata</p>
+                        <p><a href="tel:+573117074843">311 707 4843</a></p>
+                        <p><a href="tel:+573227699056">322 769 9056</a></p>
+                    </div>
+                </div>
+                <div class="delivery-item">
+                    <i class="fa-solid fa-motorcycle"></i>
+                    <div>
+                        <p class="dlv-title">Garantía Juancho's</p>
+                        <p>Domicilios rápidos en todo el sector. Tu comida llega perfectamente caliente y lista para disfrutar.</p>
+                    </div>
+                </div>
             </div>
         </div>
-        <div id="builderOverlay" class="builder-overlay" style="display:none"></div>
-        <div id="successOverlay" class="success-overlay" style="display:none"></div>
-    </div>
-</section>
-
-<section id="menu" style="pointer-events:auto;min-height:100vh;background:#F4EFEA;padding:0;scroll-margin-top:70px;">
-    <div id="menu-mount"></div>
-</section>
-
-<section id="domicilios" style="scroll-margin-top:70px;">
-    <div class="delivery-info">
-        <h2>Pide Sin Moverte de Casa</h2>
-        <div class="delivery-card">
-            <div class="delivery-item">
-                <i class="fa-solid fa-location-dot"></i>
-                <div><p class="dlv-title">Nuestra Ubicación</p><p>Nemocón - Vía Principal (Cra 6 No. 5-40)</p></div>
-            </div>
-            <div class="delivery-item">
-                <i class="fa-solid fa-phone-volume"></i>
-                <div>
-                    <p class="dlv-title">Líneas de Atención Inmediata</p>
-                    <p><a href="tel:+573117074843">311 707 4843</a></p>
-                    <p><a href="tel:+573227699056">322 769 9056</a></p>
-                </div>
-            </div>
-            <div class="delivery-item">
-                <i class="fa-solid fa-motorcycle"></i>
-                <div>
-                    <p class="dlv-title">Garantía Juancho's</p>
-                    <p>Domicilios rápidos en todo el sector. Tu comida llega perfectamente caliente y lista para disfrutar.</p>
-                </div>
-            </div>
+        <div class="delivery-map">
+            <iframe src="https://www.google.com/maps?q=Cra+6+No.+5-40+Nemoc%C3%B3n+Cundinamarca+Colombia&output=embed" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         </div>
-    </div>
-    <div class="delivery-map">
-        <iframe src="https://www.google.com/maps?q=Cra+6+No.+5-40+Nemoc%C3%B3n+Cundinamarca+Colombia&output=embed" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-</section>
+    </section>
+</div>
 
-<section id="carrito" style="pointer-events:auto;scroll-margin-top:70px;">
-    <div id="cart-mount"></div>
-</section>
+<div class="page-container" data-page="carrito">
+    <section id="carrito" style="pointer-events:auto;">
+        <div id="cart-mount"></div>
+    </section>
+</div>
 
 <footer id="footer-premium" style="background:#1A1A1A;color:#F4EFEA;position:relative;overflow:hidden;">
     <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#C0392B,#F9DC5C,#C0392B);"></div>
@@ -901,10 +913,29 @@ document.getElementById('confirmBtn').addEventListener('click', function() {
     }, 2800);
 });
 
-// Cart nav scroll
-document.getElementById('navCartBtn').addEventListener('click', (e) => {
+// Page navigation
+function showPage(pageId) {
+    document.querySelectorAll('.page-container').forEach(function(el) {
+        el.classList.remove('active');
+    });
+    var page = document.querySelector('.page-container[data-page="' + pageId + '"]');
+    if (page) page.classList.add('active');
+    // Active nav link
+    document.querySelectorAll('.nav-links a[onclick*="showPage"]').forEach(function(a) {
+        a.style.color = '';
+        a.style.fontWeight = '';
+    });
+    var activeLink = document.querySelector('.nav-links a[onclick*="showPage(\'' + pageId + '\')"]');
+    if (activeLink) {
+        activeLink.style.color = 'var(--amarillo-calido)';
+        activeLink.style.fontWeight = '700';
+    }
+}
+
+// Cart nav
+document.getElementById('navCartBtn').addEventListener('click', function(e) {
     e.preventDefault();
-    document.getElementById('carrito').scrollIntoView({ behavior: 'smooth' });
+    showPage('carrito');
 });
 
 // Menu hamburger
@@ -921,6 +952,7 @@ window.addEventListener('cart-updated', function(e) {
 });
 
 // Init
+showPage('inicio');
 cartCounter.textContent = itemsInCart;
 render();
 </script>
