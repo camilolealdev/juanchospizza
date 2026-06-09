@@ -158,13 +158,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full md:ml-0 min-w-0">
         {/* Top Header */}
-        <header className="sticky top-0 z-20 bg-brand-950/80 backdrop-blur-2xl border-b border-brand-900/20 crm-noise">
+        <header className="sticky top-0 z-20 bg-brand-950/20 backdrop-blur-xl border-b border-white/5 crm-noise">
           <div className="flex items-center justify-between px-6 md:px-10 h-16">
             {/* Mobile Menu Toggle + Title */}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden w-10 h-10 rounded-xl bg-white/[0.05] flex items-center justify-center text-brand-200/50 hover:text-white hover:bg-white/[0.08] transition-all"
+                className="md:hidden w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-brand-200 hover:text-white hover:bg-white/20 transition-all"
               >
                 <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'} text-sm`}></i>
               </button>
@@ -178,13 +178,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
             {/* Right Actions */}
             <div className="flex items-center gap-3">
-              <button className="relative w-10 h-10 rounded-xl bg-white/[0.05] flex items-center justify-center text-brand-200/50 hover:text-white hover:bg-white/[0.08] transition-all">
+              <button className="relative w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-brand-200 hover:text-white hover:bg-white/20 transition-all">
                 <i className="fas fa-bell text-sm"></i>
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-brand-600 rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-lg shadow-brand-900/40 ring-1 ring-white/10">
                   3
                 </span>
               </button>
-              <div className="hidden md:flex items-center gap-2 text-[10px] text-brand-200/40 font-bold uppercase tracking-wider">
+              <div className="hidden md:flex items-center gap-2 text-[10px] text-brand-200 font-bold uppercase tracking-wider">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
