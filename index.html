@@ -488,11 +488,6 @@
 <section id="premium-card">
   <div class="premium-mist"></div>
   <div class="premium-container">
-    <!-- Editorial geometric frame -->
-    <div class="premium-frame-t"></div>
-    <div class="premium-frame-b"></div>
-    <div class="premium-frame-l"></div>
-    <div class="premium-frame-r"></div>
 
     <!-- Main grid: Brand Left + Info Right -->
     <div class="premium-grid">
@@ -607,33 +602,7 @@
   .premium-container { padding: 0 5% 60px; }
 }
 
-/* Editorial geometric frame — thin lines */
-.premium-frame-t,
-.premium-frame-b,
-.premium-frame-l,
-.premium-frame-r {
-  position: absolute;
-  pointer-events: none;
-  opacity: .12;
-}
-.premium-frame-t { top: 0; left: 5%; right: 5%; height: 1px; background: linear-gradient(90deg,transparent,#F9DC5C,transparent); }
-.premium-frame-b { bottom: 0; left: 5%; right: 5%; height: 1px; background: linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent); }
-.premium-frame-l { left: 0; top: 10%; bottom: 10%; width: 1px; background: linear-gradient(to bottom,transparent,rgba(249,220,92,.08),transparent); }
-.premium-frame-r { right: 0; top: 10%; bottom: 10%; width: 1px; background: linear-gradient(to bottom,transparent,rgba(255,255,255,.04),transparent); }
 
-/* Ambient warm glow */
-.premium-container::before {
-  content: '';
-  position: absolute;
-  top: -120px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle,rgba(192,57,43,.08) 0%,rgba(249,220,92,.03) 40%,transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-}
 
 /* ===== Grid: Brand left + Info right ===== */
 .premium-grid {
@@ -749,34 +718,14 @@
 }
 
 .premium-icard {
-  background: linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
-  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.04);
   border-radius: 20px;
   padding: 22px 20px;
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  transition: all .4s cubic-bezier(.165,.84,.44,1);
   position: relative;
-  overflow: hidden;
-}
-.premium-icard::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 20px;
-  opacity: 0;
-  transition: opacity .4s ease;
-  pointer-events: none;
-}
-.premium-icard:hover {
-  transform: translateY(-4px);
-  border-color: rgba(249,220,92,.15);
-  box-shadow: 0 16px 48px rgba(0,0,0,.35);
-}
-.premium-icard:hover::before {
-  opacity: 1;
-  background: radial-gradient(ellipse at 50% 0%, rgba(249,220,92,.06), transparent 70%);
 }
 .premium-icard-icon {
   width: 48px;
@@ -787,7 +736,6 @@
   justify-content: center;
   font-size: 1.4rem;
   flex-shrink: 0;
-  box-shadow: 0 6px 16px rgba(0,0,0,.2);
 }
 .ic-red { background: linear-gradient(135deg,#C0392B,#962D22); }
 .ic-brown { background: linear-gradient(135deg,#8B572A,#6b4226); }
