@@ -80,13 +80,14 @@
         }
 
         header {
-            background: rgba(20, 20, 20, 0.65);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            position: fixed; top: 0; left: 0; width: 100%; z-index: 1000;
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(15px) saturate(160%) !important;
+            -webkit-backdrop-filter: blur(15px) saturate(160%) !important;
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 10001 !important;
             padding: 10px 5%; display: flex; align-items: center; justify-content: space-between;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1) !important;
+            transition: all 0.3s ease;
         }
         .logo { font-family: var(--font-headings); color: var(--amarillo-calido); font-size: 1.6rem; text-decoration: none; display: flex; align-items: center; gap: 10px; }
         .logo-img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; object-position: center; border: 2px solid var(--amarillo-calido); }
