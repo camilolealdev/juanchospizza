@@ -5,6 +5,8 @@ import { Order, OrderStatus } from '../../types';
 const RepartidorView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+  const [toast, setToast] = useState('');
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
 
   const mockAssigned: Order[] = [
     {
@@ -48,14 +50,19 @@ const RepartidorView: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <button className="bg-stone-800 py-4 rounded-2xl font-black text-xs">LLAMAR CLIENTE</button>
-            <button className="bg-blue-600 py-4 rounded-2xl font-black text-xs">ABRIR WAZE</button>
+            <button onClick={() => showToast('Llamando al cliente...')} className="bg-stone-800 py-4 rounded-2xl font-black text-xs">LLAMAR CLIENTE</button>
+            <button onClick={() => window.open('https://waze.com/ul?ll=4.7115,-74.0720&navigate=yes', '_blank')} className="bg-blue-600 py-4 rounded-2xl font-black text-xs">ABRIR WAZE</button>
           </div>
 
-          <button className="w-full bg-green-600 hover:bg-green-500 py-5 rounded-2xl font-black text-white shadow-2xl transition-all">
+          <button onClick={() => showToast('Entrega marcada como exitosa ✓')} className="w-full bg-green-600 hover:bg-green-500 py-5 rounded-2xl font-black text-white shadow-2xl transition-all">
             ENTREGA EXITOSA (Firma Digital)
           </button>
         </div>
+        {toast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-stone-900 border border-stone-700 px-6 py-3 rounded-2xl shadow-2xl z-50 text-sm font-bold">
+            {toast}
+          </div>
+        )}
       </div>
     );
   }
@@ -108,6 +115,11 @@ const RepartidorView: React.FC = () => {
           </div>
         ))}
       </div>
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-stone-900 border border-stone-700 px-6 py-3 rounded-2xl shadow-2xl z-50 text-sm font-bold">
+          {toast}
+        </div>
+      )}
     </div>
   );
 };

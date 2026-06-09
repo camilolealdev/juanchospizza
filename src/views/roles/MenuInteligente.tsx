@@ -205,7 +205,7 @@ const MenuInteligente: React.FC = () => {
 
       {/* TAB: Variantes */}
       {tab === 'variantes' && (
-        <div className="bg-stone-900/40 rounded-[2.5rem] border border-white/5 overflow-hidden shadow-xl">
+        <div className="bg-stone-900/40 rounded-[2.5rem] border border-white/5 shadow-xl">
           <div className="p-8 border-b border-white/5">
             <h3 className="font-black text-sm uppercase tracking-widest text-stone-300">
               <i className="fas fa-ruler-combined text-orange-500 mr-4"></i>

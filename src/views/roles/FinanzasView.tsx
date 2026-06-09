@@ -253,7 +253,7 @@ const FinanzasView: React.FC = () => {
             <p className="text-stone-600 text-xs mt-2 uppercase tracking-[0.4em] font-bold">Últimos movimientos registrados</p>
           </div>
         </div>
-        <div className="bg-stone-900/40 rounded-[4rem] border border-stone-800 shadow-2xl overflow-hidden">
+        <div className="bg-stone-900/40 rounded-[4rem] border border-stone-800 shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>

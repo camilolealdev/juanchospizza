@@ -9,6 +9,8 @@ const MarketingView: React.FC = () => {
     { id: 'c2', name: 'Flash Sale Suba D.O.P', type: 'flash', discount: 22, status: 'scheduled', reach: 0, conversions: 0, budget: 150000 },
     { id: 'c3', name: 'RappiPromo Weekend Tradicional', type: 'rappipromo', discount: 13, status: 'active', reach: 5000, conversions: 420, budget: 800000 },
   ]);
+  const [toast, setToast] = useState('');
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
 
   const campaignStats = campaigns.map(c => ({ name: c.name.substring(0, 15), conv: c.conversions }));
 
@@ -19,7 +21,7 @@ const MarketingView: React.FC = () => {
           <h1 className="text-5xl font-brand">Marketing Engine</h1>
           <p className="text-stone-500 mt-4 max-w-xl">Gestión de campañas para el ecosistema Guido Pizza. Segmentación por tipo de masa y zona horaria.</p>
         </div>
-        <button className="bg-orange-600 hover:bg-orange-500 px-10 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4 w-full md:w-auto justify-center">
+        <button onClick={() => showToast('Generando campaña con IA...')} className="bg-orange-600 hover:bg-orange-500 px-10 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4 w-full md:w-auto justify-center">
           <i className="fas fa-magic"></i> GENERAR CAMPAÑA IA
         </button>
       </div>
@@ -59,7 +61,7 @@ const MarketingView: React.FC = () => {
           <p className="text-stone-300 text-lg leading-relaxed italic opacity-80">
             "Detectamos un aumento en la búsqueda de <span className="text-pink-400 font-bold">postres dulces</span> los jueves en Suba. Sugerimos activar la Promo Flash <span className="text-orange-500 font-bold">Nutella Lovers</span> de 2:00 PM a 5:00 PM."
           </p>
-          <button className="w-full bg-purple-600 hover:bg-purple-500 py-6 rounded-3xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl">
+          <button onClick={() => showToast('Ejecutando estrategia Nutella Lovers...')} className="w-full bg-purple-600 hover:bg-purple-500 py-6 rounded-3xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl">
             EJECUTAR ESTRATEGIA
           </button>
         </div>
@@ -75,7 +77,7 @@ const MarketingView: React.FC = () => {
               }`}>
                 {c.status}
               </span>
-              <button className="text-stone-700 hover:text-white transition-colors"><i className="fas fa-cog"></i></button>
+              <button onClick={() => showToast(`Configurando: ${c.name}`)} className="text-stone-700 hover:text-white transition-colors"><i className="fas fa-cog"></i></button>
             </div>
             <h4 className="font-black text-xl mb-3 tracking-tight">{c.name}</h4>
             <p className="text-stone-500 text-[10px] mb-8 uppercase tracking-[0.3em] font-bold italic">{c.type}</p>
@@ -93,6 +95,11 @@ const MarketingView: React.FC = () => {
           </div>
         ))}
       </div>
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-stone-900 border border-stone-700 px-6 py-3 rounded-2xl shadow-2xl z-50 text-sm font-bold">
+          {toast}
+        </div>
+      )}
     </div>
   );
 };

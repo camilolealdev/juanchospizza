@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { OrderStatus } from '../../types';
 
 const mockOrders = [
@@ -9,15 +9,19 @@ const mockOrders = [
 ];
 
 const OperatorView: React.FC = () => {
+  const [toast, setToast] = useState('');
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
+  const [station, setStation] = useState('Preparación');
+
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
       {/* Sidebar - Stations */}
       <div className="w-full md:w-64 bg-stone-900 border-b md:border-r border-stone-800 p-4 md:p-6 flex flex-col shrink-0">
         <h2 className="text-xs font-black uppercase text-stone-500 mb-8 tracking-widest">Estaciones</h2>
         <div className="space-y-4">
-          {['Preparación', 'Horno', 'Empaque', 'Reparto'].map((station, i) => (
-            <button key={i} className={`w-full text-left p-4 rounded-xl transition-all ${i === 0 ? 'bg-orange-600 font-bold' : 'hover:bg-stone-800 text-stone-400'}`}>
-              {station}
+          {['Preparación', 'Horno', 'Empaque', 'Reparto'].map((s, i) => (
+            <button key={i} onClick={() => { setStation(s); showToast(`Estación: ${s}`); }} className={`w-full text-left p-4 rounded-xl transition-all ${station === s ? 'bg-orange-600 font-bold text-white' : 'hover:bg-stone-800 text-stone-400'}`}>
+              {s}
             </button>
           ))}
         </div>
@@ -43,7 +47,7 @@ const OperatorView: React.FC = () => {
               </div>
               <p className="text-sm font-bold">{order.customer}</p>
               <p className="text-xs text-stone-400 italic">{order.items}</p>
-              <button className="w-full bg-stone-800 hover:bg-orange-600 py-3 rounded-lg text-xs font-bold transition-all">INICIAR PREPARACIÓN</button>
+              <button onClick={() => showToast(`Preparación iniciada para #${order.id}`)} className="w-full bg-stone-800 hover:bg-orange-600 py-3 rounded-lg text-xs font-bold transition-all">INICIAR PREPARACIÓN</button>
             </div>
           ))}
         </div>
@@ -65,7 +69,7 @@ const OperatorView: React.FC = () => {
               <div className="h-1 bg-stone-800 rounded-full overflow-hidden">
                 <div className="h-full bg-orange-600 w-2/3"></div>
               </div>
-              <button className="w-full bg-orange-600 hover:bg-orange-500 py-3 rounded-lg text-xs font-bold transition-all">TERMINAR</button>
+              <button onClick={() => showToast(`Pedido #${order.id} terminado`)} className="w-full bg-orange-600 hover:bg-orange-500 py-3 rounded-lg text-xs font-bold transition-all">TERMINAR</button>
             </div>
           ))}
         </div>
@@ -85,13 +89,18 @@ const OperatorView: React.FC = () => {
               <p className="text-sm font-bold">{order.customer}</p>
               <p className="text-xs text-stone-400 italic">{order.items}</p>
               <div className="flex gap-2">
-                <button className="flex-1 bg-green-600 hover:bg-green-500 py-3 rounded-lg text-[10px] font-black tracking-widest transition-all">ENTREGA LOCAL</button>
-                <button className="flex-1 bg-stone-800 hover:bg-blue-600 py-3 rounded-lg text-[10px] font-black tracking-widest transition-all">DOMICILIO</button>
+                <button onClick={() => showToast('Entrega local registrada')} className="flex-1 bg-green-600 hover:bg-green-500 py-3 rounded-lg text-[10px] font-black tracking-widest transition-all">ENTREGA LOCAL</button>
+                <button onClick={() => showToast('Domicilio asignado a repartidor')} className="flex-1 bg-stone-800 hover:bg-blue-600 py-3 rounded-lg text-[10px] font-black tracking-widest transition-all">DOMICILIO</button>
               </div>
             </div>
           ))}
         </div>
       </div>
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-stone-900 border border-stone-700 px-6 py-3 rounded-2xl shadow-2xl z-50 text-sm font-bold animate-bounceIn">
+          {toast}
+        </div>
+      )}
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { UserRole, GastroModule } from './types';
 import AdminLayout from './components/AdminLayout';
 import MenuDigital from './components/MenuDigital';
+import CartSection from './components/CartSection';
 import { CartProvider } from './context/CartContext';
 import GastroProDashboard from './views/roles/GastroProDashboard';
 import MenuInteligente from './views/roles/MenuInteligente';
@@ -42,6 +43,7 @@ const App: React.FC = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [gastroModule, setGastroModule] = useState<GastroModule>('dashboard');
   const menuMount = typeof document !== 'undefined' ? document.getElementById('menu-mount') : null;
+  const cartMount = typeof document !== 'undefined' ? document.getElementById('cart-mount') : null;
 
   const login = (selectedRole: UserRole, pin?: string): boolean => {
     const userKey = Object.keys(TEST_USERS).find(k => TEST_USERS[k].role === selectedRole);
@@ -104,6 +106,9 @@ const App: React.FC = () => {
 
         {/* MenuDigital — rendered as inline section via portal into #menu-mount */}
         {menuMount && createPortal(<MenuDigital variant="section" />, menuMount)}
+
+        {/* CartSection — rendered as inline section via portal into #cart-mount */}
+        {cartMount && createPortal(<CartSection />, cartMount)}
       </AuthContext.Provider>
     </CartProvider>
   );

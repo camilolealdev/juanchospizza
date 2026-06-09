@@ -311,11 +311,12 @@
     <div class="hamburger" id="navToggle"><i class="fa-solid fa-bars"></i></div>
     <ul class="nav-links" id="navMenu">
         <li><a href="#inicio">Inicio</a></li>
-        <li><a href="#" id="navMenuBtn" onclick="event.preventDefault();document.getElementById('menu')?.scrollIntoView({behavior:'smooth'})">Menú</a></li>
-        <li><a href="#crea-tu-pizza">Crea tu Pizza</a></li>
-        <li><a href="#domicilios">Domicilios</a></li>
+        <li><a href="#" onclick="event.preventDefault();document.getElementById('crea-tu-pizza')?.scrollIntoView({behavior:'smooth'})">Crea tu Pizza</a></li>
+        <li><a href="#" onclick="event.preventDefault();document.getElementById('menu')?.scrollIntoView({behavior:'smooth'})">Menú</a></li>
+        <li><a href="#" onclick="event.preventDefault();document.getElementById('domicilios')?.scrollIntoView({behavior:'smooth'})">Domicilios</a></li>
+        <li><a href="#" onclick="event.preventDefault();document.getElementById('carrito')?.scrollIntoView({behavior:'smooth'})">Carrito</a></li>
         <li class="nav-actions">
-            <a href="#" id="navCartBtn" class="nav-cart" title="Carrito">
+            <a href="#" id="navCartBtn" class="nav-cart" title="Carrito" onclick="event.preventDefault();document.getElementById('carrito')?.scrollIntoView({behavior:'smooth'})">
                 <i class="fa-solid fa-basket-shopping"></i>
                 <span class="cart-count" id="cartCounter">0</span>
             </a>
@@ -401,7 +402,7 @@
 </main>
 
 <!-- ====== CREA TU PIZZA ====== -->
-<section class="builder-section" id="crea-tu-pizza">
+<section class="builder-section" id="crea-tu-pizza" style="scroll-margin-top:70px;">
     <h2 class="section__title">Crea tu Obra Maestra</h2>
     <p class="section__subtitle">Selecciona ingredientes y personaliza tu pizza artesanal</p>
     <div class="builder-wrap" id="builderWrap">
@@ -438,7 +439,7 @@
     <div id="menu-mount"></div>
 </section>
 
-<section id="domicilios">
+<section id="domicilios" style="scroll-margin-top:70px;">
     <div class="delivery-info">
         <h2>Pide Sin Moverte de Casa</h2>
         <div class="delivery-card">
@@ -468,18 +469,71 @@
     </div>
 </section>
 
-<footer>
-    <div class="footer-content">
-        <p style="font-family:var(--font-headings);font-size:1.4rem;color:var(--amarillo-calido);margin-bottom:10px;">&#127829; Juancho's Pizza</p>
-        <p><i class="fa-regular fa-clock"></i> Horario de Atención: Lunes a Domingo - 4:00 PM a 11:00 PM</p>
-        <div class="social-links">
-            <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
-            <a href="#"><i class="fa-brands fa-instagram"></i></a>
-            <a href="https://wa.me/573117074843" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+<section id="carrito" style="pointer-events:auto;scroll-margin-top:70px;">
+    <div id="cart-mount"></div>
+</section>
+
+<footer id="footer-premium" style="background:#1A1A1A;color:#F4EFEA;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#C0392B,#F9DC5C,#C0392B);"></div>
+    <div style="max-width:1200px;margin:0 auto;padding:80px 5% 40px;display:grid;grid-template-columns:1fr;gap:60px;">
+        <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:40px;align-items:center;">
+            <div style="background:linear-gradient(145deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:32px;backdrop-filter:blur(12px);transition:all .5s ease;position:relative;overflow:hidden;" onmouseover="this.style.borderColor='rgba(249,220,92,.2)';this.style.transform='translateY(-4px)';this.style.boxShadow='0 20px 60px rgba(0,0,0,.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)';this.style.transform='none';this.style.boxShadow='none'">
+                <div style="position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:radial-gradient(circle,rgba(249,220,92,.08) 0%,transparent 70%);border-radius:50%;pointer-events:none;"></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+                    <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#C0392B,#962D22);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(192,57,43,.25);"><span style="font-size:2rem;">🍕</span></div>
+                    <h3 style="font-family:'Bitter',serif;font-size:1.3rem;color:#F9DC5C;margin:0;text-transform:uppercase;letter-spacing:2px;">Juancho's</h3>
+                    <p style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:4px;font-weight:700;margin:0;">Nemocón</p>
+                </div>
+            </div>
+            <div style="text-align:center;position:relative;padding:20px 0;">
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;background:radial-gradient(circle,rgba(249,220,92,.04) 0%,transparent 70%);border-radius:50%;pointer-events:none;"></div>
+                <p style="font-family:'Bitter',serif;font-size:clamp(1.4rem,3vw,2rem);color:#F4EFEA;margin:0 0 12px;line-height:1.3;font-style:italic;">&ldquo;El sabor que une a <span style="color:#F9DC5C;font-weight:700;">Nemocón</span>&rdquo;</p>
+                <p style="font-size:12px;color:rgba(255,255,255,.35);max-width:400px;margin:0 auto;font-weight:300;letter-spacing:0.5px;">Hecho con pasión, tradición y los ingredientes más frescos desde la puerta de tu casa.</p>
+            </div>
+            <div style="display:flex;justify-content:center;">
+                <div style="width:100px;height:140px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:16px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;animation:tagSway 4s ease-in-out infinite;">
+                    <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;border:2px solid rgba(249,220,92,.3);background:transparent;"></div>
+                    <div style="position:absolute;top:-2px;left:50%;transform:translateX(-50%);width:1px;height:6px;background:rgba(249,220,92,.2);"></div>
+                    <span style="font-size:1.4rem;">🏷️</span>
+                    <span style="font-size:7px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:3px;font-weight:700;text-align:center;line-height:1.3;">Sabor<br>Artesanal</span>
+                </div>
+            </div>
         </div>
+        <div style="text-align:center;border-top:1px solid rgba(255,255,255,.06);padding-top:40px;">
+            <p style="font-size:9px;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:6px;font-weight:700;margin:0 0 20px;">Síguenos</p>
+            <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;">
+                <a href="https://www.instagram.com/juanchospizzanemocon/" target="_blank" rel="noopener" style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.06);color:#F4EFEA;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.2rem;transition:all .4s cubic-bezier(.165,.84,.44,1);border:1px solid rgba(255,255,255,.06);" onmouseover="this.style.background='linear-gradient(135deg,#833AB4,#FD1D1D)';this.style.transform='translateY(-6px) scale(1.05)';this.style.boxShadow='0 12px 30px rgba(131,58,180,.3)';this.style.borderColor='transparent'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.transform='none';this.style.boxShadow='none';this.style.borderColor='rgba(255,255,255,.06)'" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                <a href="https://www.facebook.com/juanchospizzanemocon" target="_blank" rel="noopener" style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.06);color:#F4EFEA;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.2rem;transition:all .4s cubic-bezier(.165,.84,.44,1);border:1px solid rgba(255,255,255,.06);" onmouseover="this.style.background='#1877F2';this.style.transform='translateY(-6px) scale(1.05)';this.style.boxShadow='0 12px 30px rgba(24,119,242,.3)';this.style.borderColor='transparent'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.transform='none';this.style.boxShadow='none';this.style.borderColor='rgba(255,255,255,.06)'" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                <a href="https://www.tiktok.com/@juanchospizzanemocon" target="_blank" rel="noopener" style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.06);color:#F4EFEA;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.2rem;transition:all .4s cubic-bezier(.165,.84,.44,1);border:1px solid rgba(255,255,255,.06);" onmouseover="this.style.background='linear-gradient(135deg,#00F2EA,#FF0050)';this.style.transform='translateY(-6px) scale(1.05)';this.style.boxShadow='0 12px 30px rgba(255,0,80,.25)';this.style.borderColor='transparent'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.transform='none';this.style.boxShadow='none';this.style.borderColor='rgba(255,255,255,.06)'" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+                <a href="https://wa.me/573117074843?text=Hola%2C%20quiero%20hacer%20un%20pedido" target="_blank" rel="noopener" style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.06);color:#F4EFEA;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.2rem;transition:all .4s cubic-bezier(.165,.84,.44,1);border:1px solid rgba(255,255,255,.06);" onmouseover="this.style.background='#25D366';this.style.transform='translateY(-6px) scale(1.05)';this.style.boxShadow='0 12px 30px rgba(37,211,102,.3)';this.style.borderColor='transparent'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.transform='none';this.style.boxShadow='none';this.style.borderColor='rgba(255,255,255,.06)'" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;border-top:1px solid rgba(255,255,255,.06);padding-top:40px;">
+            <div style="text-align:center;"><div style="width:36px;height:36px;border-radius:12px;background:rgba(192,57,43,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;color:#C0392B;"><i class="fa-regular fa-clock" style="font-size:14px;"></i></div><p style="font-size:11px;font-weight:700;color:#F4EFEA;margin:0 0 4px;">Horario</p><p style="font-size:10px;color:rgba(255,255,255,.35);margin:0;">Lun&ndash;Dom 4:00 PM &ndash; 11:00 PM</p></div>
+            <div style="text-align:center;"><div style="width:36px;height:36px;border-radius:12px;background:rgba(192,57,43,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;color:#C0392B;"><i class="fa-solid fa-location-dot" style="font-size:14px;"></i></div><p style="font-size:11px;font-weight:700;color:#F4EFEA;margin:0 0 4px;">Ubicación</p><p style="font-size:10px;color:rgba(255,255,255,.35);margin:0;">Cra 6 No. 5-40, Nemocón</p></div>
+            <div style="text-align:center;"><div style="width:36px;height:36px;border-radius:12px;background:rgba(192,57,43,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;color:#C0392B;"><i class="fa-solid fa-phone" style="font-size:14px;"></i></div><p style="font-size:11px;font-weight:700;color:#F4EFEA;margin:0 0 4px;">Contacto</p><p style="font-size:10px;color:rgba(255,255,255,.35);margin:0;">311 707 4843</p></div>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,.04);padding-top:24px;text-align:center;"><p style="font-size:9px;color:rgba(255,255,255,.15);margin:0;letter-spacing:2px;text-transform:uppercase;">&copy; 2026 Juancho's Pizza y Comidas R&aacute;pidas. Todos los derechos reservados.</p></div>
     </div>
-    <div class="copyright"><p>&copy; 2026 Juancho's Pizza y Comidas Rápidas. Todos los derechos reservados.</p></div>
 </footer>
+
+<style>
+@keyframes tagSway {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(3deg); }
+    75% { transform: rotate(-3deg); }
+}
+@media (max-width: 768px) {
+    #footer-premium > div > div:first-child {
+        grid-template-columns: 1fr !important;
+        gap: 32px !important;
+    }
+    #footer-premium [style*="100px;height:140px"] {
+        width: 80px !important;
+        height: 110px !important;
+    }
+}
+</style>
 
 <script>
 // ====== INGREDIENTS DATA ======
@@ -850,7 +904,7 @@ document.getElementById('confirmBtn').addEventListener('click', function() {
 // Cart nav scroll
 document.getElementById('navCartBtn').addEventListener('click', (e) => {
     e.preventDefault();
-    document.getElementById('crea-tu-pizza').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('carrito').scrollIntoView({ behavior: 'smooth' });
 });
 
 // Menu hamburger

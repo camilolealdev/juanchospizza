@@ -153,7 +153,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen md:ml-0">
+      <div className="flex-1 flex flex-col min-h-screen md:ml-0 h-full">
         {/* Top Header */}
         <header className="sticky top-0 z-20 bg-stone-950/80 backdrop-blur-2xl border-b border-white/5">
           <div className="flex items-center justify-between px-6 md:px-10 h-16">

@@ -236,7 +236,7 @@ const InventarioView: React.FC = () => {
           <span className="text-[10px] font-black text-stone-700 uppercase tracking-widest">{inventory.length} Registros</span>
         </div>
 
-        <div className="bg-stone-900/30 rounded-[2.5rem] border border-stone-800/50 overflow-hidden shadow-2xl">
+        <div className="bg-stone-900/30 rounded-[2.5rem] border border-stone-800/50 shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
