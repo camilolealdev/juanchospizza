@@ -63,6 +63,15 @@
             transition: var(--transition-smooth); text-decoration: none;
         }
         .floating-chatbot:hover { transform: scale(1.1); box-shadow: 0 6px 25px rgba(37,211,102,.5); }
+        @media(max-width:480px) {
+            .floating-chatbot { bottom: 16px; right: 16px; width: 50px; height: 50px; font-size: 1.2rem; }
+            .hero-content { padding: 0 10px; }
+            .hero-content h1 { margin-bottom: 10px; }
+            .hero-content p { margin-bottom: 24px; }
+            .divider-banner { padding: 28px 16px; }
+            .divider-banner h2 { font-size: 1.5rem; }
+            .divider-banner p { font-size: .95rem; }
+        }
         @media(max-width:768px) {
             .nav-actions { flex-direction: column; width: 100%; }
             .nav-cart { width: 100%; justify-content: center; }
@@ -92,8 +101,8 @@
         .hero-bg-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
         .hero-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.7)); z-index: 1; }
         .hero-content { position: relative; z-index: 2; }
-        .hero-content h1 { font-family: var(--font-headings); color: var(--amarillo-calido); font-size: 3.5rem; margin-bottom: 15px; text-shadow: 2px 2px 8px rgba(0,0,0,.7); text-transform: uppercase; }
-        .hero-content p { color: var(--blanco-puro); font-size: 1.3rem; max-width: 700px; margin: 0 auto 35px; font-weight: 300; text-shadow: 1px 1px 4px rgba(0,0,0,.5); }
+        .hero-content h1 { font-family: var(--font-headings); color: var(--amarillo-calido); font-size: clamp(2rem, 8vw, 3.5rem); margin-bottom: 15px; text-shadow: 2px 2px 8px rgba(0,0,0,.7); text-transform: uppercase; }
+        .hero-content p { color: var(--blanco-puro); font-size: clamp(.9rem, 3vw, 1.3rem); max-width: 700px; margin: 0 auto 35px; font-weight: 300; text-shadow: 1px 1px 4px rgba(0,0,0,.5); }
 
         .divider-banner { background-color: var(--marron-madera); color: var(--amarillo-calido); text-align: center; padding: 40px 20px; box-shadow: inset 0 0 20px rgba(0,0,0,.4); }
         .divider-banner h2 { font-family: var(--font-headings); font-size: 2rem; margin-bottom: 5px; text-transform: uppercase; }

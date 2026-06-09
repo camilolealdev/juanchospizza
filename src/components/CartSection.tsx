@@ -42,21 +42,21 @@ const CartSection: React.FC = () => {
       <div style={{
         background: 'linear-gradient(160deg, #F4EFEA 0%, #f5e6d5 50%, #F4EFEA 100%)',
         borderTop: '6px solid #8B572A',
-        padding: '80px 5%'
+        padding: 'clamp(40px, 8vw, 80px) clamp(16px, 5%, 80px)'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div className="section__header" style={{ textAlign: 'center', marginBottom: '50px' }}>
+          <div className="section__header" style={{ textAlign: 'center', marginBottom: 'clamp(24px, 5vw, 50px)' }}>
             <h2 style={{
               fontFamily: "'Bitter', serif",
               color: '#1A1A1A',
-              fontSize: 'clamp(2rem, 5vw, 3.2rem)',
+              fontSize: 'clamp(1.6rem, 5vw, 3.2rem)',
               textTransform: 'uppercase',
               letterSpacing: '2px',
               marginBottom: '10px'
             }}>
               Tu Carrito
             </h2>
-            <p style={{ color: '#8B7355', fontStyle: 'italic', fontFamily: "'Bitter', serif", fontSize: '1.05rem' }}>
+            <p style={{ color: '#8B7355', fontStyle: 'italic', fontFamily: "'Bitter', serif", fontSize: 'clamp(.85rem, 2vw, 1.05rem)' }}>
               {cartCount === 0 ? 'No hay productos aún' : `${cartCount} producto${cartCount !== 1 ? 's' : ''} seleccionado${cartCount !== 1 ? 's' : ''}`}
             </p>
           </div>
@@ -64,16 +64,16 @@ const CartSection: React.FC = () => {
           {cart.length === 0 ? (
             <div style={{
               textAlign: 'center',
-              padding: '80px 20px',
+              padding: 'clamp(40px, 8vw, 80px) 20px',
               background: 'rgba(255,255,255,.7)',
-              borderRadius: '32px',
+              borderRadius: 'clamp(24px, 3vw, 32px)',
               border: '2px dashed rgba(139,87,42,.15)'
             }}>
-              <div style={{ fontSize: '4rem', marginBottom: '20px', opacity: '.15' }}>
+              <div style={{ fontSize: 'clamp(2.5rem, 8vw, 4rem)', marginBottom: '20px', opacity: '.15' }}>
                 <i className="fas fa-basket-shopping"></i>
               </div>
-              <p style={{ color: '#1A1A1A', fontWeight: '700', fontSize: '1.1rem', marginBottom: '8px' }}>Tu carrito está vacío</p>
-              <p style={{ color: '#8B7355', fontSize: '.9rem' }}>Explora nuestro menú y agrega productos deliciosos</p>
+              <p style={{ color: '#1A1A1A', fontWeight: '700', fontSize: 'clamp(.95rem, 2vw, 1.1rem)', marginBottom: '8px' }}>Tu carrito está vacío</p>
+              <p style={{ color: '#8B7355', fontSize: 'clamp(.8rem, 2vw, .9rem)' }}>Explora nuestro menú y agrega productos deliciosos</p>
               <a
                 href="#menu"
                 className="btn-primary"
@@ -87,7 +87,7 @@ const CartSection: React.FC = () => {
               </a>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="flex flex-col gap-4 sm:gap-4">
               {cart.map((item) => (
                 <motion.div
                   key={item.id}
@@ -95,65 +95,41 @@ const CartSection: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -20 }}
+                  className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6 rounded-2xl sm:rounded-3xl"
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    padding: '20px 24px',
                     background: 'rgba(255,255,255,.85)',
-                    borderRadius: '24px',
                     border: '1px solid rgba(139,87,42,.1)',
                     backdropFilter: 'blur(8px)',
                     boxShadow: '0 4px 16px rgba(139,87,42,.06)'
                   }}
                 >
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '16px',
-                    background: 'rgba(192,57,43,.08)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#C0392B',
-                    flexShrink: 0
-                  }}>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 text-sm sm:text-base" style={{ background: 'rgba(192,57,43,.08)', color: '#C0392B' }}>
                     <i className="fas fa-pizza-slice"></i>
                   </div>
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#1A1A1A', margin: 0 }}>{item.name}</h4>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm sm:text-base font-bold truncate" style={{ color: '#1A1A1A', margin: 0 }}>{item.name}</h4>
                     {item.details && (
-                      <p style={{ fontSize: '11px', color: '#8B572A', margin: '2px 0 0 0', opacity: .6 }}>{item.details}</p>
+                      <p className="text-[10px] sm:text-xs truncate" style={{ color: '#8B572A', margin: '2px 0 0 0', opacity: .6 }}>{item.details}</p>
                     )}
-                    <p style={{ fontSize: '15px', fontWeight: '700', color: '#C0392B', margin: '4px 0 0' }}>
+                    <p className="text-sm sm:text-base font-bold" style={{ color: '#C0392B', margin: '4px 0 0' }}>
                       ${(item.price * item.quantity).toLocaleString()}
                     </p>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                     <button
                       onClick={() => updateQuantity(item.id, -1)}
-                      style={{
-                        width: '32px', height: '32px', borderRadius: '10px', border: '1px solid rgba(139,87,42,.12)',
-                        background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '11px', color: '#8B572A', transition: 'all .3s'
-                      }}
-                      onMouseOver={e => { (e.target as HTMLElement).style.background = '#C0392B'; (e.target as HTMLElement).style.color = 'white'; }}
-                      onMouseOut={e => { (e.target as HTMLElement).style.background = 'white'; (e.target as HTMLElement).style.color = '#8B572A'; }}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-[10px] sm:text-xs hover:bg-red-600 hover:text-white transition-colors"
+                      style={{ border: '1px solid rgba(139,87,42,.12)', background: 'white', color: '#8B572A' }}
                     >
                       <i className="fas fa-minus"></i>
                     </button>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#1A1A1A', width: '28px', textAlign: 'center' }}>{item.quantity}</span>
+                    <span className="text-sm sm:text-base font-bold w-6 sm:w-7 text-center" style={{ color: '#1A1A1A' }}>{item.quantity}</span>
                     <button
                       onClick={() => updateQuantity(item.id, 1)}
-                      style={{
-                        width: '32px', height: '32px', borderRadius: '10px', border: '1px solid rgba(139,87,42,.12)',
-                        background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '11px', color: '#8B572A', transition: 'all .3s'
-                      }}
-                      onMouseOver={e => { (e.target as HTMLElement).style.background = '#C0392B'; (e.target as HTMLElement).style.color = 'white'; }}
-                      onMouseOut={e => { (e.target as HTMLElement).style.background = 'white'; (e.target as HTMLElement).style.color = '#8B572A'; }}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-[10px] sm:text-xs hover:bg-red-600 hover:text-white transition-colors"
+                      style={{ border: '1px solid rgba(139,87,42,.12)', background: 'white', color: '#8B572A' }}
                     >
                       <i className="fas fa-plus"></i>
                     </button>
@@ -161,13 +137,8 @@ const CartSection: React.FC = () => {
 
                   <button
                     onClick={() => removeFromCart(item.id)}
-                    style={{
-                      width: '32px', height: '32px', borderRadius: '10px', border: 'none',
-                      background: 'rgba(239,68,68,.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '11px', color: '#ef4444', flexShrink: 0, transition: 'all .3s'
-                    }}
-                    onMouseOver={e => { (e.target as HTMLElement).style.background = '#ef4444'; (e.target as HTMLElement).style.color = 'white'; }}
-                    onMouseOut={e => { (e.target as HTMLElement).style.background = 'rgba(239,68,68,.08)'; (e.target as HTMLElement).style.color = '#ef4444'; }}
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-[10px] sm:text-xs hover:bg-red-500 hover:text-white transition-colors flex-shrink-0"
+                    style={{ background: 'rgba(239,68,68,.08)', color: '#ef4444', border: 'none' }}
                   >
                     <i className="fas fa-trash-can"></i>
                   </button>
@@ -175,36 +146,34 @@ const CartSection: React.FC = () => {
               ))}
 
               {/* Cart Summary + Checkout */}
-              <div style={{
-                marginTop: '16px',
-                padding: '32px',
+              <div className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl" style={{
+                marginTop: 'clamp(8px, 2vw, 16px)',
                 background: 'rgba(255,255,255,.9)',
-                borderRadius: '28px',
                 border: '1px solid rgba(139,87,42,.12)',
                 boxShadow: '0 8px 32px rgba(139,87,42,.08)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                <div className="flex items-center justify-between gap-4 mb-4 sm:mb-6">
                   <div>
-                    <p style={{ fontSize: '12px', color: '#8B572A', fontWeight: '500', margin: 0 }}>Subtotal</p>
-                    <p style={{ fontSize: '11px', color: '#8B572A', margin: '4px 0 0', opacity: .6 }}>Envío gratis</p>
+                    <p className="text-[11px] sm:text-xs" style={{ color: '#8B572A', fontWeight: '500', margin: 0 }}>Subtotal</p>
+                    <p className="text-[10px] sm:text-[11px]" style={{ color: '#8B572A', margin: '4px 0 0', opacity: .6 }}>Envío gratis</p>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: '28px', fontWeight: '700', color: '#C0392B', fontFamily: "'Bitter', serif", margin: 0 }}>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-2xl sm:text-3xl font-bold" style={{ color: '#C0392B', fontFamily: "'Bitter', serif", margin: 0 }}>
                       ${cartTotal.toLocaleString()}
                     </p>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="flex flex-col gap-3 sm:gap-3">
                   <input
                     type="text"
                     value={customerName}
                     onChange={e => setCustomerName(e.target.value)}
                     placeholder="Tu nombre *"
+                    className="w-full p-3 sm:p-3.5 text-sm rounded-xl sm:rounded-2xl outline-none transition-colors"
                     style={{
-                      width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid rgba(139,87,42,.12)',
-                      background: 'rgba(244,239,234,.6)', fontSize: '14px', fontWeight: '500', color: '#1A1A1A',
-                      outline: 'none', transition: 'all .3s'
+                      border: '1px solid rgba(139,87,42,.12)',
+                      background: 'rgba(244,239,234,.6)', fontWeight: '500', color: '#1A1A1A'
                     }}
                     onFocus={e => e.target.style.borderColor = 'rgba(192,57,43,.3)'}
                     onBlur={e => e.target.style.borderColor = 'rgba(139,87,42,.12)'}
@@ -214,26 +183,26 @@ const CartSection: React.FC = () => {
                     value={customerAddress}
                     onChange={e => setCustomerAddress(e.target.value)}
                     placeholder="Dirección de entrega *"
+                    className="w-full p-3 sm:p-3.5 text-sm rounded-xl sm:rounded-2xl outline-none transition-colors"
                     style={{
-                      width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid rgba(139,87,42,.12)',
-                      background: 'rgba(244,239,234,.6)', fontSize: '14px', fontWeight: '500', color: '#1A1A1A',
-                      outline: 'none', transition: 'all .3s'
+                      border: '1px solid rgba(139,87,42,.12)',
+                      background: 'rgba(244,239,234,.6)', fontWeight: '500', color: '#1A1A1A'
                     }}
                     onFocus={e => e.target.style.borderColor = 'rgba(192,57,43,.3)'}
                     onBlur={e => e.target.style.borderColor = 'rgba(139,87,42,.12)'}
                   />
 
-                  <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                  <div className="flex flex-col sm:flex-row gap-3 mt-2">
                     <button
                       onClick={handleWhatsApp}
                       disabled={!customerName || !customerAddress}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all"
                       style={{
-                        flex: 1, padding: '16px 24px', borderRadius: '16px', border: 'none',
+                        border: 'none',
                         background: !customerName || !customerAddress ? '#ccc' : '#25D366',
-                        color: 'white', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase',
-                        letterSpacing: '2px', cursor: !customerName || !customerAddress ? 'not-allowed' : 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                        transition: 'all .3s', boxShadow: !customerName || !customerAddress ? 'none' : '0 4px 20px rgba(37,211,102,.3)'
+                        color: 'white',
+                        cursor: !customerName || !customerAddress ? 'not-allowed' : 'pointer',
+                        boxShadow: !customerName || !customerAddress ? 'none' : '0 4px 20px rgba(37,211,102,.3)'
                       }}
                       onMouseOver={e => {
                         if (customerName && customerAddress) {
@@ -246,15 +215,16 @@ const CartSection: React.FC = () => {
                         (e.target as HTMLElement).style.transform = 'none';
                       }}
                     >
-                      <i className="fab fa-whatsapp" style={{ fontSize: '18px' }}></i>
+                      <i className="fab fa-whatsapp text-base sm:text-lg"></i>
                       Pedir por WhatsApp
                     </button>
                     <button
                       onClick={clearCart}
+                      className="px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all"
                       style={{
-                        padding: '16px 20px', borderRadius: '16px', border: '1px solid rgba(139,87,42,.12)',
-                        background: 'transparent', color: '#8B572A', fontWeight: '600', fontSize: '11px',
-                        cursor: 'pointer', transition: 'all .3s', whiteSpace: 'nowrap'
+                        border: '1px solid rgba(139,87,42,.12)',
+                        background: 'transparent', color: '#8B572A',
+                        cursor: 'pointer'
                       }}
                       onMouseOver={e => { (e.target as HTMLElement).style.background = 'rgba(239,68,68,.08)'; (e.target as HTMLElement).style.color = '#ef4444'; }}
                       onMouseOut={e => { (e.target as HTMLElement).style.background = 'transparent'; (e.target as HTMLElement).style.color = '#8B572A'; }}
