@@ -226,7 +226,7 @@ const VisualPizzaBuilder: React.FC<{ onAddToCart?: (item: CartItem) => void }> =
             {Object.values(PizzaSize).map(s => {
               const parts = s.split(' ');
               return (
-                <button key={s} onClick={() => setSize(s as PizzaSize)} className={`w-full py-2 md:py-3 px-1 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-tighter md:tracking-widest transition-all flex flex-col items-center justify-center leading-tight ${size === s ? 'bg-orange-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300'}`}>
+                <button key={s} onClick={() => setSize(s as PizzaSize)} className={`w-full py-3.5 md:py-4 px-1 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-tighter md:tracking-widest transition-all flex flex-col items-center justify-center leading-tight ${size === s ? 'bg-orange-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300'}`}>
                   <span>{parts[0]}</span>
                   {parts[1] && <span className="opacity-70 text-[6px] sm:text-[8px] font-bold tracking-normal mt-0.5">{parts[1]}</span>}
                 </button>
@@ -266,7 +266,7 @@ const VisualPizzaBuilder: React.FC<{ onAddToCart?: (item: CartItem) => void }> =
         <div className="w-full md:w-1/2 landscape:w-1/2 flex flex-col gap-4 md:gap-8">
           <div className="grid grid-cols-3 gap-1 md:gap-2 bg-black/40 p-1 md:p-1.5 rounded-full border border-white/5 w-full">
             {[{ id: 'whole', label: 'Toda' }, { id: 'left', label: 'Mitad Izq' }, { id: 'right', label: 'Mitad Der' }].map(tab => (
-              <button key={tab.id} onClick={() => setActiveSide(tab.id as any)} className={`w-full py-2.5 md:py-4 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-tighter md:tracking-widest transition-all flex items-center justify-center gap-1 md:gap-2 ${activeSide === tab.id ? 'bg-orange-600 text-white shadow-xl' : 'text-stone-600 hover:text-stone-400'}`}>
+              <button key={tab.id} onClick={() => setActiveSide(tab.id as any)} className={`w-full py-3.5 md:py-4 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-tighter md:tracking-widest transition-all flex items-center justify-center gap-1 md:gap-2 ${activeSide === tab.id ? 'bg-orange-600 text-white shadow-xl' : 'text-stone-600 hover:text-stone-400'}`}>
                 <span className="truncate px-1">{tab.label}</span>
               </button>
             ))}
