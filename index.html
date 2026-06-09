@@ -311,7 +311,7 @@
     <div class="hamburger" id="navToggle"><i class="fa-solid fa-bars"></i></div>
     <ul class="nav-links" id="navMenu">
         <li><a href="#inicio">Inicio</a></li>
-        <li><a href="#" id="navMenuBtn" onclick="event.preventDefault();window.dispatchEvent(new CustomEvent('open-digital-menu'))">Menú</a></li>
+        <li><a href="#" id="navMenuBtn" onclick="event.preventDefault();document.getElementById('menu')?.scrollIntoView({behavior:'smooth'})">Menú</a></li>
         <li><a href="#crea-tu-pizza">Crea tu Pizza</a></li>
         <li><a href="#domicilios">Domicilios</a></li>
         <li class="nav-actions">
@@ -333,7 +333,7 @@
     <div class="hero-content">
         <h1>En Sabor y Calidad, No Hay Igual</h1>
         <p>Las mejores pizzas, lasañas y spaguettis de Nemocón directamente a tu puerta.</p>
-        <a href="#" class="btn-primary" onclick="event.preventDefault();window.dispatchEvent(new CustomEvent('open-digital-menu'))">VER MENÚ Y ORDENAR <i class="fa-solid fa-arrow-down"></i></a>
+        <a href="#" class="btn-primary" onclick="event.preventDefault();document.getElementById('menu')?.scrollIntoView({behavior:'smooth'})">VER MENÚ Y ORDENAR <i class="fa-solid fa-arrow-down"></i></a>
     </div>
 </section>
 
@@ -432,6 +432,10 @@
         <div id="builderOverlay" class="builder-overlay" style="display:none"></div>
         <div id="successOverlay" class="success-overlay" style="display:none"></div>
     </div>
+</section>
+
+<section id="menu" style="pointer-events:auto;min-height:100vh;background:#F4EFEA;padding:0;scroll-margin-top:70px;">
+    <div id="menu-mount"></div>
 </section>
 
 <section id="domicilios">

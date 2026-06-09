@@ -1,4 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { UserRole, GastroModule } from './types';
 import AdminLayout from './components/AdminLayout';
 import MenuDigital from './components/MenuDigital';
@@ -40,13 +41,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [gastroModule, setGastroModule] = useState<GastroModule>('dashboard');
-  const [showDigitalMenu, setShowDigitalMenu] = useState(false);
-
-  useEffect(() => {
-    const handler = () => setShowDigitalMenu(true);
-    window.addEventListener('open-digital-menu', handler);
-    return () => window.removeEventListener('open-digital-menu', handler);
-  }, []);
+  const menuMount = typeof document !== 'undefined' ? document.getElementById('menu-mount') : null;
 
   const login = (selectedRole: UserRole, pin?: string): boolean => {
     const userKey = Object.keys(TEST_USERS).find(k => TEST_USERS[k].role === selectedRole);
@@ -107,8 +102,8 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* MenuDigital Overlay */}
-        {showDigitalMenu && <MenuDigital onClose={() => setShowDigitalMenu(false)} />}
+        {/* MenuDigital — rendered as inline section via portal into #menu-mount */}
+        {menuMount && createPortal(<MenuDigital variant="section" />, menuMount)}
       </AuthContext.Provider>
     </CartProvider>
   );

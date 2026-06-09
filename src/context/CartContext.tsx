@@ -68,9 +68,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Expose global bridge for vanilla pizza builder
   useEffect(() => {
     window.__pizzaBuilderAddToCart = (name: string) => {
+      // Read actual price from the DOM (set by vanilla pizza builder)
+      const priceEl = document.getElementById('priceDisplay');
+      const priceText = priceEl?.textContent || '$0';
+      const price = parseInt(priceText.replace(/[^0-9]/g, '')) || 30000;
+
+      // Read dough name for richer details
+      const doughEl = document.getElementById('doughName');
+      const dough = doughEl?.textContent || 'Personalizada';
+      const details = `Pizza artesanal · ${dough}`;
+
       const id = 'pizza-builder-' + Date.now();
       setCart(prev => {
-        const next = [...prev, { id, productId: 'pizza-builder', name, price: 0, quantity: 1, details: 'Pizza personalizada' }];
+        const next = [...prev, { id, productId: 'pizza-builder', name, price, quantity: 1, details }];
         const count = next.reduce((s, i) => s + i.quantity, 0);
         localStorage.setItem('juanchos_cart', count.toString());
         window.dispatchEvent(new CustomEvent('cart-updated', { detail: count }));
