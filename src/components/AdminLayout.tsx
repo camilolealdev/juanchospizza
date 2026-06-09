@@ -12,14 +12,14 @@ interface AdminLayoutProps {
 }
 
 const ALL_NAV: { module: GastroModule; label: string; icon: string; roles: UserRole[] }[] = [
-  { module: 'dashboard', label: 'Dashboard', icon: 'chart-simple', roles: [UserRole.ADMIN, UserRole.OPERATOR, UserRole.REPARTIDOR, UserRole.MARKETING] },
-  { module: 'menu', label: 'Menú Inteligente', icon: 'book', roles: [UserRole.ADMIN, UserRole.OPERATOR, UserRole.MARKETING] },
+  { module: 'dashboard', label: 'Dashboard', icon: 'chart-simple', roles: [UserRole.ADMIN, UserRole.OPERATOR, UserRole.REPARTIDOR] },
+  { module: 'menu', label: 'Menú Inteligente', icon: 'book', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
   { module: 'inventario', label: 'Inventario', icon: 'warehouse', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
-  { module: 'clientes', label: 'Clientes', icon: 'users', roles: [UserRole.ADMIN, UserRole.MARKETING] },
-  { module: 'fidelizacion', label: 'Fidelización', icon: 'gift', roles: [UserRole.ADMIN, UserRole.MARKETING] },
-  { module: 'campanas', label: 'Campañas', icon: 'bullhorn', roles: [UserRole.ADMIN, UserRole.MARKETING] },
+  { module: 'clientes', label: 'Clientes', icon: 'users', roles: [UserRole.ADMIN] },
+  { module: 'fidelizacion', label: 'Fidelización', icon: 'gift', roles: [UserRole.ADMIN] },
+  { module: 'campanas', label: 'Campañas', icon: 'bullhorn', roles: [UserRole.ADMIN] },
   { module: 'finanzas', label: 'Finanzas', icon: 'coins', roles: [UserRole.ADMIN] },
-  { module: 'reportes', label: 'Reportes', icon: 'chart-line', roles: [UserRole.ADMIN, UserRole.MARKETING] },
+  { module: 'reportes', label: 'Reportes', icon: 'chart-line', roles: [UserRole.ADMIN] },
 ];
 
 const MODULE_TITLES: Record<GastroModule, string> = {
@@ -37,7 +37,6 @@ const ROLE_LABELS: Record<UserRole, string> = {
   [UserRole.ADMIN]: 'Administrador',
   [UserRole.OPERATOR]: 'Cocina',
   [UserRole.REPARTIDOR]: 'Repartidor',
-  [UserRole.MARKETING]: 'Marketing',
   [UserRole.CLIENT]: 'Cliente',
 };
 

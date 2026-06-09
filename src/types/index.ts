@@ -3,8 +3,7 @@ export enum UserRole {
   CLIENT = 'CLIENT',
   ADMIN = 'ADMIN',
   OPERATOR = 'OPERATOR',
-  REPARTIDOR = 'REPARTIDOR',
-  MARKETING = 'MARKETING'
+  REPARTIDOR = 'REPARTIDOR'
 }
 
 export enum PizzaSize {

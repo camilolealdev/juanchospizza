@@ -209,51 +209,6 @@ const ProfileView: React.FC<ProfileProps> = ({ role, onClose }) => {
           </div>
         );
 
-      case UserRole.MARKETING:
-        return (
-          <div className="space-y-10">
-            {/* AI Insights Lab */}
-            <div className="bg-purple-600/10 p-10 rounded-[4rem] border border-purple-500/20 relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-8">
-                  <i className="fas fa-brain-circuit text-purple-500/30 text-5xl"></i>
-               </div>
-               <p className="text-[10px] font-black text-purple-400 uppercase tracking-[0.5em] mb-4">AI Insight del Día</p>
-               <p className="text-xl text-stone-200 font-light italic leading-relaxed relative z-10">
-                  "El 72% de los pedidos en <span className="text-purple-400 font-bold underline decoration-wavy">Suba Oriental</span> incluyen una pizza dulce después de las 8 PM. Recomendamos activar campaña de Upselling."
-               </p>
-               <button className="mt-8 bg-purple-600 px-8 py-3 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl hover:scale-105 transition-all">
-                  Ejecutar Campaña Automatizada
-               </button>
-            </div>
-
-            {/* Campaign Pulse */}
-            <div className="space-y-6">
-               <h4 className="text-[10px] font-black text-stone-500 uppercase tracking-[0.4em] px-2">Rendimiento en Vivo</h4>
-               <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-stone-900/40 p-6 rounded-[2rem] border border-stone-800">
-                     <p className="text-[8px] font-black text-stone-600 uppercase mb-2">Conversión</p>
-                     <p className="text-2xl font-black text-white">24.5%</p>
-                  </div>
-                  <div className="bg-stone-900/40 p-6 rounded-[2rem] border border-stone-800">
-                     <p className="text-[8px] font-black text-stone-600 uppercase mb-2">Alcance Social</p>
-                     <p className="text-2xl font-black text-pink-500">12.4k</p>
-                  </div>
-               </div>
-            </div>
-
-            {/* Quick Tools */}
-            <div className="grid grid-cols-1 gap-4">
-               {['Diseñar Nueva Promo Flash', 'Analítica de Audiencias', 'Configurar RappiPromo'].map(tool => (
-                 <button key={tool} className="w-full text-left p-6 rounded-[2rem] bg-stone-900/40 border border-stone-800 hover:border-purple-500/40 hover:bg-stone-800 transition-all flex items-center gap-6 group">
-                    <div className="w-10 h-10 rounded-xl bg-stone-950 flex items-center justify-center text-purple-500 group-hover:bg-purple-600 group-hover:text-white transition-all shadow-xl">
-                       <i className="fas fa-bolt-lightning text-xs"></i>
-                    </div>
-                    <span className="font-bold text-[10px] uppercase tracking-widest text-stone-400 group-hover:text-white">{tool}</span>
-                 </button>
-               ))}
-            </div>
-          </div>
-        );
       default: return null;
     }
   };

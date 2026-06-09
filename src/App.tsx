@@ -34,7 +34,6 @@ const TEST_USERS: Record<string, { role: UserRole; pin: string; name: string }> 
   'admin': { role: UserRole.ADMIN, pin: '1234', name: 'Administrador' },
   'cocina': { role: UserRole.OPERATOR, pin: '5678', name: 'Chef Principal' },
   'repartidor': { role: UserRole.REPARTIDOR, pin: '0000', name: 'Repartidor' },
-  'marketing': { role: UserRole.MARKETING, pin: '9999', name: 'Marketing Team' },
 };
 
 const App: React.FC = () => {
@@ -90,7 +89,7 @@ const App: React.FC = () => {
         {showLogin && !isAuthenticated && <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />}
 
         {/* Admin CRM Overlay */}
-        {isAuthenticated && (role === UserRole.ADMIN || role === UserRole.OPERATOR || role === UserRole.MARKETING || role === UserRole.REPARTIDOR) && (
+        {isAuthenticated && (role === UserRole.ADMIN || role === UserRole.OPERATOR || role === UserRole.REPARTIDOR) && (
           <div className="fixed inset-0 z-[9998] animate-fade-in">
             <AdminLayout
               module={gastroModule}
@@ -153,7 +152,6 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => boolean; 
               <option value={UserRole.ADMIN}>Administrador</option>
               <option value={UserRole.OPERATOR}>Cocina</option>
               <option value={UserRole.REPARTIDOR}>Repartidor</option>
-              <option value={UserRole.MARKETING}>Marketing</option>
             </select>
           </div>
 
