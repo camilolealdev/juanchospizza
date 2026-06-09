@@ -282,13 +282,13 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
               <button
                 key={cat.id}
                 onClick={() => { setActiveCategory(cat.id); setActiveFilter('todos'); }}
-                className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex-shrink-0 ${
+                className={`flex items-center gap-3 px-6 py-4 rounded-2xl text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all flex-shrink-0 ${
                   activeCategory === cat.id
                     ? 'bg-[#C0392B] text-white shadow-lg shadow-[#C0392B]/30 scale-105'
                     : 'bg-white/60 text-[#8B572A]/70 hover:bg-white hover:text-[#1A1A1A] border border-[#8B572A]/10'
                 }`}
               >
-                <i className={`fas ${cat.icon} text-sm`}></i>
+                <i className={`fas ${cat.icon} text-base`}></i>
                 <span>{cat.label}</span>
               </button>
             ))}
@@ -310,7 +310,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
             <button
               key={f.id}
               onClick={() => setActiveFilter(activeFilter === f.id ? 'todos' : f.id)}
-              className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all flex-shrink-0 border ${
+              className={`px-5 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all flex-shrink-0 border ${
                 activeFilter === f.id
                   ? 'bg-[#1A1A1A] text-[#F9DC5C] border-[#1A1A1A]'
                   : 'bg-white/50 text-[#8B572A]/60 border-[#8B572A]/10 hover:bg-white'
@@ -431,20 +431,20 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
                 <div className="p-6 max-h-[60vh] overflow-y-auto">
                   {/* Size Selector */}
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#8B572A]/60 mb-3 block">Tamaño</label>
-                  <div className="grid grid-cols-4 gap-2 mb-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
                     {PIZZA_SIZES.map((s) => (
                       <button
                         key={s.label}
                         onClick={() => setSelectedSize(s)}
-                        className={`p-3 rounded-2xl border-2 text-center transition-all ${
+                        className={`p-4 sm:p-3 rounded-2xl border-2 text-center transition-all ${
                           selectedSize.label === s.label
                             ? 'border-[#C0392B] bg-[#C0392B]/5 text-[#C0392B]'
                             : 'border-[#8B572A]/10 text-[#8B572A]/40 hover:border-[#8B572A]/20'
                         }`}
                       >
                         <div className="text-xs font-black">{s.label}</div>
-                        <div className="text-[8px] font-semibold mt-0.5">{s.portions} porc</div>
-                        <div className="text-[8px] font-semibold">{s.sabores} sabor{ s.sabores > 1 ? 'es' : ''}</div>
+                        <div className="text-[9px] font-semibold mt-0.5">{s.portions} porc</div>
+                        <div className="text-[9px] font-semibold">{s.sabores} sabor{ s.sabores > 1 ? 'es' : ''}</div>
                         <div className="text-xs font-black mt-1 text-[#C0392B]">${s.price.toLocaleString()}</div>
                       </button>
                     ))}

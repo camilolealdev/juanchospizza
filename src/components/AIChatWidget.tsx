@@ -46,7 +46,7 @@ const AIChatWidget: React.FC = () => {
       {/* Floating Toggle Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-[200] w-14 h-14 md:w-16 md:h-16 rounded-full bg-orange-600 text-white shadow-[0_20px_50px_rgba(234,88,12,0.5)] flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
+        className="fixed bottom-6 left-6 md:left-auto md:right-8 z-[200] w-14 h-14 md:w-16 md:h-16 rounded-full bg-orange-600 text-white shadow-[0_20px_50px_rgba(234,88,12,0.5)] flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
       >
         <i className={`fas ${isOpen ? 'fa-times' : 'fa-comment-dots'} text-xl md:text-2xl`}></i>
         {!isOpen && (
@@ -55,7 +55,7 @@ const AIChatWidget: React.FC = () => {
       </button>
 
       {/* Chat Window */}
-      <div className={`fixed bottom-24 right-4 left-4 md:left-auto md:bottom-28 md:right-8 z-[200] md:w-[400px] h-[500px] md:h-[550px] bg-stone-950/95 backdrop-blur-3xl border border-white/10 rounded-[2rem] md:rounded-[2.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden transition-all duration-500 transform ${isOpen ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
+      <div className={`fixed bottom-24 left-4 right-4 md:left-auto md:bottom-28 md:right-8 z-[200] md:w-[400px] h-[500px] md:h-[550px] bg-stone-950/95 backdrop-blur-3xl border border-white/10 rounded-[2rem] md:rounded-[2.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden transition-all duration-500 transform ${isOpen ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
         
         {/* Header */}
         <div className="p-6 bg-gradient-to-r from-orange-600 to-orange-800 flex items-center gap-4">
