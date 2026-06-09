@@ -11,7 +11,7 @@ const RepartidorView: React.FC = () => {
   const mockAssigned: Order[] = [
     {
       id: 'r1', orderNumber: 'GUIDO-2024-099', userId: 'u1', customerName: 'Juan Valdez',
-      address: 'Carrera 54A #167A-50, San Cipriano, Suba',
+      address: 'Cra 6 No. 5-40, Nemocón — Vía Principal',
       items: [], total: 54900, status: OrderStatus.READY, createdAt: '12:30 PM',
       estimatedTime: 20, paymentMethod: 'card'
     }
@@ -72,7 +72,7 @@ const RepartidorView: React.FC = () => {
       <div className="flex justify-between items-center gap-4">
           <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-brand truncate">Mis Entregas</h1>
-          <p className="text-stone-500 text-xs sm:text-sm">Sede San Cipriano, Suba</p>
+          <p className="text-stone-500 text-xs sm:text-sm">Sede Nemocón — Vía Principal</p>
         </div>
         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-stone-900 border border-stone-800 flex items-center justify-center text-orange-500 flex-shrink-0">
           <i className="fas fa-motorcycle text-sm sm:text-base"></i>

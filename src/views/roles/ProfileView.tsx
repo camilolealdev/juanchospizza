@@ -104,7 +104,7 @@ const ProfileView: React.FC<ProfileProps> = ({ role, onClose }) => {
 
             {/* System Monitor */}
             <div className="bg-stone-950 p-8 rounded-[3rem] border border-white/5 space-y-6">
-               <h4 className="text-[10px] font-black text-stone-500 uppercase tracking-[0.4em] px-2">Estado Crítico de Sede Suba</h4>
+                <h4 className="text-[10px] font-black text-stone-500 uppercase tracking-[0.4em] px-2">Estado Crítico — Sede Nemocón</h4>
                <div className="space-y-4">
                   {[
                     { label: 'Cocina (Hornos)', value: 'Normal', color: 'text-green-500' },
@@ -139,7 +139,7 @@ const ProfileView: React.FC<ProfileProps> = ({ role, onClose }) => {
                <div>
                   <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-2">Turno Actual</p>
                   <p className="text-3xl font-black text-white">En Preparación</p>
-                  <p className="text-xs text-stone-500 mt-1 font-bold">Desde las 08:00 AM • Sede Suba Alta</p>
+                   <p className="text-xs text-stone-500 mt-1 font-bold">Desde las 08:00 AM • Sede Nemocón</p>
                </div>
                <div className="w-20 h-20 rounded-full bg-green-500/10 flex flex-col items-center justify-center border border-green-500/30">
                   <span className="text-2xl font-black text-green-500">32</span>
@@ -247,7 +247,7 @@ const ProfileView: React.FC<ProfileProps> = ({ role, onClose }) => {
                 </h2>
                 <div className="flex justify-center gap-3">
                    <span className="text-[8px] font-black bg-white/5 text-stone-500 px-6 py-1.5 rounded-full border border-white/5 uppercase tracking-[0.4em]">{role}</span>
-                   <span className="text-[8px] font-black bg-orange-600/20 text-orange-500 px-6 py-1.5 rounded-full border border-orange-500/20 uppercase tracking-[0.4em]">Sede Suba</span>
+                   <span className="text-[8px] font-black bg-orange-600/20 text-orange-500 px-6 py-1.5 rounded-full border border-orange-500/20 uppercase tracking-[0.4em]">Sede Nemocón</span>
                 </div>
              </div>
           </div>

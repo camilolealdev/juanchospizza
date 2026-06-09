@@ -91,7 +91,7 @@ const KitchenView: React.FC = () => {
         <div className="p-4 bg-stone-950 rounded-2xl border border-stone-800 mt-auto">
            <div className="flex items-center gap-3">
              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-             <p className="text-xs font-bold uppercase tracking-tighter">Sede Suba: ONLINE</p>
+             <p className="text-xs font-bold uppercase tracking-tighter">Sede Nemocón: ONLINE</p>
            </div>
         </div>
       </div>

@@ -292,7 +292,7 @@ const CustomerView: React.FC = () => {
             <div className="w-full h-full bg-gradient-to-b from-stone-950/20 via-stone-950/80 to-stone-950"></div>
           </div>
           <div className="relative z-10 space-y-12 max-w-5xl">
-            <div className="inline-flex items-center gap-3 bg-orange-600/20 border border-orange-500/30 px-6 py-2 rounded-full text-[9px] font-black tracking-[0.4em] text-orange-400 uppercase shadow-2xl animate-pulse"><i className="fas fa-location-dot"></i> Suba Alta, Bogotá</div>
+            <div className="inline-flex items-center gap-3 bg-orange-600/20 border border-orange-500/30 px-6 py-2 rounded-full text-[9px] font-black tracking-[0.4em] text-orange-400 uppercase shadow-2xl animate-pulse"><i className="fas fa-location-dot"></i> Nemocón & Zipaquirá</div>
             <h1 className="text-6xl md:text-[9rem] font-brand text-white leading-none tracking-tighter drop-shadow-2xl">Guido <br/> <span className="text-orange-600 font-brand">Pizza</span></h1>
             <div className="max-w-3xl mx-auto w-full pt-4 px-4">
               <div className="flex bg-stone-900/80 backdrop-blur-3xl rounded-[2rem] md:rounded-[3.5rem] border border-white/10 p-2 shadow-2xl focus-within:border-orange-600 transition-all flex-col sm:flex-row">
