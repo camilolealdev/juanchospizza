@@ -165,39 +165,29 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       </div>
 
       {/* Floating Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-transparent md:left-[280px] pointer-events-none">
+      <header className="fixed top-0 left-0 right-0 z-50 md:left-[280px] pointer-events-none">
         <div className="flex items-center justify-between px-6 md:px-10 h-16 pointer-events-auto">
-          {/* Mobile Menu Toggle + Title */}
-          <div className="flex items-center gap-4">
+          {/* Left: hamburger + title */}
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-white hover:bg-white/25 transition-all"
+              className="md:hidden w-8 h-8 flex items-center justify-center text-white/70 hover:text-white transition-all"
             >
               <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'} text-sm`}></i>
             </button>
-            <div className="flex items-center gap-3">
-              <div className="w-1 h-6 rounded-full bg-gradient-to-b from-brand-600 to-gold-400" />
-              <h2 className="text-lg md:text-xl font-black text-white tracking-tight">
-                {MODULE_TITLES[module]}
-              </h2>
-            </div>
+            <h2 className="text-lg md:text-xl font-black text-white tracking-tight drop-shadow-sm">
+              {MODULE_TITLES[module]}
+            </h2>
           </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-3">
-            <button className="relative w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-white hover:bg-white/25 transition-all">
+          {/* Right: bell only */}
+          <div className="flex items-center">
+            <button className="relative w-8 h-8 flex items-center justify-center text-white/70 hover:text-white transition-all">
               <i className="fas fa-bell text-sm"></i>
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-brand-600 rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-lg shadow-brand-900/40 ring-1 ring-white/10">
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-brand-600 rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-lg shadow-brand-900/40">
                 3
               </span>
             </button>
-            <div className="hidden md:flex items-center gap-2 text-[10px] text-white/80 font-bold uppercase tracking-wider">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-              </span>
-              En línea
-            </div>
           </div>
         </div>
       </header>
