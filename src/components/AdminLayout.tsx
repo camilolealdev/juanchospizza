@@ -90,7 +90,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             </div>
             <div>
               <h1 className="text-lg font-black text-white tracking-tight">
-                Juancho<span className="text-gold-400">'</span><span className="text-gold-400">s</span>
+                Juancho<span className="text-gold-400">&rsquo;</span><span className="text-gold-400">s</span>
               </h1>
               <p className="text-[9px] font-bold text-brand-200/50 uppercase tracking-[0.25em]">Panel de Gestión</p>
             </div>

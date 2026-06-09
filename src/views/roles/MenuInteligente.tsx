@@ -100,12 +100,9 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'menuqr', label: 'Menú QR', icon: 'fa-qrcode' },
 ];
 
-let nextProductId = 100;
-let nextVariantId = 100;
-let nextComboId = 100;
-let nextPromoId = 100;
+let nextEntityId = 100;
 
-const genId = (prefix: string) => `${prefix}${nextProductId++}`;
+const genId = (prefix: string) => `${prefix}${nextEntityId++}`;
 
 const formatPrice = (price: number) => '$' + price.toLocaleString('es-CO');
 

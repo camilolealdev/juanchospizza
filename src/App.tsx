@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { UserRole, GastroModule } from './types';
 import AdminLayout from './components/AdminLayout';

@@ -23,15 +23,6 @@ interface Sabor {
   ingredients: string[];
 }
 
-interface CartItem {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  details?: string;
-}
-
 const SABORES: Sabor[] = [
   { name: 'Hawaiana', ingredients: ['Piña', 'Jamón'] },
   { name: 'Pollo y Champiñones', ingredients: ['Jamón', 'Champiñones', 'Pollo Desmechado'] },
@@ -138,7 +129,6 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
   const [showCrossSell, setShowCrossSell] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [showCheckout, setShowCheckout] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   const { cart, cartCount, cartTotal, addToCart: contextAddToCart, removeFromCart, updateQuantity } = useCart();

@@ -18,7 +18,13 @@ const clientesRecientes = [
   { name: 'Pedro Sánchez', total: '$156,300', lastOrder: 'Ayer 20:05' },
 ];
 
-const generateWeeklyData = () => [
+interface WeeklyPoint {
+  name: string;
+  ventas: number;
+  pedidos: number;
+}
+
+const generateWeeklyData = (): WeeklyPoint[] => [
   { name: 'Lun', ventas: Math.floor(Math.random() * 800000) + 1800000, pedidos: Math.floor(Math.random() * 15) + 35 },
   { name: 'Mar', ventas: Math.floor(Math.random() * 800000) + 1900000, pedidos: Math.floor(Math.random() * 15) + 38 },
   { name: 'Mie', ventas: Math.floor(Math.random() * 700000) + 1700000, pedidos: Math.floor(Math.random() * 15) + 32 },
@@ -34,7 +40,7 @@ const predictions = [
   'El análisis estacional muestra una tendencia al alza del 15% en ventas de Lasaña. Considere promocionar este plato durante los próximos días.',
 ];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip: React.FC<{ active?: boolean; payload?: { value: number }[]; label?: string }> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-stone-900/95 border border-stone-700/50 rounded-2xl p-4 shadow-2xl backdrop-blur-md">
@@ -50,7 +56,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 const GastroProDashboard: React.FC = () => {
-  const [weeklyData, setWeeklyData] = useState<any[]>([]);
+  const [weeklyData, setWeeklyData] = useState<WeeklyPoint[]>([]);
   const [pedidosHoy, setPedidosHoy] = useState(48);
   const [predictionUpdating, setPredictionUpdating] = useState(false);
   const [predictionMessage, setPredictionMessage] = useState(

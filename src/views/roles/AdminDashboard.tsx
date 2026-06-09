@@ -1,18 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
+import type { Ingredient, Product } from '../../types';
 import { PRODUCTS, INGREDIENTS } from '../../constants';
 import { generateProductImage, generateIngredientImage } from '../../services/geminiService';
-import { api } from '../../services/api';
 
-const chartData = [
-  { name: 'Lun', ventas: 4000, pedidos: 24 },
-  { name: 'Mar', ventas: 3000, pedidos: 18 },
-  { name: 'Mie', ventas: 2000, pedidos: 12 },
-  { name: 'Jue', ventas: 2780, pedidos: 20 },
-  { name: 'Vie', ventas: 1890, pedidos: 15 },
-  { name: 'Sab', ventas: 2390, pedidos: 25 },
-  { name: 'Dom', ventas: 3490, pedidos: 30 },
+type AssetItem = (Ingredient & { isProduct: false }) | (Product & { isProduct: true });
+
+const ASSET_CATALOG: AssetItem[] = [
+  ...INGREDIENTS.map(item => ({ ...item, isProduct: false as const })),
+  ...PRODUCTS.map(item => ({ ...item, isProduct: true as const }))
 ];
 
 const AdminDashboard: React.FC = () => {
@@ -20,26 +16,11 @@ const AdminDashboard: React.FC = () => {
   const [assetImages, setAssetImages] = useState<Record<string, string>>({});
   const [isBatchRunning, setIsBatchRunning] = useState(false);
   const [batchProgress, setBatchProgress] = useState(0);
-  const [syncStatus, setSyncStatus] = useState<string>("Sistemas Listos");
-  const [stats, setStats] = useState<any>(null);
-  const [useApi, setUseApi] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string>('Sistemas Listos');
 
   useEffect(() => {
     const saved = localStorage.getItem('guido_ai_images');
     if (saved) setAssetImages(JSON.parse(saved));
-  }, []);
-
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        const statsData = await api.getStats();
-        setStats(statsData);
-        setUseApi(true);
-      } catch (e) {
-        console.log('Using local stats');
-      }
-    };
-    loadStats();
   }, []);
 
   useEffect(() => {
@@ -53,14 +34,9 @@ const AdminDashboard: React.FC = () => {
     setBatchProgress(0);
     setSyncStatus("Iniciando Renderizado Masivo...");
 
-    const allAssets = [
-      ...INGREDIENTS.map(i => ({ id: i.id, nombre: i.nombre, descripcion: i.descripcion, isIngredient: true })),
-      ...PRODUCTS.map(p => ({ id: p.id, nombre: p.nombre, descripcion: p.descripcion, isIngredient: false }))
-    ];
-
-    for (let i = 0; i < allAssets.length; i++) {
-      const asset = allAssets[i];
-      setBatchProgress(Math.round(((i + 1) / allAssets.length) * 100));
+    for (let i = 0; i < ASSET_CATALOG.length; i++) {
+      const asset = ASSET_CATALOG[i];
+      setBatchProgress(Math.round(((i + 1) / ASSET_CATALOG.length) * 100));
       
       if (assetImages[asset.id]) {
          continue; 
@@ -69,9 +45,9 @@ const AdminDashboard: React.FC = () => {
       setGeneratingId(asset.id);
       setSyncStatus(`Renderizando: ${asset.nombre}...`);
       try {
-        const result = asset.isIngredient 
-          ? await generateIngredientImage(asset.nombre, asset.descripcion)
-          : await generateProductImage(asset.nombre, asset.descripcion);
+        const result = asset.isProduct 
+          ? await generateProductImage(asset.nombre, asset.descripcion)
+          : await generateIngredientImage(asset.nombre, asset.descripcion);
 
         if (result) {
           setAssetImages(prev => ({ ...prev, [asset.id]: result }));
@@ -86,12 +62,12 @@ const AdminDashboard: React.FC = () => {
     setSyncStatus("Catálogo 100% Sincronizado");
   };
 
-  const handleSingleGenerate = async (asset: any, isIng: boolean) => {
+  const handleSingleGenerate = async (asset: AssetItem) => {
     setGeneratingId(asset.id);
     try {
-      const result = isIng 
-        ? await generateIngredientImage(asset.nombre, asset.descripcion)
-        : await generateProductImage(asset.nombre, asset.descripcion);
+      const result = asset.isProduct
+        ? await generateProductImage(asset.nombre, asset.descripcion)
+        : await generateIngredientImage(asset.nombre, asset.descripcion);
       
       if (result) {
         setAssetImages(prev => ({ ...prev, [asset.id]: result }));
@@ -174,7 +150,7 @@ const AdminDashboard: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-6">
-          {[...INGREDIENTS.map(i => ({...i, isProduct: false})), ...PRODUCTS.map(p => ({...p, isProduct: true}))].map(asset => (
+          {ASSET_CATALOG.map(asset => (
             <div key={asset.id} className="bg-stone-900/40 rounded-[2.5rem] border border-stone-800 overflow-hidden group hover:border-orange-600/60 transition-all flex flex-col shadow-xl">
               <div className="relative aspect-square bg-stone-950 overflow-hidden flex items-center justify-center">
                 {assetImages[asset.id] ? (
@@ -194,7 +170,7 @@ const AdminDashboard: React.FC = () => {
 
                 <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                    <button 
-                    onClick={() => handleSingleGenerate(asset, !asset.isProduct)}
+                    onClick={() => handleSingleGenerate(asset)}
                     disabled={generatingId === asset.id}
                     className="bg-orange-600 w-12 h-12 rounded-full flex items-center justify-center hover:scale-110 active:scale-90 transition-transform shadow-2xl"
                    >
@@ -204,7 +180,7 @@ const AdminDashboard: React.FC = () => {
               </div>
               <div className="p-5 flex-1 flex flex-col justify-center bg-stone-900/60">
                 <h4 className="font-black text-[10px] truncate uppercase text-stone-300 tracking-tight">{asset.nombre}</h4>
-                <p className="text-[8px] text-stone-600 mt-1 uppercase font-bold tracking-[0.2em]">{asset.isProduct ? 'Producto' : (asset as any).categoria}</p>
+                <p className="text-[8px] text-stone-600 mt-1 uppercase font-bold tracking-[0.2em]">{asset.isProduct ? 'Producto' : asset.categoria}</p>
               </div>
             </div>
           ))}

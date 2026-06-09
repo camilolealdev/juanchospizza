@@ -5,7 +5,7 @@ import VisualPizzaBuilder from '../../components/VisualPizzaBuilder';
 import { getSmartRecommendations } from '../../services/geminiService';
 import { api } from '../../services/api';
 import { POS } from '../../services/payments';
-import { CartItem, Order, OrderStatus, Category, Product } from '../../types';
+import { CartItem, Order, OrderStatus, Category, Product, OrderItem, PizzaSize } from '../../types';
 import { PaymentResponse } from '../../services/payments/paymentService';
 
 const CustomerView: React.FC = () => {
@@ -16,7 +16,6 @@ const CustomerView: React.FC = () => {
   const [aiRec, setAiRec] = useState<{recommendedId: string, reasoning: string} | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [useApi, setUseApi] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showPOS, setShowPOS] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({ name: '', email: '', address: '', phone: '' });
@@ -36,7 +35,6 @@ const CustomerView: React.FC = () => {
         if (cats.length > 0) {
           setCategories(cats);
           setProducts(prods);
-          setUseApi(true);
         }
       } catch (e) {
         console.log('Using local data');
@@ -48,7 +46,11 @@ const CustomerView: React.FC = () => {
   useEffect(() => {
     const savedCart = localStorage.getItem('guido_cart');
     if (savedCart) {
-      setCart(JSON.parse(savedCart));
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch {
+        localStorage.removeItem('guido_cart');
+      }
     }
   }, []);
 
@@ -77,10 +79,19 @@ const CustomerView: React.FC = () => {
     setIsAiLoading(false);
   };
 
-  const createOrder = (paymentMethod: string = 'cash') => {
+  const createOrder = (paymentMethod: Order['paymentMethod'] = 'cash') => {
     const orderNumber = `GUIDO-${Math.floor(Math.random() * 9000) + 1000}`;
     const savedOrders = localStorage.getItem('guido_live_orders');
-    let orders: Order[] = savedOrders ? JSON.parse(savedOrders) : [];
+    const orders: Order[] = savedOrders ? JSON.parse(savedOrders) : [];
+    const orderItems: OrderItem[] = cart.map(item => ({
+      id: item.id,
+      productId: item.productId,
+      name: item.name,
+      size: PizzaSize.PERSONAL,
+      quantity: item.quantity,
+      price: item.price,
+      details: item.details
+    }));
     
     const newOrder: Order = {
       id: `ord_${Date.now()}`,
@@ -88,16 +99,16 @@ const CustomerView: React.FC = () => {
       userId: 'cliente_web',
       customerName: customerInfo.name || 'Cliente',
       address: customerInfo.address || 'Dirección por confirmar',
-      items: cart as any,
+      items: orderItems,
       total: cartTotal,
       status: OrderStatus.PENDING,
       createdAt: new Date().toLocaleTimeString(),
       estimatedTime: 30,
-      paymentMethod: paymentMethod as any
+      paymentMethod
     };
 
-    orders.push(newOrder);
-    localStorage.setItem('guido_live_orders', JSON.stringify(orders));
+    const updatedOrders = [...orders, newOrder];
+    localStorage.setItem('guido_live_orders', JSON.stringify(updatedOrders));
     
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('new-order-submitted'));
@@ -112,7 +123,7 @@ const CustomerView: React.FC = () => {
 
   const handlePaymentComplete = (response: PaymentResponse) => {
     if (response.success) {
-      createOrder('paid');
+      createOrder('card');
       setCart([]);
       setIsCartOpen(false);
       localStorage.removeItem('guido_cart');
@@ -133,7 +144,7 @@ const CustomerView: React.FC = () => {
     }));
   };
 
-  const addToCart = (product: any) => {
+  const addToCart = (product: Product) => {
     const newItem: CartItem = {
       id: `${product.id}-${Date.now()}`,
       productId: product.id,
@@ -149,7 +160,7 @@ const CustomerView: React.FC = () => {
     setCart(prev => [...prev, item]);
   };
 
-  const renderProductCard = (product: any) => {
+  const renderProductCard = (product: Product) => {
     return (
       <div key={product.id} className="group relative bg-stone-900/40 rounded-[3rem] overflow-hidden border border-white/5 hover:border-orange-500/30 transition-all duration-700 shadow-2xl flex flex-col h-full animate-in fade-in slide-in-from-bottom-5">
         <div className="relative h-[240px] md:h-[280px] overflow-hidden bg-stone-950">
@@ -162,7 +173,7 @@ const CustomerView: React.FC = () => {
         </div>
         <div className="p-8 md:p-10 space-y-5 flex-1 flex flex-col">
           <h3 className="text-2xl md:text-3xl font-brand text-stone-100 group-hover:text-orange-500 transition-colors leading-tight">{product.nombre}</h3>
-          <p className="text-stone-500 text-xs md:text-sm leading-relaxed italic opacity-80 flex-1">"{product.descripcion}"</p>
+          <p className="text-stone-500 text-xs md:text-sm leading-relaxed italic opacity-80 flex-1">&ldquo;{product.descripcion}&rdquo;</p>
           <div className="flex justify-between items-center pt-6 border-t border-white/5">
             <span className="text-2xl md:text-4xl font-black text-white tracking-tighter">${product.basePrice.toLocaleString()}</span>
             <button onClick={() => addToCart(product)} className="bg-orange-600 hover:bg-orange-500 w-14 h-14 md:w-16 md:h-16 rounded-[1.5rem] flex items-center justify-center transition-all shadow-xl shadow-orange-900/40 transform group-hover:rotate-12"><i className="fas fa-plus text-lg text-white"></i></button>
@@ -190,7 +201,7 @@ const CustomerView: React.FC = () => {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto space-y-4">
-              {cart.map(item => (
+             {cart.map(item => (
                 <div key={item.id} className="flex gap-4 p-4 bg-stone-950 rounded-xl">
                   <img src={item.image || '/assets/images/products/pizza-default.svg'} alt={item.name} className="w-20 h-20 object-cover rounded-lg" />
                   <div className="flex-1">
@@ -313,7 +324,7 @@ const CustomerView: React.FC = () => {
           {aiRec && <div className="bg-stone-900/80 backdrop-blur-3xl p-10 rounded-[4rem] border border-orange-500/30 shadow-2xl animate-in zoom-in fade-in duration-700 max-w-4xl mx-auto"><p className="text-xl md:text-2xl text-stone-100 font-light italic leading-relaxed text-center">{aiRec.reasoning}</p></div>}
           <div className="bg-stone-950/40 backdrop-blur-3xl p-4 md:p-8 rounded-[3rem] md:rounded-[4rem] border border-white/5 shadow-2xl">
             <div className="flex flex-wrap justify-center gap-3 md:gap-5">
-              {CATEGORIES.map(cat => (
+               {categories.map(cat => (
                 <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`flex items-center gap-3 md:gap-4 px-6 md:px-10 py-4 md:py-6 rounded-full border transition-all duration-500 ${activeCategory === cat.id ? 'bg-orange-600 border-orange-500 text-white shadow-xl scale-105' : 'bg-stone-900/60 border-white/5 text-stone-500 hover:border-white/20 hover:text-stone-300'}`}>
                   <i className={`fas fa-${cat.icon} ${activeCategory === cat.id ? 'text-white' : cat.color} text-base md:text-lg`}></i>
                   <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap">{cat.name}</span>

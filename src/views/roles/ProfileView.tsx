@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { UserRole, OrderStatus } from '../../types';
+import { UserRole } from '../../types';
 
 interface ProfileProps {
   role: UserRole;

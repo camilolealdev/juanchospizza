@@ -47,7 +47,13 @@ const triggerOptions = ['Cliente Inactivo 30 días', 'Cumpleaños', 'Compra > $5
 const segmentOptions = ['Todos los Clientes', 'Clientes VIP', 'Inactivos >30 días', 'Alta Frecuencia', 'Cumpleaños Este Mes'];
 const actionOptions = ['Enviar WhatsApp', 'Enviar Email', 'Enviar SMS', 'Asignar Cupón'];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: { value: number }[];
+  label?: string;
+}
+
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-stone-900 border border-stone-700 rounded-2xl px-5 py-3">

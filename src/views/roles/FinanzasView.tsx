@@ -45,12 +45,23 @@ const gastosColors: Record<string, string> = {
 
 const categorias = ['Ingredientes', 'Nómina', 'Servicios', 'Marketing', 'Mantenimiento', 'Transporte', 'Empaques', 'Varios'];
 
-const CustomBarTooltip = ({ active, payload, label }: any) => {
+interface BarTooltipPayload {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface PieTooltipPayload {
+  name: string;
+  value: number;
+}
+
+const CustomBarTooltip: React.FC<{ active?: boolean; payload?: BarTooltipPayload[]; label?: string }> = ({ active, payload, label }) => {
   if (!active || !payload || payload.length === 0) return null;
   return (
     <div className="bg-stone-900 border border-stone-800 rounded-2xl px-5 py-4 shadow-2xl">
       <p className="text-stone-400 font-bold text-[11px] uppercase tracking-wider mb-2">{label}</p>
-      {payload.map((entry: any, i: number) => (
+      {payload.map((entry, i) => (
         <p key={i} className="font-bold text-sm" style={{ color: entry.color }}>
           {entry.name}: {formatCOP(entry.value)}
         </p>
@@ -59,11 +70,11 @@ const CustomBarTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-const CustomPieTooltip = ({ active, payload }: any) => {
+const CustomPieTooltip: React.FC<{ active?: boolean; payload?: PieTooltipPayload[] }> = ({ active, payload }) => {
   if (!active || !payload || payload.length === 0) return null;
   return (
     <div className="bg-stone-900 border border-stone-800 rounded-2xl px-5 py-4 shadow-2xl">
-      {payload.map((entry: any, i: number) => (
+      {payload.map((entry, i) => (
         <p key={i} className="font-bold text-sm text-stone-200">
           {entry.name}: {entry.value}%
         </p>

@@ -1,5 +1,9 @@
 
+import type { Order, Campaign, OrderStatus } from '../types';
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+type OrderPayload = Partial<Order>;
 
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
@@ -46,7 +50,7 @@ export const api = {
     return fetch(`${API_BASE}/api/orders/${id}`).then(handleResponse);
   },
 
-  async createOrder(order: any) {
+  async createOrder(order: OrderPayload) {
     return fetch(`${API_BASE}/api/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -54,7 +58,7 @@ export const api = {
     }).then(handleResponse);
   },
 
-  async updateOrder(id: string, data: any) {
+  async updateOrder(id: string, data: OrderPayload) {
     return fetch(`${API_BASE}/api/orders/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -62,7 +66,7 @@ export const api = {
     }).then(handleResponse);
   },
 
-  async updateOrderStatus(id: string, status: string) {
+  async updateOrderStatus(id: string, status: OrderStatus) {
     return fetch(`${API_BASE}/api/orders/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -75,7 +79,7 @@ export const api = {
     return fetch(`${API_BASE}/api/campaigns`).then(handleResponse);
   },
 
-  async createCampaign(campaign: any) {
+  async createCampaign(campaign: Partial<Campaign>) {
     return fetch(`${API_BASE}/api/campaigns`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -83,7 +87,7 @@ export const api = {
     }).then(handleResponse);
   },
 
-  async updateCampaign(id: string, data: any) {
+  async updateCampaign(id: string, data: Partial<Campaign>) {
     return fetch(`${API_BASE}/api/campaigns/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

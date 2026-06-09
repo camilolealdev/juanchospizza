@@ -2,14 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 
-const SECTIONS = [
-  { id: 'inicio', label: 'Inicio' },
-  { id: 'crea-tu-pizza', label: 'Crea tu Pizza' },
-  { id: 'menu', label: 'Menú' },
-  { id: 'domicilios', label: 'Domicilios' },
-  { id: 'carrito', label: 'Carrito' },
-];
-
 const CartSection: React.FC = () => {
   const { cart, cartCount, cartTotal, removeFromCart, updateQuantity, clearCart } = useCart();
   const [customerName, setCustomerName] = useState('');

@@ -118,7 +118,7 @@ class PaymentService {
     }
   }
 
-  private async processNEQUI(request: PaymentRequest): Promise<PaymentResponse> {
+  private async processNEQUI(_request: PaymentRequest): Promise<PaymentResponse> {
     if (!this.config.NEQUI?.apiKey) {
       return { success: false, message: 'NEQUI no configurado' };
     }
@@ -135,12 +135,9 @@ class PaymentService {
       return { success: false, message: 'PayPal no configurado' };
     }
 
-    const returnUrl = `${window.location.origin}/payment/success`;
-    const cancelUrl = `${window.location.origin}/payment/cancel`;
-
     return {
       success: true,
-      paymentUrl: `https://www.paypal.com/checkoutnow?token=${request.orderId}`,
+      paymentUrl: `https://www.paypal.com/checkoutnow?token=${request.orderId}&return=${encodeURIComponent(`${window.location.origin}/payment/success`)}&cancel=${encodeURIComponent(`${window.location.origin}/payment/cancel`)}`,
       message: 'Redirigiendo a PayPal...',
     };
   }

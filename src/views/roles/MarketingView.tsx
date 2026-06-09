@@ -59,7 +59,7 @@ const MarketingView: React.FC = () => {
             <h4 className="font-black text-xs uppercase tracking-widest">Predicción IA</h4>
           </div>
           <p className="text-stone-300 text-lg leading-relaxed italic opacity-80">
-            "Detectamos un aumento en la búsqueda de <span className="text-pink-400 font-bold">postres dulces</span> los jueves en Suba. Sugerimos activar la Promo Flash <span className="text-orange-500 font-bold">Nutella Lovers</span> de 2:00 PM a 5:00 PM."
+            &ldquo;Detectamos un aumento en la búsqueda de <span className="text-pink-400 font-bold">postres dulces</span> los jueves en Suba. Sugerimos activar la Promo Flash <span className="text-orange-500 font-bold">Nutella Lovers</span> de 2:00 PM a 5:00 PM.&rdquo;
           </p>
           <button onClick={() => showToast('Ejecutando estrategia Nutella Lovers...')} className="w-full bg-purple-600 hover:bg-purple-500 py-6 rounded-3xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl">
             EJECUTAR ESTRATEGIA

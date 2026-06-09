@@ -403,7 +403,7 @@ const ClientesView: React.FC = () => {
               <div className="space-y-3">
                 <h4 className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em]">Notas</h4>
                 <div className="bg-stone-800/30 rounded-2xl p-5 border border-white/5">
-                  <p className="text-stone-300 text-sm italic">"{c.notas}"</p>
+                  <p className="text-stone-300 text-sm italic">&ldquo;{c.notas}&rdquo;</p>
                 </div>
               </div>
             )}

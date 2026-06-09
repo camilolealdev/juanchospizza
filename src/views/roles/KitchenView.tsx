@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Order, OrderStatus } from '../../types';
 import { api } from '../../services/api';
 
+type ApiOrder = Omit<Order, 'items'> & { items: string | Order['items'] };
+
 const KitchenView: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [useApi, setUseApi] = useState(false);
@@ -11,15 +13,20 @@ const KitchenView: React.FC = () => {
     const loadOrders = async () => {
       try {
         const apiOrders = await api.getOrders();
-        setOrders(apiOrders.map((o: any) => ({
-          ...o,
-          items: typeof o.items === 'string' ? JSON.parse(o.items) : o.items
-        })));
+        const normalized = apiOrders.map((order: ApiOrder) => ({
+          ...order,
+          items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items
+        }));
+        setOrders(normalized);
         setUseApi(true);
       } catch (e) {
         const saved = localStorage.getItem('guido_live_orders');
         if (saved) {
-          setOrders(JSON.parse(saved));
+          try {
+            setOrders(JSON.parse(saved));
+          } catch {
+            localStorage.removeItem('guido_live_orders');
+          }
         }
       }
     };
@@ -115,15 +122,11 @@ const KitchenView: React.FC = () => {
                         <span className="font-black text-orange-500 uppercase tracking-tighter">{item.quantity}x {item.name}</span>
                         <span className="text-[10px] text-stone-600">${item.price.toLocaleString()}</span>
                       </div>
-                      {/* DETALLE CRÍTICO DE PERSONALIZACIÓN */}
-                      {item.productId === 'custom-pizza' && (
+                      {item.details && (
                         <div className="mt-3 p-4 bg-stone-950/50 rounded-2xl border border-orange-500/10">
                           <p className="text-[10px] text-stone-400 leading-relaxed font-medium">
                             <i className="fas fa-info-circle mr-2 text-orange-600"></i>
-                            {item.id.includes('custom') || true ? (
-                              // Mostramos el detalle que viene en el item
-                              (o as any).items[0].details || "Ver detalle en tablet de preparación"
-                            ) : "Pizza Artesanal Personalizada"}
+                            {item.details}
                           </p>
                         </div>
                       )}
@@ -153,7 +156,9 @@ const KitchenView: React.FC = () => {
                   {o.items.map(item => (
                     <div key={item.id} className="flex flex-col text-sm">
                       <span className="font-bold text-stone-200">{item.quantity}x {item.name}</span>
-                      <span className="text-[10px] text-stone-500 italic">{(o as any).items[0].details?.substring(0, 60)}...</span>
+                      {item.details && (
+                        <span className="text-[10px] text-stone-500 italic">{item.details.slice(0, 60)}{item.details.length > 60 ? '...' : ''}</span>
+                      )}
                     </div>
                   ))}
                 </div>

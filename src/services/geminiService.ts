@@ -1,45 +1,50 @@
 
 // Gemini AI Service - Optional module
-// Requires @google/genai package and GEMINI_API_KEY environment variable
+// Requires @google/generative-ai package and GEMINI_API_KEY environment variable
 
-import { PRODUCTS, INGREDIENTS } from "../constants";
+import type { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+import { PRODUCTS, INGREDIENTS } from '../constants';
 
-let ai: any = null;
+let aiModel: GenerativeModel | null = null;
 let isInitialized = false;
 
-const initAI = () => {
+const initAI = async () => {
   if (isInitialized) return;
   try {
-    const { GoogleGenAI } = require("@google/generative-ai");
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
-    if (apiKey) {
-      ai = new GoogleGenAI({ apiKey });
-      isInitialized = true;
-      console.log("Gemini AI initialized successfully");
+    if (!apiKey) {
+      console.warn('Gemini API key not configured. Skipping AI init.');
+      return;
     }
-  } catch (e) {
-    console.warn("Gemini AI not available. Install @google/generative-ai and set GEMINI_API_KEY.");
+    const client: GoogleGenerativeAI = new GoogleGenerativeAI({ apiKey });
+    aiModel = client.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    isInitialized = true;
+    console.log('Gemini AI initialized successfully');
+  } catch (error) {
+    console.warn('Gemini AI not available. Install @google/generative-ai and set GEMINI_API_KEY.', error);
   }
 };
 
 export const getSmartRecommendations = async (userInput: string) => {
-  initAI();
-  if (!ai) {
+  await initAI();
+  if (!aiModel) {
     // Fallback: return random product
     const randomProduct = PRODUCTS[Math.floor(Math.random() * PRODUCTS.length)];
     return { recommendedId: randomProduct.id, reasoning: `Te recomendamos ${randomProduct.nombre}: ${randomProduct.descripcion}` };
   }
   
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-exp",
-      contents: `User is looking for: "${userInput}". Based on these pizzas: ${JSON.stringify(PRODUCTS.map(p => ({id: p.id, name: p.nombre, desc: p.descripcion})))}. Recommend the best match and explain why.`,
-      config: {
-        responseMimeType: "application/json",
+    const response = await aiModel.generateContent([
+      {
+        text: `User is looking for: "${userInput}". Based on these pizzas: ${JSON.stringify(
+          PRODUCTS.map(p => ({ id: p.id, name: p.nombre, desc: p.descripcion }))
+        )}. Recommend the best match and explain why. Responde en JSON con campos recommendedId y reasoning.`
       }
-    });
+    ]);
 
-    return JSON.parse(response.text || '{}');
+    const parsed = response.response?.text();
+    return parsed ? JSON.parse(parsed) : null;
   } catch (error) {
     console.error("AI Recommendation Error:", error);
     return null;
@@ -47,8 +52,8 @@ export const getSmartRecommendations = async (userInput: string) => {
 };
 
 export const getChatbotResponse = async (history: { role: 'user' | 'model', parts: { text: string }[] }[]) => {
-  initAI();
-  if (!ai) {
+  await initAI();
+  if (!aiModel) {
     const fallbackResponses = [
       "¡Hola! Soy el asistente de Guido Pizza. ¿Qué te gustaría pedir hoy?",
       "Tenemos las mejores pizzas artesanales de Bogotá. ¿Te gustaría ver nuestro menú?",
@@ -58,7 +63,7 @@ export const getChatbotResponse = async (history: { role: 'user' | 'model', part
   }
   
   try {
-    const systemInstruction = `Eres el "Concierge" de Guido Pizza en Bogotá. Tu objetivo es ayudar a los clientes a hacer pedidos.
+  const systemInstruction = `Eres el "Concierge" de Guido Pizza en Bogotá. Tu objetivo es ayudar a los clientes a hacer pedidos.
     REGLAS:
     1. Solo productos del menú: ${JSON.stringify(PRODUCTS.map(p => ({nombre: p.nombre, precio: p.basePrice})))}
     2. Solo ingredientes disponibles: ${JSON.stringify(INGREDIENTS.map(i => ({nombre: i.nombre, precio: i.precio_extra})))}
@@ -67,13 +72,13 @@ export const getChatbotResponse = async (history: { role: 'user' | 'model', part
     5. Precios en COP.
     6. Responde en Español.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-exp",
+    const response = await aiModel.generateContent({
       contents: history.map(h => ({ role: h.role, parts: h.parts })),
-      config: { systemInstruction },
+      safetySettings: [],
+      systemInstruction
     });
 
-    return response.text || "Fue un placer atenderte. ¿Algo más?";
+    return response.response?.text() || "Fue un placer atenderte. ¿Algo más?";
   } catch (error) {
     console.error("Chatbot Error:", error);
     return "¡Bienvenido a Guido Pizza! ¿En qué puedo ayudarte?";
@@ -81,17 +86,17 @@ export const getChatbotResponse = async (history: { role: 'user' | 'model', part
 };
 
 export const generateProductImage = async (productName: string, description: string) => {
-  initAI();
-  if (!ai) return null;
+  await initAI();
+  if (!aiModel) return null;
   
   try {
     const prompt = `Professional food photography of "${productName}". ${description}. Italian restaurant, dark moody background, warm lighting, 4k.`;
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: [{ text: prompt }],
-    });
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+    const response = await aiModel.generateContent([{ text: prompt }]);
+    const parts = response.response?.candidates?.[0]?.content?.parts || [];
+    for (const part of parts) {
+      if ('inlineData' in part && part.inlineData?.data) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
     }
     return null;
   } catch (error) {
@@ -100,17 +105,17 @@ export const generateProductImage = async (productName: string, description: str
 };
 
 export const generateIngredientImage = async (name: string, description: string) => {
-  initAI();
-  if (!ai) return null;
+  await initAI();
+  if (!aiModel) return null;
   
   try {
     const prompt = `Minimalist icon of pizza ingredient: "${name}". ${description}. Flat design, clean, white background.`;
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: [{ text: prompt }],
-    });
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+    const response = await aiModel.generateContent([{ text: prompt }]);
+    const parts = response.response?.candidates?.[0]?.content?.parts || [];
+    for (const part of parts) {
+      if ('inlineData' in part && part.inlineData?.data) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
     }
     return null;
   } catch (error) {

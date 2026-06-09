@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { INGREDIENTS, SIZE_FACTORS } from '../constants';
-import { Ingredient, PizzaSize, CartItem } from '../types';
+import { PizzaSize, CartItem } from '../types';
 
 interface SlotPosition {
   x: number;
@@ -40,22 +40,29 @@ const CATEGORY_UI: Record<string, { color: string; icon: string; visualColor?: s
   especia: { color: 'bg-stone-700', icon: 'pepper-hot' }
 };
 
+type PizzaSide = 'whole' | 'left' | 'right';
+
 const VisualPizzaBuilder: React.FC<{ onAddToCart?: (item: CartItem) => void }> = ({ onAddToCart }) => {
   const [size, setSize] = useState<PizzaSize>(PizzaSize.MEDIANA);
-  const [activeSide, setActiveSide] = useState<'whole' | 'left' | 'right'>('whole');
+  const [activeSide, setActiveSide] = useState<PizzaSide>('whole');
   const [activeCategory, setActiveCategory] = useState<string>('base');
   const [assetImages, setAssetImages] = useState<Record<string, string>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   
-  const [selections, setSelections] = useState<{ whole: string[], left: string[], right: string[] }>({
+  const [selections, setSelections] = useState<Record<PizzaSide, string[]>>({
     whole: [], left: [], right: []
   });
 
   useEffect(() => {
     const loadAssets = () => {
       const saved = localStorage.getItem('guido_ai_images');
-      if (saved) try { setAssetImages(JSON.parse(saved)); } catch (e) { console.error(e); }
+      if (!saved) return;
+      try {
+        setAssetImages(JSON.parse(saved));
+      } catch (error) {
+        console.error('Failed to parse stored assets', error);
+      }
     };
     loadAssets();
     window.addEventListener('product-images-updated', loadAssets);
@@ -135,7 +142,7 @@ const VisualPizzaBuilder: React.FC<{ onAddToCart?: (item: CartItem) => void }> =
     }, 2800);
   };
 
-  const renderToppingsLayer = (side: 'whole' | 'left' | 'right') => {
+  const renderToppingsLayer = (side: PizzaSide) => {
     const ids = selections[side];
     return ids.flatMap((id, ingredientIdx) => {
       const ing = INGREDIENTS.find(i => i.id === id);
@@ -236,20 +243,20 @@ const VisualPizzaBuilder: React.FC<{ onAddToCart?: (item: CartItem) => void }> =
 
           <div className="relative w-full max-w-[220px] sm:max-w-[280px] md:max-w-[400px] lg:max-w-[500px] landscape:max-w-[200px] md:landscape:max-w-[240px] lg:landscape:max-w-[500px] aspect-square mx-auto mt-2 md:mt-0">
             <div className={`absolute inset-0 rounded-full transition-colors duration-1000 ${currentMasa ? 'bg-[#dcae73]' : 'bg-stone-800'} border-[12px] sm:border-[16px] md:border-[24px] lg:border-[30px] ${currentMasa?.id === 'base_2' ? 'border-[#8B4513]' : 'border-[#a67c52]'} shadow-[inset_0_0_40px_rgba(0,0,0,0.6),0_20px_50px_rgba(0,0,0,0.8)] md:shadow-[inset_0_0_80px_rgba(0,0,0,0.6),0_40px_100px_rgba(0,0,0,0.8)] overflow-hidden pizza-texture`}>
-              {['whole', 'left', 'right'].map(side => {
-                const salsa = INGREDIENTS.find(i => i.categoria === 'salsa' && selections[side as keyof typeof selections].includes(i.id));
+            {(['whole', 'left', 'right'] as PizzaSide[]).map(side => {
+                const salsa = INGREDIENTS.find(i => i.categoria === 'salsa' && selections[side].includes(i.id));
                 if (!salsa) return null;
                 return <div key={`salsa-${side}`} className={`absolute inset-2 md:inset-4 rounded-full blur-xl md:blur-2xl opacity-60 transition-all duration-1000 ${side === 'left' ? 'w-1/2 left-2 md:left-4' : side === 'right' ? 'w-1/2 left-1/2' : 'w-full'}`} style={{ backgroundColor: CATEGORY_UI.salsa.visualColor || 'red' }}></div>;
               })}
-              {['whole', 'left', 'right'].map(side => {
-                const queso = INGREDIENTS.find(i => i.categoria === 'queso' && selections[side as keyof typeof selections].includes(i.id));
+              {(['whole', 'left', 'right'] as PizzaSide[]).map(side => {
+                const queso = INGREDIENTS.find(i => i.categoria === 'queso' && selections[side].includes(i.id));
                 if (!queso) return null;
                 return <div key={`queso-${side}`} className={`absolute inset-4 md:inset-6 rounded-full blur-lg md:blur-xl opacity-40 transition-all duration-1000 ${side === 'left' ? 'w-1/2 left-4 md:left-6' : side === 'right' ? 'w-1/2 left-1/2' : 'w-full'}`} style={{ backgroundColor: CATEGORY_UI.queso.visualColor || 'yellow' }}></div>;
               })}
               <div className="absolute inset-0 pointer-events-none">
-                {renderToppingsLayer('whole')}
-                <div className="absolute inset-0" style={{ clipPath: 'polygon(0 0, 50% 0, 50% 100%, 0 100%)' }}>{renderToppingsLayer('left')}</div>
-                <div className="absolute inset-0" style={{ clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)' }}>{renderToppingsLayer('right')}</div>
+                 {renderToppingsLayer('whole')}
+                 <div className="absolute inset-0" style={{ clipPath: 'polygon(0 0, 50% 0, 50% 100%, 0 100%)' }}>{renderToppingsLayer('left')}</div>
+                 <div className="absolute inset-0" style={{ clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)' }}>{renderToppingsLayer('right')}</div>
               </div>
               {!currentMasa && <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-8 text-center"><p className="text-stone-500 text-[7px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.4em] leading-relaxed">Selecciona una base para comenzar</p></div>}
             </div>
@@ -265,8 +272,12 @@ const VisualPizzaBuilder: React.FC<{ onAddToCart?: (item: CartItem) => void }> =
 
         <div className="w-full md:w-1/2 landscape:w-1/2 flex flex-col gap-4 md:gap-8">
           <div className="grid grid-cols-3 gap-1 md:gap-2 bg-black/40 p-1 md:p-1.5 rounded-full border border-white/5 w-full">
-            {[{ id: 'whole', label: 'Toda' }, { id: 'left', label: 'Mitad Izq' }, { id: 'right', label: 'Mitad Der' }].map(tab => (
-              <button key={tab.id} onClick={() => setActiveSide(tab.id as any)} className={`w-full py-3.5 md:py-4 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-tighter md:tracking-widest transition-all flex items-center justify-center gap-1 md:gap-2 ${activeSide === tab.id ? 'bg-orange-600 text-white shadow-xl' : 'text-stone-600 hover:text-stone-400'}`}>
+            {([
+              { id: 'whole', label: 'Toda' },
+              { id: 'left', label: 'Mitad Izq' },
+              { id: 'right', label: 'Mitad Der' }
+            ] as { id: PizzaSide; label: string }[]).map(tab => (
+              <button key={tab.id} onClick={() => setActiveSide(tab.id)} className={`w-full py-3.5 md:py-4 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-tighter md:tracking-widest transition-all flex items-center justify-center gap-1 md:gap-2 ${activeSide === tab.id ? 'bg-orange-600 text-white shadow-xl' : 'text-stone-600 hover:text-stone-400'}`}>
                 <span className="truncate px-1">{tab.label}</span>
               </button>
             ))}
@@ -282,7 +293,7 @@ const VisualPizzaBuilder: React.FC<{ onAddToCart?: (item: CartItem) => void }> =
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 max-h-[35vh] sm:max-h-[40vh] md:max-h-[50vh] lg:max-h-[400px] overflow-y-auto pr-1 md:pr-3 custom-scrollbar w-full">
-            {INGREDIENTS.filter(i => activeCategory === 'extra' ? (i.categoria === 'extra' || i.categoria === 'especia') : i.categoria === activeCategory).map(ing => {
+             {INGREDIENTS.filter(i => activeCategory === 'extra' ? (i.categoria === 'extra' || i.categoria === 'especia') : i.categoria === activeCategory).map(ing => {
               const selected = selections[activeSide].includes(ing.id);
               const imgUrl = assetImages[ing.id];
               return (

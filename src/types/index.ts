@@ -76,6 +76,7 @@ export interface OrderItem {
   size: PizzaSize;
   quantity: number;
   price: number;
+  details?: string;
 }
 
 export interface CartItem {
