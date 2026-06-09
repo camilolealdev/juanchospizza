@@ -166,7 +166,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
       {/* Floating Header */}
       <div className="fixed top-0 left-0 right-0 z-50 md:left-[280px] pointer-events-none">
-        <div className="flex items-center justify-between px-6 md:px-10 h-16 pointer-events-auto bg-white/[0.02] backdrop-blur-xl border-b border-white/5 shadow-2xl shadow-black/20">
+        <div className="flex items-center justify-between px-6 md:px-10 h-16 pointer-events-auto bg-white/[0.005] backdrop-blur-2xl border-b border-white/[0.03] shadow-2xl shadow-black/10">
           {/* Left: hamburger + title */}
           <div className="flex items-center gap-3">
             <button
