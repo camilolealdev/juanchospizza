@@ -563,20 +563,7 @@
       </div>
     </div>
 
-    <!-- Bottom row: QR + Copyright -->
-    <div class="premium-bottom-row">
-      <div class="premium-qr-block">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=https://wa.me/573117074843" alt="QR Juancho's" loading="lazy" />
-        <div class="premium-qr-text">
-          <p>Escanea y ordena ahora</p>
-          <span>Menú · WhatsApp · Redes</span>
-        </div>
-      </div>
-      <div class="premium-copyright">
-        <p>© 2026 Juancho's Pizza y Comidas Rápidas</p>
-        <span>Nemocón — Tradición Artesanal</span>
-      </div>
-    </div>
+
   </div>
 </section>
 
@@ -839,80 +826,6 @@
   .psc { padding: 12px 18px; font-size: 12px; }
   .psc span { display: none; }
   .psc i { font-size: 1.4rem; }
-}
-
-/* ===== Bottom row ===== */
-.premium-bottom-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 40px;
-  flex-wrap: wrap;
-  border-top: 1px solid rgba(255,255,255,.04);
-  padding-top: 36px;
-  position: relative;
-  z-index: 1;
-}
-@media (max-width: 640px) {
-  .premium-bottom-row { flex-direction: column; text-align: center; }
-}
-
-/* QR block */
-.premium-qr-block {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 18px;
-  padding: 18px 24px;
-  transition: all .4s ease;
-}
-.premium-qr-block:hover {
-  background: rgba(255,255,255,.05);
-  border-color: rgba(249,220,92,.12);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0,0,0,.2);
-}
-.premium-qr-block img {
-  width: 80px;
-  height: 80px;
-  border-radius: 12px;
-  background: #fff;
-  padding: 5px;
-  box-shadow: 0 6px 16px rgba(0,0,0,.25);
-}
-.premium-qr-text p {
-  font-size: 14px;
-  font-weight: 700;
-  color: #F4EFEA;
-  margin: 0 0 4px;
-}
-.premium-qr-text span {
-  font-size: 11px;
-  color: rgba(255,255,255,.25);
-  letter-spacing: 1px;
-}
-@media (max-width: 640px) {
-  .premium-qr-block { flex-direction: column; text-align: center; width: 100%; }
-}
-
-/* Copyright */
-.premium-copyright { text-align: right; }
-.premium-copyright p {
-  font-size: 12px;
-  color: rgba(255,255,255,.15);
-  margin: 0 0 4px;
-  letter-spacing: 1px;
-}
-.premium-copyright span {
-  font-size: 10px;
-  color: rgba(255,255,255,.08);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-}
-@media (max-width: 640px) {
-  .premium-copyright { text-align: center; width: 100%; }
 }
 
 /* ====== CRM BRAND STYLES ====== */
