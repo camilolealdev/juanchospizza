@@ -5,10 +5,12 @@
 @layer base {
   html {
     font-family: 'Inter', sans-serif;
+    scroll-padding-top: 80px;
   }
   
   body {
     @apply bg-stone-950 text-stone-100 antialiased;
+    touch-action: manipulation;
   }
 
   ::selection {

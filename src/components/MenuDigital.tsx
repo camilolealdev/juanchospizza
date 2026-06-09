@@ -226,7 +226,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
   return (
     <motion.div
       {...(isOverlay ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } } : {})}
-      className={isOverlay ? "fixed inset-0 z-[9995] bg-[#F4EFEA] overflow-y-auto" : "bg-[#F4EFEA] min-h-screen scroll-mt-16 animate-fade-in"}
+      className={isOverlay ? "fixed inset-0 z-[9995] bg-[#F4EFEA] overflow-y-auto overscroll-behavior-contain" : "bg-[#F4EFEA] min-h-screen scroll-mt-16 animate-fade-in"}
       id={isOverlay ? undefined : 'menu'}
       style={{ fontFamily: "'Poppins', sans-serif" }}
     >
@@ -526,7 +526,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl flex flex-col"
+              className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl flex flex-col overscroll-behavior-contain"
             >
               {/* Cart Header */}
               <div className="p-6 border-b border-[#8B572A]/10 flex items-center justify-between">

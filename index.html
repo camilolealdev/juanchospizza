@@ -126,6 +126,12 @@
         .hamburger { display: none; color: var(--blanco-puro); font-size: 1.5rem; cursor: pointer; background: rgba(255,255,255,.1); width: 48px; height: 48px; border-radius: 12px; align-items: center; justify-content: center; transition: var(--transition-smooth); }
         .hamburger:hover { background: rgba(255,255,255,.2); }
 
+        .container-max {
+            max-width: 1440px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
         #inicio {
             height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
             text-align: center; padding: 0 20px; border-bottom: 8px solid var(--marron-madera);
@@ -443,7 +449,7 @@
     <section id="inicio">
         <video class="hero-bg-video" autoplay loop muted playsinline src="/pizza-logo.mp4"></video>
         <div class="hero-overlay"></div>
-        <div class="hero-content">
+        <div class="hero-content container-max">
             <h1>En Sabor y Calidad, No Hay Igual</h1>
             <p>Las mejores pizzas, lasañas y spaguettis de Nemocón y Zipaquirá directamente a tu puerta.</p>
             <a href="#" class="btn-primary" onclick="event.preventDefault();showPage('menu')">VER MENÚ Y ORDENAR <i class="fa-solid fa-arrow-right"></i></a>
@@ -557,7 +563,8 @@
 
 <div class="page-container" data-page="domicilios">
     <section id="domicilios">
-        <div class="delivery-info">
+        <div class="container-max" style="display: flex; gap: 50px; align-items: center; width: 100%; flex-wrap: wrap;">
+            <div class="delivery-info">
             <h2>Pide Sin Moverte de Casa</h2>
             <div class="delivery-card">
                 <div class="delivery-item">
@@ -595,7 +602,8 @@
                 <iframe src="https://www.google.com/maps?q=Diagonal+4+%2329-10+Zipaquir%C3%A1+Cundinamarca+Colombia&output=embed" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 </div>
 
 <div class="page-container" data-page="carrito">
