@@ -17,7 +17,7 @@ const initAI = async () => {
       console.warn('Gemini API key not configured. Skipping AI init.');
       return;
     }
-    const client: GoogleGenerativeAI = new GoogleGenerativeAI({ apiKey });
+    const client: GoogleGenerativeAI = new GoogleGenerativeAI(apiKey);
     aiModel = client.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
     isInitialized = true;
     console.log('Gemini AI initialized successfully');

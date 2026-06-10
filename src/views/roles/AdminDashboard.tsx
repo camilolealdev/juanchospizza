@@ -180,7 +180,7 @@ const AdminDashboard: React.FC = () => {
               </div>
               <div className="p-5 flex-1 flex flex-col justify-center bg-stone-900/60">
                 <h4 className="font-black text-[10px] truncate uppercase text-stone-300 tracking-tight">{asset.nombre}</h4>
-                <p className="text-[8px] text-stone-600 mt-1 uppercase font-bold tracking-[0.2em]">{asset.isProduct ? 'Producto' : asset.categoria}</p>
+                <p className="text-[8px] text-stone-600 mt-1 uppercase font-bold tracking-[0.2em]">{'categoria' in asset ? asset.categoria : 'Producto'}</p>
               </div>
             </div>
           ))}
