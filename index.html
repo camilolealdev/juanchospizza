@@ -809,27 +809,29 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 0;
   background: linear-gradient(180deg, rgba(10,10,10,.7) 0%, rgba(10,10,10,.85) 50%, rgba(10,10,10,.95) 100%);
 }
 #premium-card .premium-texture {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
-  opacity: .1;
+  z-index: 1;
+  opacity: .15;
   background-image:
-    radial-gradient(circle at 20% 50%, rgba(249,220,92,.12) 1px, transparent 1px),
-    radial-gradient(circle at 80% 30%, rgba(192,57,43,.1) 1px, transparent 1px),
-    radial-gradient(circle at 50% 80%, rgba(255,255,255,.05) 1px, transparent 1px),
-    repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(139,87,42,.03) 40px, rgba(139,87,42,.03) 41px),
-    repeating-linear-gradient(-45deg, transparent, transparent 40px, rgba(139,87,42,.03) 40px, rgba(139,87,42,.03) 41px);
+    radial-gradient(circle at 15% 40%, rgba(249,220,92,.18) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 75% 25%, rgba(192,57,43,.14) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 45% 75%, rgba(255,255,255,.08) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 85% 70%, rgba(249,220,92,.1) 1px, transparent 1px),
+    radial-gradient(circle at 25% 85%, rgba(192,57,43,.08) 1px, transparent 1px),
+    repeating-conic-gradient(rgba(139,87,42,.04) 0% 25%, transparent 0% 50%) 0 0 / 60px 60px;
 }
 
 .premium-mist {
   height: 48px;
   background: linear-gradient(180deg, transparent 0%, rgba(10,10,10,.6) 100%);
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 @media (max-width: 768px) {
   .premium-mist { height: 32px; }
@@ -840,7 +842,7 @@
   margin: 0 auto;
   padding: 0 6% 40px;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 @media (max-width: 768px) {
   .premium-container { padding: 0 5% 28px; }
