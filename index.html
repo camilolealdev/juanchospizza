@@ -817,17 +817,16 @@
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  opacity: .45;
+  opacity: .55;
   background-image:
-    radial-gradient(circle at 10% 20%, rgba(200,160,120,.08) 8px, transparent 8px),
-    radial-gradient(circle at 30% 70%, rgba(200,160,120,.06) 6px, transparent 6px),
-    radial-gradient(circle at 60% 30%, rgba(180,140,100,.07) 7px, transparent 7px),
-    radial-gradient(circle at 80% 75%, rgba(200,160,120,.05) 5px, transparent 5px),
-    radial-gradient(circle at 45% 50%, rgba(180,140,100,.04) 4px, transparent 4px),
-    repeating-linear-gradient(0deg, transparent, transparent 32px, rgba(160,120,80,.03) 32px, rgba(160,120,80,.03) 33px),
-    repeating-linear-gradient(90deg, transparent, transparent 32px, rgba(160,120,80,.03) 32px, rgba(160,120,80,.03) 33px);
-  background-repeat: repeat, repeat, repeat, repeat, repeat, repeat, repeat;
-  background-size: auto, auto, auto, auto, auto, auto, auto;
+    repeating-linear-gradient(80deg, rgba(60,50,45,.08) 0px, rgba(60,50,45,.08) 2px, transparent 2px, transparent 6px),
+    repeating-linear-gradient(170deg, rgba(60,50,45,.06) 0px, rgba(60,50,45,.06) 1px, transparent 1px, transparent 5px),
+    repeating-conic-gradient(rgba(80,65,55,.04) 0% 25%, transparent 0% 50%) 0 0 / 80px 80px,
+    radial-gradient(ellipse at 15% 30%, rgba(80,65,55,.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 65%, rgba(60,50,45,.1) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 20%, rgba(90,75,65,.08) 0%, transparent 35%);
+  background-repeat: repeat, repeat, repeat, no-repeat, no-repeat, no-repeat;
+  background-size: auto, auto, auto, 100% 100%, 100% 100%, 100% 100%;
 }
 
 .premium-mist {
