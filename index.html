@@ -703,6 +703,7 @@
 
 <!-- ===== PREMIUM DIGITAL CARD — Sección final de la web ===== -->
 <section id="premium-card">
+  <div class="premium-texture"></div>
   <div class="premium-mist"></div>
   <div class="premium-container">
 
@@ -810,6 +811,19 @@
   inset: 0;
   pointer-events: none;
   background: linear-gradient(180deg, rgba(10,10,10,.7) 0%, rgba(10,10,10,.85) 50%, rgba(10,10,10,.95) 100%);
+}
+#premium-card .premium-texture {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: .12;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(249,220,92,.15) 1px, transparent 1px),
+    radial-gradient(circle at 80% 30%, rgba(192,57,43,.12) 1px, transparent 1px),
+    radial-gradient(circle at 50% 80%, rgba(255,255,255,.06) 1px, transparent 1px),
+    repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(139,87,42,.04) 40px, rgba(139,87,42,.04) 41px),
+    repeating-linear-gradient(-45deg, transparent, transparent 40px, rgba(139,87,42,.04) 40px, rgba(139,87,42,.04) 41px);
 }
 
 .premium-mist {
