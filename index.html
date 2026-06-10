@@ -795,7 +795,7 @@
 #premium-card {
   position: relative;
   overflow: hidden;
-  background: #0a0a0a;
+  background-color: #1a0f0a;
   color: #F4EFEA;
   font-family: 'Poppins', sans-serif;
   background-image: url('/footer-img.png');
@@ -810,31 +810,29 @@
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background: linear-gradient(180deg, rgba(10,10,10,.7) 0%, rgba(10,10,10,.85) 50%, rgba(10,10,10,.95) 100%);
+  background: linear-gradient(180deg, rgba(10,5,3,.5) 0%, rgba(10,5,3,.65) 40%, rgba(10,5,3,.8) 100%);
 }
 #premium-card .premium-texture {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
+  opacity: .45;
   background-image:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='.5' fill='%23222'/%3E%3C/svg%3E"),
-    repeating-linear-gradient(45deg, transparent, transparent 28px, rgba(139,87,42,.04) 28px, rgba(139,87,42,.04) 29px),
-    repeating-linear-gradient(-45deg, transparent, transparent 28px, rgba(139,87,42,.04) 28px, rgba(139,87,42,.04) 29px),
-    radial-gradient(circle at 15% 30%, rgba(139,87,42,.07) 3px, transparent 3px),
-    radial-gradient(circle at 50% 70%, rgba(139,87,42,.05) 2px, transparent 2px),
-    radial-gradient(circle at 80% 20%, rgba(139,87,42,.06) 2.5px, transparent 2.5px),
-    radial-gradient(circle at 35% 85%, rgba(139,87,42,.04) 2px, transparent 2px),
-    radial-gradient(circle at 70% 60%, rgba(139,87,42,.05) 1.5px, transparent 1.5px);
-  background-repeat: repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat;
-  background-size: 160px 160px, auto, auto, auto, auto, auto, auto, auto;
-  mix-blend-mode: multiply;
-  opacity: .6;
+    radial-gradient(circle at 10% 20%, rgba(200,160,120,.08) 8px, transparent 8px),
+    radial-gradient(circle at 30% 70%, rgba(200,160,120,.06) 6px, transparent 6px),
+    radial-gradient(circle at 60% 30%, rgba(180,140,100,.07) 7px, transparent 7px),
+    radial-gradient(circle at 80% 75%, rgba(200,160,120,.05) 5px, transparent 5px),
+    radial-gradient(circle at 45% 50%, rgba(180,140,100,.04) 4px, transparent 4px),
+    repeating-linear-gradient(0deg, transparent, transparent 32px, rgba(160,120,80,.03) 32px, rgba(160,120,80,.03) 33px),
+    repeating-linear-gradient(90deg, transparent, transparent 32px, rgba(160,120,80,.03) 32px, rgba(160,120,80,.03) 33px);
+  background-repeat: repeat, repeat, repeat, repeat, repeat, repeat, repeat;
+  background-size: auto, auto, auto, auto, auto, auto, auto;
 }
 
 .premium-mist {
   height: 48px;
-  background: linear-gradient(180deg, transparent 0%, rgba(10,10,10,.6) 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(26,15,10,.7) 100%);
   position: relative;
   z-index: 2;
 }
