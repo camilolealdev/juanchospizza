@@ -410,13 +410,13 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
               >
                 <div className="relative h-48 bg-[#F4EFEA]">
                   <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                  <button onClick={() => setShowPizzaBuilder(null)} className="absolute top-4 right-4 w-9 h-9 rounded-xl bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-all">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+                  <button onClick={() => setShowPizzaBuilder(null)} className="absolute top-4 right-4 z-10 w-9 h-9 rounded-xl bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-all">
                     <i className="fas fa-times text-xs"></i>
                   </button>
-                  <div className="absolute bottom-4 left-4">
+                  <div className="absolute bottom-4 left-4 z-10">
                     <h2 className="text-2xl font-black text-white drop-shadow-lg" style={{ fontFamily: "'Bitter', serif" }}>{product.name}</h2>
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                 </div>
                 <div className="p-6 max-h-[60vh] overflow-y-auto">
                   {/* Size Selector */}
