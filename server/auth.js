@@ -77,10 +77,10 @@ function verifyToken(token) {
 // Usuarios autorizados (en producción, estos datos deben estar en DB)
 // Los pines deben ser hasheados con salt único por usuario
 const USERS = [
-  { username: 'admin', role: 'ADMIN', pinHash: '5cf856c3e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9', salt: 'admin_salt_1234' }, // PIN: 1234
-  { username: 'cocina', role: 'OPERATOR', pinHash: '5cf856c3e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9', salt: 'cocina_salt_5678' }, // PIN: 5678
-  { username: 'repartidor', role: 'REPARTIDOR', pinHash: '5cf856c3e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9', salt: 'repartidor_salt_0000' }, // PIN: 0000
-  { username: 'marketing', role: 'MARKETING', pinHash: '5cf856c3e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9e8c4e7a9', salt: 'marketing_salt_9999' }, // PIN: 9999
+  { username: 'admin', role: 'ADMIN', pinHash: '7c8e412e662bac5e072311b4581516c0177c11b0987e917d87c0995a08511920d1aaa3ea69f8b6a0aa3b944e50dbecb7c6ea6d4cba023ee32be3729a7186acef', salt: 'admin_salt_1234' }, // PIN: 1234
+  { username: 'cocina', role: 'OPERATOR', pinHash: '8ee13a114078fa68cf7198ec543eb34e4eed8a1fa48a3c94ec57930eab385fcbbc7717278d251ca0fbbc777ec696a02f9ed15bb09533c79c0fce70d965381824', salt: 'cocina_salt_5678' }, // PIN: 5678
+  { username: 'repartidor', role: 'REPARTIDOR', pinHash: 'b00acf37b4058cc555f92cc69eb9741adf6a7f701bb9a51f459664a2e556040a77a9a38c6727e1c77fe15239e1508959bcef584ec9038e5754d7a7f44397f56a', salt: 'repartidor_salt_0000' }, // PIN: 0000
+  { username: 'marketing', role: 'MARKETING', pinHash: '01ba420d5ff67db2aa890bdf61e9e3dee8f861b5f333e1fef35a50e51c118f74f4107f588fa87c216370a3514e298f89831173c3e576aa1a653c5d4ee19d0f60', salt: 'marketing_salt_9999' }, // PIN: 9999
 ];
 
 // Función para gerar hashes de PIN (para usar en setup)
@@ -98,7 +98,9 @@ export function authenticate(username, pin) {
   if (!user) return null;
   
   const inputHash = hashPin(pin, user.salt);
-  if (inputHash !== user.pinHash) {
+  const inputBuf = Buffer.from(inputHash, 'hex');
+  const storedBuf = Buffer.from(user.pinHash, 'hex');
+  if (inputBuf.length !== storedBuf.length || !crypto.timingSafeEqual(inputBuf, storedBuf)) {
     return null;
   }
   

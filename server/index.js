@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@libsql/client';
 import dotenv from 'dotenv';
+import { authMiddleware, requireRole } from './auth.js';
 
 dotenv.config();
 
@@ -28,6 +29,14 @@ app.use(express.json({ limit: '10mb' }));
 
 // Rate limiting básico por IP
 const rateLimit = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, record] of rateLimit) {
+    if (now > record.reset) {
+      rateLimit.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000);
 app.use((req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress;
   const now = Date.now();
@@ -284,6 +293,14 @@ async function initDB() {
       )
     `);
 
+    await turso.execute('CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)');
+    await turso.execute('CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders(createdAt)');
+    await turso.execute('CREATE INDEX IF NOT EXISTS idx_clients_estado ON clients(estado)');
+    await turso.execute('CREATE INDEX IF NOT EXISTS idx_inventory_categoria ON inventory_items(categoria)');
+    await turso.execute('CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipeId ON recipe_ingredients(recipeId)');
+    await turso.execute('CREATE INDEX IF NOT EXISTS idx_expenses_fecha ON expenses(fecha)');
+    await turso.execute('CREATE INDEX IF NOT EXISTS idx_menu_promotions_activo ON menu_promotions(activo)');
+
     console.log('✅ Database initialized with GastroPro CRM tables');
   } catch (error) {
     console.error('❌ DB init error:', error.message);
@@ -366,7 +383,7 @@ app.get('/api/ingredients', async (req, res) => {
 });
 
 // ORDERS
-app.get('/api/orders', async (req, res) => {
+app.get('/api/orders', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'), async (req, res) => {
   try {
     const { status } = req.query;
     let query = 'SELECT * FROM orders';
@@ -386,7 +403,7 @@ app.get('/api/orders', async (req, res) => {
   }
 });
 
-app.get('/api/orders/:id', async (req, res) => {
+app.get('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'), async (req, res) => {
   try {
     const result = await turso.execute({
       sql: 'SELECT * FROM orders WHERE id = ?',
@@ -438,7 +455,7 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-app.patch('/api/orders/:id/status', async (req, res) => {
+app.patch('/api/orders/:id/status', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'), async (req, res) => {
   try {
     const { status } = req.body;
     
@@ -468,8 +485,40 @@ app.patch('/api/orders/:id/status', async (req, res) => {
   }
 });
 
+app.put('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
+  try {
+    const { address, items, total, estimatedTime, paymentMethod } = req.body;
+
+    const updates = [];
+    const params = [];
+    if (address !== undefined) { updates.push('address = ?'); params.push(String(address).slice(0, 200)); }
+    if (items !== undefined) { updates.push('items = ?'); params.push(JSON.stringify(items).slice(0, 5000)); }
+    if (total !== undefined) { updates.push('total = ?'); params.push(Math.max(0, Math.min(Number(total), 999999999))); }
+    if (estimatedTime !== undefined) { updates.push('estimatedTime = ?'); params.push(Math.max(0, Math.min(Number(estimatedTime), 180))); }
+    if (paymentMethod !== undefined) { updates.push('paymentMethod = ?'); params.push(String(paymentMethod).slice(0, 20)); }
+
+    if (updates.length) {
+      params.push(req.params.id);
+      await turso.execute({ sql: `UPDATE orders SET ${updates.join(', ')} WHERE id = ?`, args: params });
+    }
+
+    const result = await turso.execute({
+      sql: 'SELECT * FROM orders WHERE id = ?',
+      args: [req.params.id]
+    });
+
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(404).json({ error: 'Order not found' });
+    }
+  } catch (e) {
+    res.status(500).json({ error: 'Error updating order' });
+  }
+});
+
 // CAMPAIGNS
-app.get('/api/campaigns', async (req, res) => {
+app.get('/api/campaigns', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
     const result = await turso.execute('SELECT * FROM campaigns ORDER BY id');
     res.json(result.rows);
@@ -478,7 +527,7 @@ app.get('/api/campaigns', async (req, res) => {
   }
 });
 
-app.post('/api/campaigns', async (req, res) => {
+app.post('/api/campaigns', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
     const { name, type, discount, status, budget } = req.body;
     const id = `camp_${Date.now()}`;
@@ -494,8 +543,40 @@ app.post('/api/campaigns', async (req, res) => {
   }
 });
 
+app.put('/api/campaigns/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+  try {
+    const { name, type, discount, status, budget } = req.body;
+
+    const updates = [];
+    const params = [];
+    if (name !== undefined) { updates.push('name = ?'); params.push(String(name).slice(0, 100)); }
+    if (type !== undefined) { updates.push('type = ?'); params.push(String(type).slice(0, 20)); }
+    if (discount !== undefined) { updates.push('discount = ?'); params.push(Math.max(0, Math.min(Number(discount), 100))); }
+    if (status !== undefined) { updates.push('status = ?'); params.push(String(status).slice(0, 20)); }
+    if (budget !== undefined) { updates.push('budget = ?'); params.push(Math.max(0, Math.min(Number(budget), 999999999))); }
+
+    if (updates.length) {
+      params.push(req.params.id);
+      await turso.execute({ sql: `UPDATE campaigns SET ${updates.join(', ')} WHERE id = ?`, args: params });
+    }
+
+    const result = await turso.execute({
+      sql: 'SELECT * FROM campaigns WHERE id = ?',
+      args: [req.params.id]
+    });
+
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(404).json({ error: 'Campaign not found' });
+    }
+  } catch (e) {
+    res.status(500).json({ error: 'Error updating campaign' });
+  }
+});
+
 // STATS
-app.get('/api/stats', async (req, res) => {
+app.get('/api/stats', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     
@@ -525,7 +606,7 @@ app.get('/api/stats', async (req, res) => {
 // ===================== GASTROPRO CRM API ROUTES =====================
 
 // --- CLIENTS ---
-app.get('/api/clients', async (req, res) => {
+app.get('/api/clients', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
     const { estado, search } = req.query;
     let query = 'SELECT * FROM clients';
@@ -540,7 +621,7 @@ app.get('/api/clients', async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Error fetching clients' }); }
 });
 
-app.get('/api/clients/:id', async (req, res) => {
+app.get('/api/clients/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
     const result = await turso.execute({ sql: 'SELECT * FROM clients WHERE id = ?', args: [req.params.id] });
     if (result.rows.length) {
@@ -550,7 +631,7 @@ app.get('/api/clients/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Error fetching client' }); }
 });
 
-app.post('/api/clients', async (req, res) => {
+app.post('/api/clients', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
     const { nombre, telefono, email, direccion, notas, cumpleanos } = req.body;
     const id = `cli_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
@@ -562,7 +643,7 @@ app.post('/api/clients', async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Error creating client' }); }
 });
 
-app.patch('/api/clients/:id', async (req, res) => {
+app.patch('/api/clients/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
     const { vip, notas, tags, estado } = req.body;
     const updates = []; const params = [];
@@ -579,14 +660,14 @@ app.patch('/api/clients/:id', async (req, res) => {
 });
 
 // --- INVENTORY ---
-app.get('/api/inventory', async (req, res) => {
+app.get('/api/inventory', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const result = await turso.execute('SELECT * FROM inventory_items ORDER BY nombre');
     res.json(result.rows);
   } catch (e) { res.status(500).json({ error: 'Error fetching inventory' }); }
 });
 
-app.post('/api/inventory', async (req, res) => {
+app.post('/api/inventory', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const { nombre, categoria, stockActual, stockMinimo, stockMaximo, unidad, costoUnitario, proveedor, lote, fechaVencimiento, ubicacion } = req.body;
     const id = `inv_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
@@ -598,7 +679,7 @@ app.post('/api/inventory', async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Error creating inventory item' }); }
 });
 
-app.post('/api/inventory/movement', async (req, res) => {
+app.post('/api/inventory/movement', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const { itemId, tipo, cantidad, motivo, referencia, usuario } = req.body;
     const item = await turso.execute({ sql: 'SELECT * FROM inventory_items WHERE id = ?', args: [itemId] });
@@ -615,7 +696,7 @@ app.post('/api/inventory/movement', async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Error registering movement' }); }
 });
 
-app.get('/api/inventory/movements', async (req, res) => {
+app.get('/api/inventory/movements', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const result = await turso.execute('SELECT * FROM inventory_movements ORDER BY creado DESC LIMIT 50');
     res.json(result.rows);
@@ -623,20 +704,22 @@ app.get('/api/inventory/movements', async (req, res) => {
 });
 
 // --- RECIPES ---
-app.get('/api/recipes', async (req, res) => {
+app.get('/api/recipes', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const recipes = await turso.execute('SELECT * FROM recipes');
-    const result = [];
-    for (const recipe of recipes.rows) {
-      const ingredients = await turso.execute({ sql: 'SELECT * FROM recipe_ingredients WHERE recipeId = ?', args: [recipe.id] });
-      result.push({ ...recipe, ingredientes: ingredients.rows });
+    const allIngredients = await turso.execute('SELECT * FROM recipe_ingredients');
+    const byRecipeId = new Map();
+    for (const ingredient of allIngredients.rows) {
+      if (!byRecipeId.has(ingredient.recipeId)) byRecipeId.set(ingredient.recipeId, []);
+      byRecipeId.get(ingredient.recipeId).push(ingredient);
     }
+    const result = recipes.rows.map(recipe => ({ ...recipe, ingredientes: byRecipeId.get(recipe.id) || [] }));
     res.json(result);
   } catch (e) { res.status(500).json({ error: 'Error fetching recipes' }); }
 });
 
 // --- EXPENSES ---
-app.get('/api/expenses', async (req, res) => {
+app.get('/api/expenses', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
     const { desde, hasta } = req.query;
     let query = 'SELECT * FROM expenses';
@@ -648,7 +731,7 @@ app.get('/api/expenses', async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Error fetching expenses' }); }
 });
 
-app.post('/api/expenses', async (req, res) => {
+app.post('/api/expenses', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
     const { categoria, descripcion, monto, fecha, metodo, proveedor, factura, notas, recurrente } = req.body;
     const id = `exp_${Date.now()}`;
@@ -661,14 +744,14 @@ app.post('/api/expenses', async (req, res) => {
 });
 
 // --- LOYALTY ---
-app.get('/api/loyalty/rewards', async (req, res) => {
+app.get('/api/loyalty/rewards', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
     const result = await turso.execute('SELECT * FROM loyalty_rewards WHERE vigente = 1');
     res.json(result.rows);
   } catch (e) { res.status(500).json({ error: 'Error fetching rewards' }); }
 });
 
-app.post('/api/loyalty/points', async (req, res) => {
+app.post('/api/loyalty/points', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
     const { clientId, puntos, concepto, referencia } = req.body;
     const id = `lpt_${Date.now()}`;
@@ -704,7 +787,7 @@ app.get('/api/menu/promotions', async (req, res) => {
 });
 
 // --- FINANCE REPORTS ---
-app.get('/api/finance/summary', async (req, res) => {
+app.get('/api/finance/summary', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
     const ingresos = await turso.execute("SELECT COALESCE(SUM(total),0) as total FROM orders WHERE status != 'CANCELLED'");
     const egresos = await turso.execute("SELECT COALESCE(SUM(monto),0) as total FROM expenses");
@@ -723,7 +806,7 @@ app.get('/api/finance/summary', async (req, res) => {
 });
 
 // --- CLIENT HISTORY ---
-app.get('/api/clients/:id/orders', async (req, res) => {
+app.get('/api/clients/:id/orders', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
     const result = await turso.execute({
       sql: "SELECT * FROM orders WHERE customerName = (SELECT nombre FROM clients WHERE id = ?) ORDER BY createdAt DESC LIMIT 20",
@@ -734,7 +817,7 @@ app.get('/api/clients/:id/orders', async (req, res) => {
 });
 
 // Seed data endpoint
-app.post('/api/seed', async (req, res) => {
+app.post('/api/seed', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
     const categories = [
       { id: '1', name: 'PROMOS FLASH', icon: 'bolt', color: 'text-yellow-500' },
