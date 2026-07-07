@@ -445,7 +445,7 @@ app.post('/api/orders', async (req, res) => {
     const createdAt = new Date().toISOString();
     
     await turso.execute({
-      sql: `INSERT INTO orders (id, orderNumber, customerName, address, items, total, status, createdAt, estimatedTime, paymentMethod) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO orders (id, orderNumber, customerName, address, items, total, status, createdAt, estimatedTime, paymentMethod) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [id, sanitized.orderNumber, sanitized.customerName, sanitized.address, sanitized.items, sanitized.total, status, createdAt, sanitized.estimatedTime, sanitized.paymentMethod]
     });
     
@@ -517,6 +517,54 @@ app.put('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR'), asy
   }
 });
 
+// PAYMENTS — Bold (Colombia)
+app.post('/api/payments/bold/create-link', async (req, res) => {
+  try {
+    if (!process.env.BOLD_API_KEY) {
+      return res.status(503).json({ error: 'Bold no configurado' });
+    }
+
+    const { orderId } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ error: 'Falta orderId' });
+    }
+
+    const orderResult = await turso.execute({ sql: 'SELECT * FROM orders WHERE id = ?', args: [orderId] });
+    const order = orderResult.rows[0];
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    if (order.status === 'CANCELLED' || order.status === 'COMPLETED') {
+      return res.status(400).json({ error: `No se puede pagar un pedido ${order.status.toLowerCase()}` });
+    }
+
+    const boldResponse = await fetch('https://integrations.api.bold.co/online/link/v1', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `x-api-key ${process.env.BOLD_API_KEY}`
+      },
+      body: JSON.stringify({
+        amount_type: 'CLOSE',
+        amount: { currency: 'COP', total_amount: order.total },
+        reference: order.orderNumber,
+        description: `Pedido Juancho's Pizza #${order.orderNumber}`.slice(0, 100),
+        payment_methods: ['CREDIT_CARD', 'PSE', 'NEQUI', 'BOTON_BANCOLOMBIA']
+      })
+    });
+
+    const data = await boldResponse.json();
+
+    if (!boldResponse.ok || (data.errors && data.errors.length > 0)) {
+      return res.status(502).json({ error: data.errors?.[0]?.message || 'Error creando el link de pago Bold' });
+    }
+
+    res.status(201).json({ url: data.payload.url, paymentLink: data.payload.payment_link });
+  } catch (e) {
+    res.status(500).json({ error: 'Error de conexión con Bold' });
+  }
+});
+
 // CAMPAIGNS
 app.get('/api/campaigns', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
@@ -533,7 +581,7 @@ app.post('/api/campaigns', authMiddleware, requireRole('ADMIN', 'MARKETING'), as
     const id = `camp_${Date.now()}`;
     
     await turso.execute({
-      sql: `INSERT INTO campaigns (id, name, type, discount, status, reach, conversions, budget) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO campaigns (id, name, type, discount, status, reach, conversions, budget) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [id, String(name).slice(0, 100), String(type).slice(0, 20), Math.max(0, Math.min(Number(discount || 0), 100)), String(status || 'draft').slice(0, 20), 0, 0, Math.max(0, Math.min(Number(budget || 0), 999999999))]
     });
     

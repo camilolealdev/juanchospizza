@@ -1,4 +1,4 @@
-export type PaymentMethod = 'mercadopago' | 'nequi' | 'paypal' | 'wompi' | 'cash' | 'card';
+export type PaymentMethod = 'mercadopago' | 'nequi' | 'paypal' | 'wompi' | 'bold' | 'cash' | 'card';
 
 export interface PaymentConfig {
   MercadoPago?: {
@@ -70,6 +70,8 @@ class PaymentService {
         return this.processPayPal(request);
       case 'wompi':
         return this.processWompi(request);
+      case 'bold':
+        return this.processBold(request);
       case 'cash':
       case 'card':
         return this.processCashOrCard(request);
@@ -185,6 +187,32 @@ class PaymentService {
     }
   }
 
+  private async processBold(request: PaymentRequest): Promise<PaymentResponse> {
+    try {
+      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiBase}/api/payments/bold/create-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: request.orderId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, message: data.error || 'Bold no configurado' };
+      }
+
+      return {
+        success: true,
+        transactionId: data.paymentLink,
+        paymentUrl: data.url,
+        message: 'Redirigiendo a Bold...',
+      };
+    } catch (error) {
+      return { success: false, message: 'Error de conexión con Bold' };
+    }
+  }
+
   private processCashOrCard(request: PaymentRequest): PaymentResponse {
     return {
       success: true,
@@ -202,6 +230,7 @@ class PaymentService {
       { id: 'nequi', name: 'NEQUI', icon: 'fas fa-mobile-alt' },
       { id: 'paypal', name: 'PayPal', icon: 'fab fa-paypal' },
       { id: 'wompi', name: 'Wompi', icon: 'fas fa-credit-card' },
+      { id: 'bold', name: 'Bold', icon: 'fas fa-bolt' },
       { id: 'card', name: 'Tarjeta', icon: 'fas fa-credit-card' },
     ];
   }
