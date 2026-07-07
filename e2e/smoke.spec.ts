@@ -9,6 +9,6 @@ test('home page loads with hero and nav', async ({ page }) => {
 
 test('menu nav link switches to the menu page', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Menú' }).click();
+  await page.locator('.nav-links').getByRole('link', { name: 'Menú', exact: true }).click();
   await expect(page.locator('.page-container[data-page="menu"]')).toHaveClass(/active/);
 });

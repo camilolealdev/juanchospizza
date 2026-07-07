@@ -44,6 +44,10 @@ build/
 coverage/
 .nyc_output/
 
+# Playwright
+playwright-report/
+test-results/
+
 # Vercel
 .vercel
 
