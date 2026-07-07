@@ -1,21 +1,9 @@
 export type PaymentMethod = 'mercadopago' | 'nequi' | 'paypal' | 'wompi' | 'bold' | 'cash' | 'card';
 
 export interface PaymentConfig {
-  MercadoPago?: {
-    accessToken: string;
-    publicKey: string;
-  };
   NEQUI?: {
     apiKey: string;
     phone: string;
-  };
-  PayPal?: {
-    clientId: string;
-    clientSecret: string;
-  };
-  Wompi?: {
-    merchantId: string;
-    publicKey: string;
   };
 }
 
@@ -41,23 +29,21 @@ class PaymentService {
 
   constructor() {
     this.config = {
-      MercadoPago: {
-        accessToken: import.meta.env.VITE_MP_ACCESS_TOKEN || '',
-        publicKey: import.meta.env.VITE_MP_PUBLIC_KEY || '',
-      },
       NEQUI: {
         apiKey: import.meta.env.VITE_NEQUI_API_KEY || '',
         phone: import.meta.env.VITE_NEQUI_PHONE || '',
       },
-      PayPal: {
-        clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || '',
-        clientSecret: import.meta.env.VITE_PAYPAL_CLIENT_SECRET || '',
-      },
-      Wompi: {
-        merchantId: import.meta.env.VITE_WOMPI_MERCHANT_ID || '',
-        publicKey: import.meta.env.VITE_WOMPI_PUBLIC_KEY || '',
-      },
     };
+  }
+
+  private async postToBackend<T>(path: string, body: Record<string, unknown>): Promise<{ ok: boolean; data: T }> {
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const response = await fetch(`${apiBase}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return { ok: response.ok, data: (await response.json()) as T };
   }
 
   async processPayment(request: PaymentRequest): Promise<PaymentResponse> {
@@ -81,40 +67,22 @@ class PaymentService {
   }
 
   private async processMercadoPago(request: PaymentRequest): Promise<PaymentResponse> {
-    if (!this.config.MercadoPago?.accessToken) {
-      return { success: false, message: 'MercadoPago no configurado' };
-    }
-
     try {
-      const response = await fetch('https://api.mercadopago.com/v1/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.MercadoPago.accessToken}`,
-        },
-        body: JSON.stringify({
-          transaction_amount: request.amount,
-          description: `Pedido Guido Pizza #${request.orderId}`,
-          payment_method_id: 'pix',
-          payer: {
-            email: request.customerEmail,
-          },
-          external_reference: request.orderId,
-        }),
+      const { ok, data } = await this.postToBackend<{ error?: string; transactionId?: string; qrCode?: string }>('/api/payments/mercadopago/create-payment', {
+        orderId: request.orderId,
+        customerEmail: request.customerEmail,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        return {
-          success: true,
-          transactionId: data.id,
-          message: 'Pago con MercadoPago procesado',
-          qrCode: data.point_of_interaction?.transaction_data?.qr_code,
-        };
+      if (!ok) {
+        return { success: false, message: data.error || 'MercadoPago no configurado' };
       }
 
-      return { success: false, message: data.message || 'Error en pago' };
+      return {
+        success: true,
+        transactionId: data.transactionId,
+        message: 'Pago con MercadoPago procesado',
+        qrCode: data.qrCode,
+      };
     } catch (error) {
       return { success: false, message: 'Error de conexión' };
     }
@@ -133,55 +101,41 @@ class PaymentService {
   }
 
   private async processPayPal(request: PaymentRequest): Promise<PaymentResponse> {
-    if (!this.config.PayPal?.clientId) {
-      return { success: false, message: 'PayPal no configurado' };
-    }
-
-    return {
-      success: true,
-      paymentUrl: `https://www.paypal.com/checkoutnow?token=${request.orderId}&return=${encodeURIComponent(`${window.location.origin}/payment/success`)}&cancel=${encodeURIComponent(`${window.location.origin}/payment/cancel`)}`,
-      message: 'Redirigiendo a PayPal...',
-    };
-  }
-
-  private async processWompi(request: PaymentRequest): Promise<PaymentResponse> {
-    if (!this.config.Wompi?.merchantId) {
-      return { success: false, message: 'Wompi no configurado' };
-    }
-
     try {
-      const response = await fetch('https://sandbox.wompi.co/v1/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount_in_cents: Math.round(request.amount * 100),
-          currency: 'COP',
-          customer_email: request.customerEmail,
-          payment_method: {
-            type: 'CARD',
-          },
-          reference: request.orderId,
-          redirect_url: `${window.location.origin}/payment/return`,
-        }),
+      const { ok, data } = await this.postToBackend<{ error?: string; paymentUrl?: string }>('/api/payments/paypal/create-order', {
+        orderId: request.orderId,
       });
 
-      const data = await response.json();
-
-      if (data.status === 'approved') {
-        return {
-          success: true,
-          transactionId: data.id,
-          message: 'Pago aprobado',
-        };
+      if (!ok) {
+        return { success: false, message: data.error || 'PayPal no configurado' };
       }
 
       return {
         success: true,
-        paymentUrl: data.redirect_url,
-        message: 'Redirigiendo al pago...',
+        paymentUrl: data.paymentUrl,
+        message: 'Redirigiendo a PayPal...',
       };
+    } catch (error) {
+      return { success: false, message: 'Error de conexión' };
+    }
+  }
+
+  private async processWompi(request: PaymentRequest): Promise<PaymentResponse> {
+    try {
+      const { ok, data } = await this.postToBackend<{ error?: string; approved?: boolean; transactionId?: string; paymentUrl?: string }>('/api/payments/wompi/create-transaction', {
+        orderId: request.orderId,
+        customerEmail: request.customerEmail,
+      });
+
+      if (!ok) {
+        return { success: false, message: data.error || 'Wompi no configurado' };
+      }
+
+      if (data.approved) {
+        return { success: true, transactionId: data.transactionId, message: 'Pago aprobado' };
+      }
+
+      return { success: true, paymentUrl: data.paymentUrl, message: 'Redirigiendo al pago...' };
     } catch (error) {
       return { success: false, message: 'Error de conexión' };
     }
@@ -189,16 +143,11 @@ class PaymentService {
 
   private async processBold(request: PaymentRequest): Promise<PaymentResponse> {
     try {
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiBase}/api/payments/bold/create-link`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: request.orderId }),
+      const { ok, data } = await this.postToBackend<{ error?: string; url?: string; paymentLink?: string }>('/api/payments/bold/create-link', {
+        orderId: request.orderId,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (!ok) {
         return { success: false, message: data.error || 'Bold no configurado' };
       }
 

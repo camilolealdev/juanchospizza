@@ -565,6 +565,124 @@ app.post('/api/payments/bold/create-link', async (req, res) => {
   }
 });
 
+// PAYMENTS — MercadoPago
+app.post('/api/payments/mercadopago/create-payment', async (req, res) => {
+  try {
+    if (!process.env.MP_ACCESS_TOKEN) {
+      return res.status(503).json({ error: 'MercadoPago no configurado' });
+    }
+
+    const { orderId, customerEmail } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ error: 'Falta orderId' });
+    }
+
+    const orderResult = await turso.execute({ sql: 'SELECT * FROM orders WHERE id = ?', args: [orderId] });
+    const order = orderResult.rows[0];
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`
+      },
+      body: JSON.stringify({
+        transaction_amount: order.total,
+        description: `Pedido Juancho's Pizza #${order.orderNumber}`.slice(0, 100),
+        payment_method_id: 'pix',
+        payer: { email: String(customerEmail || '').slice(0, 100) },
+        external_reference: order.id
+      })
+    });
+
+    const data = await mpResponse.json();
+
+    if (!mpResponse.ok) {
+      return res.status(502).json({ error: data.message || 'Error creando pago MercadoPago' });
+    }
+
+    res.status(201).json({
+      transactionId: data.id,
+      qrCode: data.point_of_interaction?.transaction_data?.qr_code
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Error de conexión con MercadoPago' });
+  }
+});
+
+// PAYMENTS — Wompi
+app.post('/api/payments/wompi/create-transaction', async (req, res) => {
+  try {
+    if (!process.env.WOMPI_MERCHANT_ID) {
+      return res.status(503).json({ error: 'Wompi no configurado' });
+    }
+
+    const { orderId, customerEmail } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ error: 'Falta orderId' });
+    }
+
+    const orderResult = await turso.execute({ sql: 'SELECT * FROM orders WHERE id = ?', args: [orderId] });
+    const order = orderResult.rows[0];
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const wompiResponse = await fetch('https://sandbox.wompi.co/v1/transactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount_in_cents: Math.round(order.total * 100),
+        currency: 'COP',
+        customer_email: String(customerEmail || '').slice(0, 100),
+        payment_method: { type: 'CARD' },
+        reference: order.orderNumber,
+        redirect_url: `${req.get('origin') || 'http://localhost:3000'}/payment/return`
+      })
+    });
+
+    const data = await wompiResponse.json();
+
+    if (data.status === 'approved') {
+      return res.status(201).json({ transactionId: data.id, approved: true });
+    }
+
+    res.status(201).json({ paymentUrl: data.redirect_url, approved: false });
+  } catch (e) {
+    res.status(500).json({ error: 'Error de conexión con Wompi' });
+  }
+});
+
+// PAYMENTS — PayPal
+app.post('/api/payments/paypal/create-order', async (req, res) => {
+  try {
+    if (!process.env.PAYPAL_CLIENT_ID) {
+      return res.status(503).json({ error: 'PayPal no configurado' });
+    }
+
+    const { orderId } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ error: 'Falta orderId' });
+    }
+
+    const orderResult = await turso.execute({ sql: 'SELECT * FROM orders WHERE id = ?', args: [orderId] });
+    const order = orderResult.rows[0];
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const origin = req.get('origin') || 'http://localhost:3000';
+    res.status(201).json({
+      paymentUrl: `https://www.paypal.com/checkoutnow?token=${order.id}&return=${encodeURIComponent(`${origin}/payment/success`)}&cancel=${encodeURIComponent(`${origin}/payment/cancel`)}`
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Error de conexión con PayPal' });
+  }
+});
+
 // CAMPAIGNS
 app.get('/api/campaigns', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
