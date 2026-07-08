@@ -46,6 +46,29 @@ export interface MenuPromotion {
 }
 type MenuPromotionPayload = Partial<MenuPromotion>;
 
+export interface Expense {
+  id: string;
+  categoria: string;
+  descripcion: string;
+  monto: number;
+  fecha: string;
+  metodo: string;
+  proveedor: string;
+  factura: string;
+  notas?: string;
+  recurrente?: boolean;
+}
+type ExpensePayload = Partial<Expense>;
+
+export interface FinanceSummary {
+  ingresos: number;
+  egresos: number;
+  utilidad: number;
+  totalOrdenes: number;
+  totalClientes: number;
+  gastosPorCategoria: { categoria: string; total: number }[];
+}
+
 // ---- Auth/session storage helpers ----
 // Shared so every request can automatically attach the bearer token without
 // repeating the header logic at each call site.
@@ -407,6 +430,27 @@ export const api = {
 
   async deleteMenuPromotion(id: string) {
     return apiFetch(`/api/menu/promotions/${id}`, { method: 'DELETE' });
+  },
+
+  // Expenses / finance
+  async getExpenses(params?: { desde?: string; hasta?: string }): Promise<Expense[]> {
+    const query = new URLSearchParams();
+    if (params?.desde) query.set('desde', params.desde);
+    if (params?.hasta) query.set('hasta', params.hasta);
+    const qs = query.toString();
+    return apiFetch(`/api/expenses${qs ? `?${qs}` : ''}`);
+  },
+
+  async createExpense(expense: ExpensePayload) {
+    return apiFetch('/api/expenses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(expense)
+    });
+  },
+
+  async getFinanceSummary(): Promise<FinanceSummary> {
+    return apiFetch('/api/finance/summary');
   }
 };
 

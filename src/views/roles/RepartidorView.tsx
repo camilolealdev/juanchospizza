@@ -1,21 +1,50 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Order, OrderStatus } from '../../types';
+import { api } from '../../services/api';
+
+type ApiOrder = Omit<Order, 'items'> & { items: string | Order['items'] };
+
+const normalize = (order: ApiOrder): Order => ({
+  ...order,
+  items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items
+});
 
 const RepartidorView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
 
-  const mockAssigned: Order[] = [
-    {
-      id: 'r1', orderNumber: 'GUIDO-2024-099', userId: 'u1', customerName: 'Juan Valdez',
-      address: 'Cra 6 No. 5-40, Nemocón — Vía Principal',
-      items: [], total: 54900, status: OrderStatus.READY, createdAt: '12:30 PM',
-      estimatedTime: 20, paymentMethod: 'card'
+  const loadOrders = async () => {
+    try {
+      const apiOrders = await api.getOrders();
+      setOrders(apiOrders.map(normalize));
+    } catch (e) {
+      showToast(`Error cargando entregas: ${e instanceof Error ? e.message : 'error desconocido'}`);
     }
-  ];
+  };
+
+  useEffect(() => {
+    loadOrders();
+    const interval = setInterval(loadOrders, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const assigned = orders.filter(o => o.status === OrderStatus.ASSIGNED || o.status === OrderStatus.DELIVERING);
+  const history = orders.filter(o => o.status === OrderStatus.COMPLETED);
+
+  const markDelivered = async (id: string) => {
+    try {
+      await api.updateOrderStatus(id, OrderStatus.COMPLETED);
+      showToast('Entrega marcada como exitosa ✓');
+      setActiveOrder(null);
+      loadOrders();
+    } catch (e) {
+      showToast(`Error registrando entrega: ${e instanceof Error ? e.message : 'error desconocido'}`);
+    }
+  };
 
   if (activeOrder) {
     return (
@@ -54,7 +83,7 @@ const RepartidorView: React.FC = () => {
             <button onClick={() => window.open('https://waze.com/ul?ll=4.7115,-74.0720&navigate=yes', '_blank')} className="bg-blue-600 py-3 sm:py-4 rounded-2xl font-black text-[10px] sm:text-xs">ABRIR WAZE</button>
           </div>
 
-          <button onClick={() => showToast('Entrega marcada como exitosa ✓')} className="w-full bg-green-600 hover:bg-green-500 py-4 sm:py-5 rounded-2xl font-black text-white shadow-2xl transition-all text-xs sm:text-sm">
+          <button onClick={() => markDelivered(activeOrder.id)} className="w-full bg-green-600 hover:bg-green-500 py-4 sm:py-5 rounded-2xl font-black text-white shadow-2xl transition-all text-xs sm:text-sm">
             ENTREGA EXITOSA (Firma Digital)
           </button>
         </div>
@@ -66,6 +95,8 @@ const RepartidorView: React.FC = () => {
       </div>
     );
   }
+
+  const list = activeTab === 'assigned' ? assigned : history;
 
   return (
     <div className="min-h-screen bg-stone-950 p-4 sm:p-6 flex flex-col gap-6 sm:gap-8">
@@ -80,13 +111,13 @@ const RepartidorView: React.FC = () => {
       </div>
 
       <div className="flex gap-2 p-1 bg-stone-900 rounded-2xl border border-stone-800">
-        <button 
+        <button
           onClick={() => setActiveTab('assigned')}
           className={`flex-1 py-2.5 sm:py-3 rounded-xl text-[9px] sm:text-xs font-bold transition-all ${activeTab === 'assigned' ? 'bg-orange-600 text-white' : 'text-stone-500'}`}
         >
           POR RECOGER
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('history')}
           className={`flex-1 py-2.5 sm:py-3 rounded-xl text-[9px] sm:text-xs font-bold transition-all ${activeTab === 'history' ? 'bg-orange-600 text-white' : 'text-stone-500'}`}
         >
@@ -95,10 +126,15 @@ const RepartidorView: React.FC = () => {
       </div>
 
       <div className="space-y-3 sm:space-y-4">
-        {mockAssigned.map(order => (
-          <div 
-            key={order.id} 
-            onClick={() => setActiveOrder(order)}
+        {list.length === 0 && (
+          <p className="text-center text-stone-600 font-bold text-xs uppercase tracking-widest py-12">
+            {activeTab === 'assigned' ? 'No hay entregas asignadas' : 'Sin historial todavía'}
+          </p>
+        )}
+        {list.map(order => (
+          <div
+            key={order.id}
+            onClick={() => activeTab === 'assigned' && setActiveOrder(order)}
             className="bg-stone-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-stone-800 flex justify-between items-center gap-3 group cursor-pointer active:scale-95 transition-all"
           >
             <div className="min-w-0 space-y-1">
@@ -110,7 +146,9 @@ const RepartidorView: React.FC = () => {
             </div>
             <div className="text-right flex-shrink-0">
               <p className="text-lg sm:text-xl font-black text-orange-500">${order.total.toLocaleString()}</p>
-              <span className="text-[9px] sm:text-[10px] bg-green-900/30 text-green-500 px-2 py-0.5 rounded-full font-bold">LISTO</span>
+              <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-bold ${activeTab === 'assigned' ? 'bg-green-900/30 text-green-500' : 'bg-stone-800 text-stone-400'}`}>
+                {activeTab === 'assigned' ? 'ASIGNADO' : 'ENTREGADO'}
+              </span>
             </div>
           </div>
         ))}

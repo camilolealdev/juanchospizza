@@ -1,41 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { api, Expense, FinanceSummary } from '../../services/api';
 
-const cashFlowData = [
-  { name: 'Ene', ingresos: 15400000, egresos: 9800000 },
-  { name: 'Feb', ingresos: 16200000, egresos: 10200000 },
-  { name: 'Mar', ingresos: 17100000, egresos: 10700000 },
-  { name: 'Abr', ingresos: 16800000, egresos: 11000000 },
-  { name: 'May', ingresos: 17900000, egresos: 10900000 },
-  { name: 'Jun', ingresos: 18450000, egresos: 11230000 },
-];
-
-const formatCOP = (value: number) =>
-  '$' + value.toLocaleString('es-CO');
-
-const INGRESOS_ESTIMADO = 18450000;
-
-interface Gasto {
-  categoria: string;
-  descripcion: string;
-  monto: number;
-  fecha: string;
-  metodoPago: string;
-  proveedor: string;
-  factura: string;
-}
-
-const gastosData: Gasto[] = [
-  { categoria: 'Ingredientes', descripcion: 'Harina Trigo Panadero 50kg', monto: 2850000, fecha: '2026-06-04', metodoPago: 'Transferencia', proveedor: 'Harinas del Valle S.A.S.', factura: 'FV-2026-4891' },
-  { categoria: 'Nómina', descripcion: 'Pago quincenal cocina y domicilios', monto: 4200000, fecha: '2026-06-03', metodoPago: 'Nómina', proveedor: 'Staff Operativo', factura: 'NOM-0626-01' },
-  { categoria: 'Servicios', descripcion: 'Recibo energía eléctrica local Suba', monto: 890000, fecha: '2026-06-02', metodoPago: 'Débito', proveedor: 'Enel Colombia', factura: 'E-84219-06' },
-  { categoria: 'Marketing', descripcion: 'Campaña Instagram + Facebook Ads Junio', monto: 1120000, fecha: '2026-06-01', metodoPago: 'Tarjeta', proveedor: 'Meta Business', factura: 'META-AD-0626' },
-  { categoria: 'Mantenimiento', descripcion: 'Reparación horno pizzero G3', monto: 540000, fecha: '2026-05-30', metodoPago: 'Efectivo', proveedor: 'TecniHornos SAS', factura: 'TH-30589' },
-  { categoria: 'Transporte', descripcion: 'Combustible domicilios mayo-junio', monto: 920000, fecha: '2026-05-29', metodoPago: 'Transferencia', proveedor: 'Terpel', factura: 'TC-2026-0512' },
-  { categoria: 'Empaques', descripcion: 'Cajas pizza kraft 1000 und + stickers', monto: 760000, fecha: '2026-05-28', metodoPago: 'Tarjeta', proveedor: 'Empaques Bogotá Ltda.', factura: 'EB-4421' },
-  { categoria: 'Varios', descripcion: 'Papelería administrativa y útiles', monto: 210000, fecha: '2026-05-27', metodoPago: 'Efectivo', proveedor: 'Papelería Suba', factura: 'PS-887' },
-];
+const formatCOP = (value: number) => '$' + value.toLocaleString('es-CO');
 
 const gastosColors: Record<string, string> = {
   Ingredientes: '#ea580c', Nómina: '#f97316', Servicios: '#fdba74',
@@ -84,67 +52,82 @@ const CustomPieTooltip: React.FC<{ active?: boolean; payload?: PieTooltipPayload
 };
 
 const FinanzasView: React.FC = () => {
-  const [gastos, setGastos] = useState(gastosData);
+  const [gastos, setGastos] = useState<Expense[]>([]);
+  const [summary, setSummary] = useState<FinanceSummary | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [nuevoGasto, setNuevoGasto] = useState<Gasto>({
+  const [toast, setToast] = useState('');
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
+
+  const [nuevoGasto, setNuevoGasto] = useState({
     categoria: 'Ingredientes',
     descripcion: '',
     monto: 0,
     fecha: '',
-    metodoPago: '',
+    metodo: '',
     proveedor: '',
     factura: '',
   });
 
-  const totalEgresos = gastos.reduce((s, g) => s + g.monto, 0);
-  const utilidadNeta = INGRESOS_ESTIMADO - totalEgresos;
-  const puntoEquilibrio = Math.round(INGRESOS_ESTIMADO * 0.46);
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const [exp, sum] = await Promise.all([api.getExpenses(), api.getFinanceSummary()]);
+      setGastos(exp);
+      setSummary(sum);
+    } catch (e) {
+      showToast(`Error cargando finanzas: ${e instanceof Error ? e.message : 'error desconocido'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const computedKpis = [
-    { label: 'Ingresos Mes', value: formatCOP(INGRESOS_ESTIMADO), icon: 'arrow-trend-up', color: 'text-green-500', trend: '+8.2%' },
-    { label: 'Egresos Mes', value: formatCOP(totalEgresos), icon: 'arrow-trend-down', color: 'text-red-500', trend: totalEgresos > 11000000 ? '+3.1%' : '+1.2%' },
-    { label: 'Utilidad Neta', value: formatCOP(utilidadNeta), icon: 'sack-dollar', color: utilidadNeta > 0 ? 'text-orange-500' : 'text-red-500', trend: utilidadNeta > 0 ? '+14.7%' : 'Negativa' },
-    { label: 'Punto Equilibrio', value: formatCOP(puntoEquilibrio), icon: 'scale-balanced', color: 'text-blue-500', trend: totalEgresos < puntoEquilibrio ? 'Sobre meta' : 'Bajo meta' },
-  ];
+  useEffect(() => { loadAll(); }, []);
 
-  const gastosPorCategoria = gastos.reduce<Record<string, number>>((acc, g) => {
-    acc[g.categoria] = (acc[g.categoria] || 0) + g.monto;
-    return acc;
-  }, {});
-  const totalPorCat = Object.values(gastosPorCategoria).reduce((a, b) => a + b, 0);
-  const computedDistribucion = Object.entries(gastosPorCategoria)
-    .filter(([_, m]) => m > 0)
-    .map(([cat, monto]) => ({
-      name: cat,
-      value: Math.round((monto / totalPorCat) * 100),
-      color: gastosColors[cat] || '#78716c',
-    }))
-    .sort((a, b) => b.value - a.value);
-
-  const gastosPorMes = gastos.reduce<Record<string, number>>((acc, g) => {
-    const mes = g.fecha.slice(0, 7);
-    acc[mes] = (acc[mes] || 0) + g.monto;
-    return acc;
-  }, {});
-  const compCashFlow = cashFlowData.map(m => ({
-    ...m,
-    egresos: m.name === 'Jun' && gastosPorMes['2026-06'] ? Math.max(gastosPorMes['2026-06'], m.egresos) : m.egresos,
-  }));
-
-  const handleChange = (field: keyof Gasto, value: string | number) => {
+  const handleChange = (field: keyof typeof nuevoGasto, value: string | number) => {
     setNuevoGasto(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
-    if (!nuevoGasto.descripcion || !nuevoGasto.monto || !nuevoGasto.fecha || !nuevoGasto.metodoPago || !nuevoGasto.proveedor || !nuevoGasto.factura) return;
-    setGastos(prev => [...prev, { ...nuevoGasto }]);
-    setShowModal(false);
-    setNuevoGasto({ categoria: 'Ingredientes', descripcion: '', monto: 0, fecha: '', metodoPago: '', proveedor: '', factura: '' });
+  const handleSubmit = async () => {
+    if (!nuevoGasto.descripcion || !nuevoGasto.monto || !nuevoGasto.fecha || !nuevoGasto.metodo || !nuevoGasto.proveedor || !nuevoGasto.factura) return;
+    try {
+      await api.createExpense(nuevoGasto);
+      setShowModal(false);
+      setNuevoGasto({ categoria: 'Ingredientes', descripcion: '', monto: 0, fecha: '', metodo: '', proveedor: '', factura: '' });
+      showToast('Gasto registrado');
+      loadAll();
+    } catch (e) {
+      showToast(`Error registrando gasto: ${e instanceof Error ? e.message : 'error desconocido'}`);
+    }
   };
 
-  const eliminarGasto = (index: number) => {
-    setGastos(prev => prev.filter((_, i) => i !== index));
-  };
+  if (loading || !summary) {
+    return (
+      <div className="p-10 flex items-center justify-center min-h-[50vh] text-stone-500">
+        <i className="fas fa-spinner fa-spin text-3xl mr-4"></i>
+        <span className="font-bold uppercase tracking-widest text-sm">Cargando finanzas...</span>
+      </div>
+    );
+  }
+
+  const cashFlowData = [{ name: 'Actual', ingresos: summary.ingresos, egresos: summary.egresos }];
+
+  const totalPorCat = summary.gastosPorCategoria.reduce((a, g) => a + g.total, 0);
+  const computedDistribucion = summary.gastosPorCategoria
+    .filter(g => g.total > 0)
+    .map(g => ({
+      name: g.categoria,
+      value: totalPorCat > 0 ? Math.round((g.total / totalPorCat) * 100) : 0,
+      color: gastosColors[g.categoria] || '#78716c',
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  const computedKpis = [
+    { label: 'Ingresos', value: formatCOP(summary.ingresos), icon: 'arrow-trend-up', color: 'text-green-500' },
+    { label: 'Egresos', value: formatCOP(summary.egresos), icon: 'arrow-trend-down', color: 'text-red-500' },
+    { label: 'Utilidad Neta', value: formatCOP(summary.utilidad), icon: 'sack-dollar', color: summary.utilidad >= 0 ? 'text-orange-500' : 'text-red-500' },
+    { label: 'Órdenes Totales', value: String(summary.totalOrdenes), icon: 'receipt', color: 'text-blue-500' },
+  ];
 
   return (
     <div className="p-8 md:p-12 space-y-16 pb-40 animate-fade-in">
@@ -185,7 +168,7 @@ const FinanzasView: React.FC = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-2">Método de Pago</label>
-                <input type="text" value={nuevoGasto.metodoPago} onChange={e => handleChange('metodoPago', e.target.value)} className="w-full bg-stone-800/60 border border-stone-700 rounded-2xl px-5 py-4 text-sm text-stone-200 outline-none focus:border-orange-500" placeholder="Efectivo, Tarjeta, Transferencia..." />
+                <input type="text" value={nuevoGasto.metodo} onChange={e => handleChange('metodo', e.target.value)} className="w-full bg-stone-800/60 border border-stone-700 rounded-2xl px-5 py-4 text-sm text-stone-200 outline-none focus:border-orange-500" placeholder="Efectivo, Tarjeta, Transferencia..." />
               </div>
               <div>
                 <label className="block text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] mb-2">Proveedor</label>
@@ -213,10 +196,7 @@ const FinanzasView: React.FC = () => {
                 <i className={`fas fa-${kpi.icon} text-xl`}></i>
               </div>
             </div>
-            <div className="flex items-end gap-3">
-              <p className="text-5xl font-black text-white tracking-tighter">{kpi.value}</p>
-              <span className={`text-[10px] font-black uppercase mb-1.5 px-3 py-1 rounded-full border border-white/5 ${kpi.color.includes('green') ? 'bg-green-500/10 text-green-500' : kpi.color.includes('red') ? 'bg-red-500/10 text-red-500' : kpi.color.includes('orange') ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>{kpi.trend}</span>
-            </div>
+            <p className="text-5xl font-black text-white tracking-tighter">{kpi.value}</p>
           </div>
         ))}
       </div>
@@ -224,8 +204,8 @@ const FinanzasView: React.FC = () => {
       <section className="space-y-10">
         <div className="flex justify-between items-end border-b border-white/5 pb-8">
           <div>
-            <h2 className="text-4xl font-brand">Flujo de Caja</h2>
-            <p className="text-stone-600 text-xs mt-2 uppercase tracking-[0.4em] font-bold">Enero - Junio 2026</p>
+            <h2 className="text-4xl font-brand">Ingresos vs Egresos</h2>
+            <p className="text-stone-600 text-xs mt-2 uppercase tracking-[0.4em] font-bold">Acumulado histórico</p>
           </div>
           <div className="flex gap-6">
             <div className="flex items-center gap-2">
@@ -241,7 +221,7 @@ const FinanzasView: React.FC = () => {
         <div className="bg-stone-900/40 p-10 rounded-[4rem] border border-stone-800 shadow-2xl">
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={compCashFlow} barGap={4} barCategoryGap="20%">
+              <BarChart data={cashFlowData} barGap={4} barCategoryGap="20%">
                 <XAxis dataKey="name" stroke="#57534e" fontSize={11} axisLine={false} tickLine={false} />
                 <YAxis stroke="#57534e" fontSize={10} axisLine={false} tickLine={false} tickFormatter={(v: number) => '$' + (v / 1000000).toFixed(1) + 'M'} />
                 <Tooltip
@@ -249,8 +229,8 @@ const FinanzasView: React.FC = () => {
                   content={<CustomBarTooltip />}
                   labelStyle={{ color: '#a8a29e', fontWeight: 700, fontSize: 11 }}
                 />
-                <Bar dataKey="ingresos" fill="#22c55e" radius={[8, 8, 0, 0]} barSize={28} />
-                <Bar dataKey="egresos" fill="#ef4444" radius={[8, 8, 0, 0]} barSize={28} />
+                <Bar dataKey="ingresos" fill="#22c55e" radius={[8, 8, 0, 0]} barSize={48} />
+                <Bar dataKey="egresos" fill="#ef4444" radius={[8, 8, 0, 0]} barSize={48} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -275,30 +255,27 @@ const FinanzasView: React.FC = () => {
                   <th className="p-6">Fecha</th>
                   <th className="p-6">Método Pago</th>
                   <th className="p-6">Proveedor</th>
-                  <th className="p-6">Factura</th>
-                  <th className="p-6 pr-10"></th>
+                  <th className="p-6 pr-10">Factura</th>
                 </tr>
               </thead>
               <tbody>
-                {gastos.map((g, i) => (
-                  <tr key={i} className="border-b border-stone-800/40 hover:bg-stone-800/20 transition-colors text-sm">
+                {gastos.length === 0 && (
+                  <tr><td colSpan={7} className="p-10 text-center text-stone-600 font-bold text-xs uppercase tracking-widest">Sin gastos registrados</td></tr>
+                )}
+                {gastos.map((g) => (
+                  <tr key={g.id} className="border-b border-stone-800/40 hover:bg-stone-800/20 transition-colors text-sm">
                     <td className="p-6 pl-10">
                       <span className="font-bold text-orange-500 text-[11px] uppercase tracking-wider">{g.categoria}</span>
                     </td>
                     <td className="p-6 text-stone-300">{g.descripcion}</td>
                     <td className="p-6 font-mono font-bold text-white">{formatCOP(g.monto)}</td>
-                    <td className="p-6 text-stone-400">{g.fecha}</td>
+                    <td className="p-6 text-stone-400">{new Date(g.fecha).toLocaleDateString('es-CO')}</td>
                     <td className="p-6">
-                      <span className="text-[10px] font-black text-stone-400 uppercase tracking-wider">{g.metodoPago}</span>
+                      <span className="text-[10px] font-black text-stone-400 uppercase tracking-wider">{g.metodo}</span>
                     </td>
                     <td className="p-6 text-stone-400 text-xs">{g.proveedor}</td>
-                    <td className="p-6">
-                      <span className="font-mono text-[11px] text-stone-500">{g.factura}</span>
-                    </td>
                     <td className="p-6 pr-10">
-                      <button onClick={() => eliminarGasto(i)} className="text-stone-600 hover:text-red-400 transition-colors" title="Eliminar">
-                        <i className="fas fa-trash-can"></i>
-                      </button>
+                      <span className="font-mono text-[11px] text-stone-500">{g.factura}</span>
                     </td>
                   </tr>
                 ))}
@@ -317,35 +294,44 @@ const FinanzasView: React.FC = () => {
         </div>
         <div className="bg-stone-900/40 p-10 rounded-[4rem] border border-stone-800 shadow-2xl">
           <div className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={computedDistribucion}
-                  cx="50%"
-                  cy="45%"
-                  innerRadius={80}
-                  outerRadius={140}
-                  paddingAngle={4}
-                  dataKey="value"
-                  stroke="none"
-                >
-                  {computedDistribucion.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomPieTooltip />} />
-                <Legend
-                  verticalAlign="bottom"
-                  height={48}
-                  iconType="circle"
-                  iconSize={10}
-                  formatter={(value: string) => <span className="text-xs text-stone-400 font-bold">{value}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {computedDistribucion.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-stone-600 font-bold text-xs uppercase tracking-widest">Sin datos de gastos aún</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={computedDistribucion}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={80}
+                    outerRadius={140}
+                    paddingAngle={4}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {computedDistribucion.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomPieTooltip />} />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={48}
+                    iconType="circle"
+                    iconSize={10}
+                    formatter={(value: string) => <span className="text-xs text-stone-400 font-bold">{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </section>
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-orange-600 text-white px-6 py-4 rounded-2xl shadow-2xl text-sm font-bold animate-fade-in">
+          {toast}
+        </div>
+      )}
     </div>
   );
 };

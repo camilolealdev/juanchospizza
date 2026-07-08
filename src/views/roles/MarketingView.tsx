@@ -1,18 +1,32 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 import { Campaign } from '../../types';
+import { api } from '../../services/api';
 
 const MarketingView: React.FC = () => {
-  const [campaigns] = useState<Campaign[]>([
-    { id: 'c1', name: 'Guido Lover Sweet', type: 'segment', discount: 15, status: 'active', reach: 1200, conversions: 145, budget: 450000 },
-    { id: 'c2', name: 'Flash Sale Suba D.O.P', type: 'flash', discount: 22, status: 'scheduled', reach: 0, conversions: 0, budget: 150000 },
-    { id: 'c3', name: 'RappiPromo Weekend Tradicional', type: 'rappipromo', discount: 13, status: 'active', reach: 5000, conversions: 420, budget: 800000 },
-  ]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
 
+  useEffect(() => {
+    api.getCampaigns()
+      .then(setCampaigns)
+      .catch(e => showToast(`Error cargando campañas: ${e instanceof Error ? e.message : 'error desconocido'}`))
+      .finally(() => setLoading(false));
+  }, []);
+
   const campaignStats = campaigns.map(c => ({ name: c.name.substring(0, 15), conv: c.conversions }));
+
+  if (loading) {
+    return (
+      <div className="p-10 flex items-center justify-center min-h-[50vh] text-stone-500">
+        <i className="fas fa-spinner fa-spin text-3xl mr-4"></i>
+        <span className="font-bold uppercase tracking-widest text-sm">Cargando campañas...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="p-10 space-y-12 pb-40">
