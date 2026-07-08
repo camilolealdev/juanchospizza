@@ -118,6 +118,18 @@ export interface Recipe {
   ingredientes: RecipeIngredient[];
 }
 
+export interface Review {
+  id: string;
+  orderId: string;
+  clientPhone: string | null;
+  clientName: string | null;
+  rating: number;
+  comment: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+type ReviewPayload = { orderId: string; clientPhone?: string; clientName?: string; rating: number; comment?: string };
+
 // ---- Auth/session storage helpers ----
 // Shared so every request can automatically attach the bearer token without
 // repeating the header logic at each call site.
@@ -500,6 +512,32 @@ export const api = {
 
   async getFinanceSummary(): Promise<FinanceSummary> {
     return apiFetch('/api/finance/summary');
+  },
+
+  // Reviews
+  async createReview(review: ReviewPayload) {
+    return apiFetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(review)
+    });
+  },
+
+  async getApprovedReviews(): Promise<Review[]> {
+    return apiFetch('/api/reviews/approved');
+  },
+
+  async getReviews(status?: string): Promise<Review[]> {
+    const qs = status ? `?status=${status}` : '';
+    return apiFetch(`/api/reviews${qs}`);
+  },
+
+  async updateReviewStatus(id: string, status: 'pending' | 'approved' | 'rejected') {
+    return apiFetch(`/api/reviews/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
   },
 
   // Inventory
