@@ -219,6 +219,27 @@ CREATE TABLE IF NOT EXISTS menu_promotions (
   limite INTEGER DEFAULT 100
 );
 
+CREATE TABLE IF NOT EXISTS reviews (
+  id TEXT PRIMARY KEY,
+  "orderId" TEXT REFERENCES orders(id),
+  "clientPhone" TEXT,
+  "clientName" TEXT,
+  rating INTEGER NOT NULL,
+  comment TEXT,
+  status TEXT DEFAULT 'pending',
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id TEXT PRIMARY KEY,
+  phone TEXT,
+  "clientId" TEXT REFERENCES clients(id),
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders("createdAt");
 CREATE INDEX IF NOT EXISTS idx_clients_estado ON clients(estado);
@@ -226,3 +247,4 @@ CREATE INDEX IF NOT EXISTS idx_inventory_categoria ON inventory_items(categoria)
 CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipeId ON recipe_ingredients("recipeId");
 CREATE INDEX IF NOT EXISTS idx_expenses_fecha ON expenses(fecha);
 CREATE INDEX IF NOT EXISTS idx_menu_promotions_activo ON menu_promotions(activo);
+CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status);

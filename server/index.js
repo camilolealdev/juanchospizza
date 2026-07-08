@@ -299,6 +299,31 @@ async function initDB() {
       )
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id TEXT PRIMARY KEY,
+        "orderId" TEXT REFERENCES orders(id),
+        "clientPhone" TEXT,
+        "clientName" TEXT,
+        rating INTEGER NOT NULL,
+        comment TEXT,
+        status TEXT DEFAULT 'pending',
+        "createdAt" TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id TEXT PRIMARY KEY,
+        phone TEXT,
+        "clientId" TEXT REFERENCES clients(id),
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        "createdAt" TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders("createdAt")');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_clientId ON orders("clientId")');
@@ -307,6 +332,7 @@ async function initDB() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipeId ON recipe_ingredients("recipeId")');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_expenses_fecha ON expenses(fecha)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_menu_promotions_activo ON menu_promotions(activo)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status)');
 
     console.log('✅ Database initialized with GastroPro CRM tables');
   } catch (error) {
