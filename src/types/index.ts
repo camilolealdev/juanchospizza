@@ -94,6 +94,7 @@ export interface Order {
   orderNumber: string;
   userId: string;
   customerName: string;
+  customerPhone?: string;
   address: string;
   items: OrderItem[];
   total: number;

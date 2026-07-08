@@ -540,6 +540,15 @@ export const api = {
     });
   },
 
+  // Push notifications
+  async subscribePush(data: { phone?: string; clientId?: string; endpoint: string; p256dh: string; auth: string }) {
+    return apiFetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
   // Inventory
   async getInventory(): Promise<InventoryItem[]> {
     return apiFetch('/api/inventory');

@@ -5,8 +5,10 @@ import { fileURLToPath } from 'url';
 import pg from 'pg';
 import dotenv from 'dotenv';
 import { authMiddleware, requireRole, login, refreshToken } from './auth.js';
+import { initPush, sendPushToPhone } from './push.js';
 
 dotenv.config();
+initPush();
 
 const { Pool } = pg;
 
@@ -163,6 +165,9 @@ async function initDB() {
     // se agrega aquí (después de clients, a la que referencia) vía ALTER
     // TABLE idempotente para que también aplique a bases ya existentes.
     await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS "clientId" TEXT REFERENCES clients(id)');
+    // Necesaria para notificaciones push y reseñas (ambas se identifican por
+    // teléfono, ya que no existe sistema de cuentas de cliente).
+    await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS "customerPhone" TEXT');
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inventory_items (
@@ -729,7 +734,7 @@ app.get('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REP
 
 app.post('/api/orders', async (req, res) => {
   try {
-    const { orderNumber, customerName, address, items, total, estimatedTime, paymentMethod, clientId } = req.body;
+    const { orderNumber, customerName, customerPhone, address, items, total, estimatedTime, paymentMethod, clientId } = req.body;
 
     // Validación de inputs
     if (!orderNumber || !customerName || !address || !items || !total) {
@@ -750,6 +755,7 @@ app.post('/api/orders', async (req, res) => {
     const sanitized = {
       orderNumber: String(orderNumber).slice(0, 50),
       customerName: String(customerName).slice(0, 100),
+      customerPhone: customerPhone ? String(customerPhone).slice(0, 30) : null,
       address: String(address).slice(0, 200),
       total: Math.max(0, Math.min(Number(total), 999999999)),
       estimatedTime: Math.max(0, Math.min(Number(estimatedTime || 30), 180)),
@@ -763,11 +769,11 @@ app.post('/api/orders', async (req, res) => {
     const createdAt = new Date().toISOString();
 
     await pool.query(
-      `INSERT INTO orders (id, "orderNumber", "customerName", address, items, total, status, "createdAt", "estimatedTime", "paymentMethod", "clientId") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [id, sanitized.orderNumber, sanitized.customerName, sanitized.address, itemsForDb, sanitized.total, status, createdAt, sanitized.estimatedTime, sanitized.paymentMethod, sanitized.clientId]
+      `INSERT INTO orders (id, "orderNumber", "customerName", "customerPhone", address, items, total, status, "createdAt", "estimatedTime", "paymentMethod", "clientId") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [id, sanitized.orderNumber, sanitized.customerName, sanitized.customerPhone, sanitized.address, itemsForDb, sanitized.total, status, createdAt, sanitized.estimatedTime, sanitized.paymentMethod, sanitized.clientId]
     );
 
-    res.status(201).json({ id, orderNumber: sanitized.orderNumber, customerName: sanitized.customerName, address: sanitized.address, items, total: sanitized.total, status, createdAt, estimatedTime: sanitized.estimatedTime, paymentMethod: sanitized.paymentMethod, clientId: sanitized.clientId });
+    res.status(201).json({ id, orderNumber: sanitized.orderNumber, customerName: sanitized.customerName, customerPhone: sanitized.customerPhone, address: sanitized.address, items, total: sanitized.total, status, createdAt, estimatedTime: sanitized.estimatedTime, paymentMethod: sanitized.paymentMethod, clientId: sanitized.clientId });
   } catch (e) {
     res.status(500).json({ error: 'Error creating order' });
   }
@@ -842,6 +848,23 @@ app.patch('/api/orders/:id/status', authMiddleware, requireRole('ADMIN', 'OPERAT
         // al agregar las métricas del cliente.
         console.error('Error updating client spend aggregate:', aggError.message);
       }
+    }
+
+    const pushMessages = {
+      READY: 'Tu pedido está listo',
+      ASSIGNED: 'Tu pedido fue asignado a un repartidor',
+      DELIVERING: 'Tu pedido va en camino',
+      COMPLETED: '¡Tu pedido fue entregado! Gracias por tu compra'
+    };
+    if (pushMessages[status] && order.customerPhone) {
+      // El envío nunca debe fallar la actualización del pedido: sendPushToPhone
+      // ya atrapa sus propios errores internamente, pero se envuelve igual
+      // por si acaso (no bloqueante, no se espera con await bloqueante del response).
+      sendPushToPhone(pool, order.customerPhone, {
+        title: `Pedido ${order.orderNumber}`,
+        body: pushMessages[status],
+        url: '/'
+      }).catch(err => console.error('Error sending push notification:', err.message));
     }
 
     res.json(order);
@@ -1823,6 +1846,38 @@ app.get('/api/clients/:id/orders', authMiddleware, requireRole('ADMIN', 'MARKETI
     );
     res.json(result.rows);
   } catch (e) { res.status(500).json({ error: 'Error fetching client orders' }); }
+});
+
+// --- PUSH NOTIFICATIONS ---
+app.post('/api/push/subscribe', async (req, res) => {
+  try {
+    const { phone, clientId, endpoint, p256dh, auth } = req.body;
+
+    if (!endpoint || !p256dh || !auth) {
+      return res.status(400).json({ error: 'Faltan datos requeridos' });
+    }
+
+    const sanitized = {
+      phone: phone ? String(phone).slice(0, 30) : null,
+      clientId: (clientId !== undefined && clientId !== null && clientId !== '') ? String(clientId).slice(0, 100) : null,
+      endpoint: String(endpoint).slice(0, 500),
+      p256dh: String(p256dh).slice(0, 200),
+      auth: String(auth).slice(0, 200)
+    };
+
+    const id = `push_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    await pool.query(
+      `INSERT INTO push_subscriptions (id, phone, "clientId", endpoint, p256dh, auth)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (endpoint) DO UPDATE SET phone = $2, "clientId" = $3, p256dh = $5, auth = $6`,
+      [id, sanitized.phone, sanitized.clientId, sanitized.endpoint, sanitized.p256dh, sanitized.auth]
+    );
+
+    res.status(201).json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Error saving push subscription' });
+  }
 });
 
 // --- REVIEWS ---

@@ -94,6 +94,7 @@ const CustomerView: React.FC = () => {
     return api.createOrder({
       orderNumber,
       customerName: customerInfo.name || 'Cliente',
+      customerPhone: customerInfo.phone,
       address: customerInfo.address || 'Dirección por confirmar',
       items: orderItems,
       total: cartTotal,
