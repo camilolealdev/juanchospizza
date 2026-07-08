@@ -101,7 +101,7 @@ export interface Order {
   status: OrderStatus;
   createdAt: string;
   estimatedTime: number;
-  paymentMethod: 'cash' | 'card' | 'nequi' | 'daviplata' | 'pse';
+  paymentMethod: 'cash' | 'card' | 'nequi' | 'daviplata' | 'pse' | 'mercadopago' | 'paypal' | 'wompi' | 'bold';
 }
 
 export interface Campaign {

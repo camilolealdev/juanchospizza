@@ -284,9 +284,12 @@ export const api = {
   },
 
   // Orders
-  async getOrders(status?: string) {
-    const path = status ? `/api/orders?status=${status}` : '/api/orders';
-    return apiFetch(path);
+  async getOrders(status?: string, options?: { paidOnly?: boolean }) {
+    const query = new URLSearchParams();
+    if (status) query.set('status', status);
+    if (options?.paidOnly) query.set('paidOnly', 'true');
+    const qs = query.toString();
+    return apiFetch(`/api/orders${qs ? `?${qs}` : ''}`);
   },
 
   async getOrder(id: string) {

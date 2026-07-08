@@ -12,7 +12,7 @@ const KitchenView: React.FC = () => {
   useEffect(() => {
     const loadOrders = async () => {
       try {
-        const apiOrders = await api.getOrders();
+        const apiOrders = await api.getOrders(undefined, { paidOnly: true });
         const normalized = apiOrders.map((order: ApiOrder) => ({
           ...order,
           items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items

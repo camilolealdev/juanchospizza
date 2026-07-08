@@ -19,7 +19,7 @@ const RepartidorView: React.FC = () => {
 
   const loadOrders = async () => {
     try {
-      const apiOrders = await api.getOrders();
+      const apiOrders = await api.getOrders(undefined, { paidOnly: true });
       setOrders(apiOrders.map(normalize));
     } catch (e) {
       showToast(`Error cargando entregas: ${e instanceof Error ? e.message : 'error desconocido'}`);

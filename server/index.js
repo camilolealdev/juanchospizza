@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
 import dotenv from 'dotenv';
@@ -168,6 +169,14 @@ async function initDB() {
     // Necesaria para notificaciones push y reseñas (ambas se identifican por
     // teléfono, ya que no existe sistema de cuentas de cliente).
     await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS "customerPhone" TEXT');
+
+    // Separa el estado de pago del estado de cocina/entrega. 'cash'/'card'
+    // (pago contra-entrega) se marcan 'paid' de inmediato -- no hay nada que
+    // confirmar por adelantado. Los métodos online (bold/mercadopago/wompi)
+    // arrancan en 'pending' y solo el webhook del proveedor los pasa a
+    // 'paid'/'failed', nunca el cliente.
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS "paymentStatus" TEXT DEFAULT 'pending'`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS "paymentProviderRef" TEXT`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inventory_items (
@@ -700,15 +709,25 @@ app.delete('/api/ingredients/:id', authMiddleware, requireRole('ADMIN'), async (
 // ORDERS
 app.get('/api/orders', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'), async (req, res) => {
   try {
-    const { status } = req.query;
-    let query = 'SELECT * FROM orders';
+    const { status, paidOnly } = req.query;
+    const conditions = [];
     const params = [];
 
     if (status && status !== 'all') {
-      query += ' WHERE status = $1';
       params.push(status);
+      conditions.push(`status = $${params.length}`);
     }
 
+    // Cocina/Operador/Repartidor deben usar esto para no ver pedidos con
+    // pago online todavía sin confirmar por el webhook del proveedor.
+    // Efectivo/tarjeta (pago contra-entrega) siempre pasan, sin importar
+    // paymentStatus, porque nunca dependen de una confirmación externa.
+    if (paidOnly === 'true') {
+      conditions.push(`("paymentStatus" = 'paid' OR "paymentMethod" IN ('cash', 'card'))`);
+    }
+
+    let query = 'SELECT * FROM orders';
+    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
     query += ' ORDER BY "createdAt" DESC';
 
     const result = await pool.query(query, params);
@@ -793,13 +812,18 @@ app.post('/api/orders', async (req, res) => {
     const id = `ord_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const status = 'PENDING';
     const createdAt = new Date().toISOString();
+    // Efectivo/tarjeta se cobran contra-entrega: no hay nada que un proveedor
+    // externo deba confirmar, así que se marcan pagados de inmediato. Los
+    // métodos online arrancan 'pending' -- solo el webhook del proveedor
+    // correspondiente los mueve a 'paid'/'failed'.
+    const paymentStatus = ['cash', 'card'].includes(sanitized.paymentMethod) ? 'paid' : 'pending';
 
     await pool.query(
-      `INSERT INTO orders (id, "orderNumber", "customerName", "customerPhone", address, items, total, status, "createdAt", "estimatedTime", "paymentMethod", "clientId") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-      [id, sanitized.orderNumber, sanitized.customerName, sanitized.customerPhone, sanitized.address, itemsForDb, sanitized.total, status, createdAt, sanitized.estimatedTime, sanitized.paymentMethod, sanitized.clientId]
+      `INSERT INTO orders (id, "orderNumber", "customerName", "customerPhone", address, items, total, status, "createdAt", "estimatedTime", "paymentMethod", "clientId", "paymentStatus") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [id, sanitized.orderNumber, sanitized.customerName, sanitized.customerPhone, sanitized.address, itemsForDb, sanitized.total, status, createdAt, sanitized.estimatedTime, sanitized.paymentMethod, sanitized.clientId, paymentStatus]
     );
 
-    res.status(201).json({ id, orderNumber: sanitized.orderNumber, customerName: sanitized.customerName, customerPhone: sanitized.customerPhone, address: sanitized.address, items, total: sanitized.total, status, createdAt, estimatedTime: sanitized.estimatedTime, paymentMethod: sanitized.paymentMethod, clientId: sanitized.clientId });
+    res.status(201).json({ id, orderNumber: sanitized.orderNumber, customerName: sanitized.customerName, customerPhone: sanitized.customerPhone, address: sanitized.address, items, total: sanitized.total, status, createdAt, estimatedTime: sanitized.estimatedTime, paymentMethod: sanitized.paymentMethod, clientId: sanitized.clientId, paymentStatus });
   } catch (e) {
     res.status(500).json({ error: 'Error creating order' });
   }
@@ -934,6 +958,56 @@ app.put('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR'), asy
   }
 });
 
+// Confirma (o rechaza) el pago de un pedido -- SOLO debe llamarse desde un
+// webhook ya verificado/consultado de forma autoritativa contra el
+// proveedor, nunca desde algo que el cliente reporte directamente.
+async function confirmOrderPayment(pool, orderRow, newPaymentStatus) {
+  await pool.query('UPDATE orders SET "paymentStatus" = $1 WHERE id = $2', [newPaymentStatus, orderRow.id]);
+
+  if (newPaymentStatus === 'paid' && orderRow.customerPhone) {
+    sendPushToPhone(pool, orderRow.customerPhone, {
+      title: `Pedido ${orderRow.orderNumber}`,
+      body: 'Confirmamos tu pago. ¡Ya estamos preparando tu pedido!',
+      url: '/'
+    }).catch(err => console.error('Error sending payment-confirmed push:', err.message));
+  }
+}
+
+// Patrón documentado por MercadoPago ("Verificar el origen de la
+// notificación"): el header x-signature trae "ts=...,v1=..."; el manifest
+// firmado es "id:{dataId};request-id:{xRequestId};ts:{ts};" con HMAC-SHA256.
+function verifyMercadoPagoSignature(xSignature, xRequestId, dataId, secret) {
+  try {
+    const parts = Object.fromEntries(
+      xSignature.split(',').map(p => p.trim().split('=').map(s => s.trim()))
+    );
+    if (!parts.ts || !parts.v1) return false;
+    const manifest = `id:${dataId};request-id:${xRequestId};ts:${parts.ts};`;
+    const expected = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
+    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1));
+  } catch {
+    return false;
+  }
+}
+
+// Patrón documentado por Wompi (eventos con checksum): se concatenan los
+// valores de "signature.properties" resueltos contra event.data, se agrega
+// el timestamp del evento y el secreto de eventos, y se hashea con SHA256.
+function verifyWompiChecksum(event, secret) {
+  try {
+    const { properties, checksum } = event.signature || {};
+    if (!properties || !checksum) return false;
+    const concatenated = properties
+      .map(propPath => propPath.split('.').reduce((obj, key) => obj?.[key], event.data))
+      .join('');
+    const toHash = `${concatenated}${event.timestamp}${secret}`;
+    const expected = crypto.createHash('sha256').update(toHash).digest('hex');
+    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(checksum));
+  } catch {
+    return false;
+  }
+}
+
 // PAYMENTS — Bold (Colombia)
 app.post('/api/payments/bold/create-link', async (req, res) => {
   try {
@@ -975,6 +1049,8 @@ app.post('/api/payments/bold/create-link', async (req, res) => {
     if (!boldResponse.ok || (data.errors && data.errors.length > 0)) {
       return res.status(502).json({ error: data.errors?.[0]?.message || 'Error creando el link de pago Bold' });
     }
+
+    await pool.query('UPDATE orders SET "paymentProviderRef" = $1 WHERE id = $2', [data.payload.payment_link, order.id]);
 
     res.status(201).json({ url: data.payload.url, paymentLink: data.payload.payment_link });
   } catch (e) {
@@ -1021,6 +1097,8 @@ app.post('/api/payments/mercadopago/create-payment', async (req, res) => {
       return res.status(502).json({ error: data.message || 'Error creando pago MercadoPago' });
     }
 
+    await pool.query('UPDATE orders SET "paymentProviderRef" = $1 WHERE id = $2', [String(data.id), order.id]);
+
     res.status(201).json({
       transactionId: data.id,
       qrCode: data.point_of_interaction?.transaction_data?.qr_code
@@ -1063,6 +1141,13 @@ app.post('/api/payments/wompi/create-transaction', async (req, res) => {
 
     const data = await wompiResponse.json();
 
+    if (data.id) {
+      await pool.query('UPDATE orders SET "paymentProviderRef" = $1 WHERE id = $2', [String(data.id), order.id]).catch(() => {});
+    }
+
+    // NOTA: "approved" acá es solo informativo para la UI -- el estado de
+    // pago real de la orden SOLO lo confirma el webhook de Wompi (ver
+    // POST /api/payments/wompi/webhook), nunca esta respuesta síncrona.
     if (data.status === 'approved') {
       return res.status(201).json({ transactionId: data.id, approved: true });
     }
@@ -1097,6 +1182,139 @@ app.post('/api/payments/paypal/create-order', async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ error: 'Error de conexión con PayPal' });
+  }
+});
+
+// PAYMENTS — Webhooks (confirmación server-side, reemplaza el flujo
+// optimista anterior donde el cliente decidía si "el pago fue exitoso").
+// Todas responden 200 incluso ante datos que no reconocen o errores propios,
+// para evitar que el proveedor reintente indefinidamente una notificación
+// que de todas formas no vamos a poder procesar.
+
+app.post('/api/payments/mercadopago/webhook', async (req, res) => {
+  try {
+    const paymentId = req.body?.data?.id || req.query['data.id'] || req.query.id;
+    const topic = req.body?.type || req.query.topic || req.query.type;
+
+    if (!paymentId || (topic && topic !== 'payment')) {
+      return res.sendStatus(200);
+    }
+
+    if (process.env.MP_WEBHOOK_SECRET) {
+      const xSignature = req.headers['x-signature'];
+      const xRequestId = req.headers['x-request-id'];
+      if (!xSignature || !xRequestId || !verifyMercadoPagoSignature(xSignature, xRequestId, paymentId, process.env.MP_WEBHOOK_SECRET)) {
+        console.error('MercadoPago webhook: firma inválida, ignorado');
+        return res.sendStatus(200);
+      }
+    } else {
+      console.warn('⚠️  MP_WEBHOOK_SECRET no configurado -- webhook de MercadoPago procesándose sin verificar firma');
+    }
+
+    // Nunca confiar en el status del body del webhook: se consulta la API
+    // de MercadoPago de forma autoritativa con el access token del server.
+    const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN || ''}` }
+    });
+    const payment = await mpRes.json();
+
+    const orderId = payment.external_reference;
+    if (!orderId) return res.sendStatus(200);
+
+    const orderResult = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+    const order = orderResult.rows[0];
+    if (!order) return res.sendStatus(200);
+
+    if (payment.status === 'approved') {
+      await confirmOrderPayment(pool, order, 'paid');
+    } else if (['rejected', 'cancelled'].includes(payment.status)) {
+      await confirmOrderPayment(pool, order, 'failed');
+    }
+
+    res.sendStatus(200);
+  } catch (e) {
+    console.error('Error procesando webhook de MercadoPago:', e.message);
+    res.sendStatus(200);
+  }
+});
+
+app.post('/api/payments/wompi/webhook', async (req, res) => {
+  try {
+    const event = req.body;
+    const transaction = event?.data?.transaction;
+    if (!transaction) return res.sendStatus(200);
+
+    if (process.env.WOMPI_EVENTS_SECRET) {
+      if (!verifyWompiChecksum(event, process.env.WOMPI_EVENTS_SECRET)) {
+        console.error('Wompi webhook: checksum inválido, ignorado');
+        return res.sendStatus(200);
+      }
+    } else {
+      console.warn('⚠️  WOMPI_EVENTS_SECRET no configurado -- webhook de Wompi procesándose sin verificar checksum');
+    }
+
+    const orderResult = await pool.query('SELECT * FROM orders WHERE "orderNumber" = $1', [transaction.reference]);
+    const order = orderResult.rows[0];
+    if (!order) return res.sendStatus(200);
+
+    if (transaction.status === 'APPROVED') {
+      await confirmOrderPayment(pool, order, 'paid');
+    } else if (['DECLINED', 'ERROR', 'VOIDED'].includes(transaction.status)) {
+      await confirmOrderPayment(pool, order, 'failed');
+    }
+
+    res.sendStatus(200);
+  } catch (e) {
+    console.error('Error procesando webhook de Wompi:', e.message);
+    res.sendStatus(200);
+  }
+});
+
+// NOTA IMPORTANTE: la verificación de firma de Bold se implementó con menos
+// confianza que MercadoPago/Wompi -- no se tuvo acceso a documentación en
+// vivo ni a credenciales de sandbox reales para confirmar el nombre exacto
+// del header o el algoritmo que usa Bold. Antes de aceptar pagos reales por
+// Bold, verificar esto contra la documentación actual de Bold y probar con
+// una notificación real de su sandbox.
+app.post('/api/payments/bold/webhook', async (req, res) => {
+  try {
+    const body = req.body;
+
+    if (process.env.BOLD_WEBHOOK_SECRET) {
+      const providedSecret = req.headers['x-bold-signature'] || req.headers['x-webhook-secret'];
+      if (providedSecret !== process.env.BOLD_WEBHOOK_SECRET) {
+        console.error('Bold webhook: secreto inválido, ignorado');
+        return res.sendStatus(200);
+      }
+    } else {
+      console.warn('⚠️  BOLD_WEBHOOK_SECRET no configurado -- webhook de Bold procesándose sin verificar');
+    }
+
+    const reference = body?.data?.reference || body?.reference || body?.payload?.reference;
+    const status = String(body?.data?.status || body?.status || '').toUpperCase();
+
+    if (!reference) {
+      console.warn('Bold webhook: no se encontró referencia reconocible en el payload');
+      return res.sendStatus(200);
+    }
+
+    const orderResult = await pool.query(
+      'SELECT * FROM orders WHERE "orderNumber" = $1 OR "paymentProviderRef" = $1',
+      [reference]
+    );
+    const order = orderResult.rows[0];
+    if (!order) return res.sendStatus(200);
+
+    if (['APPROVED', 'PAID', 'SUCCESS'].includes(status)) {
+      await confirmOrderPayment(pool, order, 'paid');
+    } else if (['REJECTED', 'FAILED', 'VOIDED'].includes(status)) {
+      await confirmOrderPayment(pool, order, 'failed');
+    }
+
+    res.sendStatus(200);
+  } catch (e) {
+    console.error('Error procesando webhook de Bold:', e.message);
+    res.sendStatus(200);
   }
 });
 

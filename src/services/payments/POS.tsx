@@ -1,16 +1,27 @@
 import React, { useState } from 'react';
 import { paymentService, PaymentMethod, PaymentRequest, PaymentResponse } from './paymentService';
+import { api } from '../api';
+import { Order, OrderItem } from '../../types';
+
+export interface OrderDraft {
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  items: OrderItem[];
+  total: number;
+  estimatedTime: number;
+}
 
 interface POSProps {
-  orderId: string;
-  total: number;
-  customerName: string;
+  orderDraft: OrderDraft;
   customerEmail: string;
+  onOrderCreated: (order: Order) => void;
   onPaymentComplete: (response: PaymentResponse) => void;
   onClose: () => void;
 }
 
-const POS: React.FC<POSProps> = ({ orderId, total, customerName, customerEmail, onPaymentComplete, onClose }) => {
+const POS: React.FC<POSProps> = ({ orderDraft, customerEmail, onOrderCreated, onPaymentComplete, onClose }) => {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentResult, setPaymentResult] = useState<PaymentResponse | null>(null);
@@ -22,24 +33,44 @@ const POS: React.FC<POSProps> = ({ orderId, total, customerName, customerEmail, 
     setIsProcessing(true);
     setPaymentResult(null);
 
+    // El pedido se crea AQUÍ, recién con el método elegido, y ANTES de
+    // intentar el cobro -- así el link/sesión de pago del proveedor siempre
+    // referencia un orderId real (ver PR6: antes se generaba un id falso y
+    // Bold/MercadoPago/Wompi fallaban con 404 en el backend).
+    let order: Order;
+    try {
+      order = await api.createOrder({ ...orderDraft, paymentMethod: selectedMethod });
+      onOrderCreated(order);
+    } catch (e) {
+      setPaymentResult({ success: false, message: `No se pudo registrar el pedido: ${e instanceof Error ? e.message : 'error desconocido'}` });
+      setIsProcessing(false);
+      return;
+    }
+
     const request: PaymentRequest = {
-      amount: total,
+      amount: orderDraft.total,
       currency: 'COP',
-      orderId,
+      orderId: order.id,
       customerEmail,
-      customerName,
+      customerName: orderDraft.customerName,
       method: selectedMethod,
     };
 
     const result = await paymentService.processPayment(request);
-    
+
     setPaymentResult(result);
     setIsProcessing(false);
-    
+
     if (result.success) {
       onPaymentComplete(result);
       if (result.qrCode) {
         setShowQR(true);
+      }
+      // Métodos como Bold/MercadoPago/Wompi devuelven una URL del proveedor
+      // donde el cliente completa el pago -- el pedido ya existe (pending),
+      // el webhook del proveedor lo confirma cuando corresponda.
+      if (result.paymentUrl) {
+        window.location.href = result.paymentUrl;
       }
     }
   };
@@ -52,7 +83,7 @@ const POS: React.FC<POSProps> = ({ orderId, total, customerName, customerEmail, 
   return (
     <div className="fixed inset-0 z-[300] bg-stone-950/95 backdrop-blur-xl flex items-center justify-center p-4">
       <div className="bg-stone-900 border border-white/10 rounded-[2rem] p-6 md:p-8 max-w-lg w-full shadow-2xl">
-        
+
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-brand text-white">Pago POS</h2>
           <button onClick={onClose} className="text-stone-400 hover:text-white">
@@ -63,17 +94,17 @@ const POS: React.FC<POSProps> = ({ orderId, total, customerName, customerEmail, 
         <div className="bg-stone-950 p-4 rounded-xl mb-6">
           <div className="flex justify-between items-center">
             <span className="text-stone-400">Pedido</span>
-            <span className="text-white font-mono">#{orderId}</span>
+            <span className="text-white font-mono">#{orderDraft.orderNumber}</span>
           </div>
           <div className="flex justify-between items-center mt-2">
             <span className="text-stone-400">Cliente</span>
-            <span className="text-white">{customerName}</span>
+            <span className="text-white">{orderDraft.customerName}</span>
           </div>
           <div className="border-t border-white/10 mt-4 pt-4">
             <div className="flex justify-between items-center">
               <span className="text-xl text-white">Total</span>
               <span className="text-2xl font-black text-orange-500">
-                ${total.toLocaleString('es-CO')}
+                ${orderDraft.total.toLocaleString('es-CO')}
               </span>
             </div>
           </div>
@@ -82,7 +113,7 @@ const POS: React.FC<POSProps> = ({ orderId, total, customerName, customerEmail, 
         {!paymentResult ? (
           <>
             <p className="text-stone-400 text-sm mb-4">Selecciona método de pago:</p>
-            
+
             <div className="grid grid-cols-3 gap-3 mb-6">
               {paymentMethods.map(method => (
                 <button
@@ -127,7 +158,7 @@ const POS: React.FC<POSProps> = ({ orderId, total, customerName, customerEmail, 
                 </div>
                 <h3 className="text-xl text-white mb-2">Pago Exitoso</h3>
                 <p className="text-stone-400 mb-4">{paymentResult.message}</p>
-                
+
                 {paymentResult.qrCode && showQR && (
                   <div className="bg-white p-4 rounded-xl mb-4 inline-block">
                     <img src={paymentResult.qrCode} alt="QR Code" className="w-48 h-48" />

@@ -5,7 +5,7 @@ import VisualPizzaBuilder from '../../components/VisualPizzaBuilder';
 import { getSmartRecommendations } from '../../services/geminiService';
 import { api } from '../../services/api';
 import { subscribeToPushNotifications } from '../../services/push';
-import { POS } from '../../services/payments';
+import { POS, OrderDraft } from '../../services/payments';
 import TrackOrderModal from '../../components/TrackOrderModal';
 import ApprovedReviews from '../../components/ApprovedReviews';
 import { CartItem, Order, Category, Product, OrderItem, PizzaSize } from '../../types';
@@ -83,8 +83,7 @@ const CustomerView: React.FC = () => {
     setIsAiLoading(false);
   };
 
-  const createOrder = async (paymentMethod: Order['paymentMethod'] = 'cash') => {
-    const orderNumber = `GUIDO-${Math.floor(Math.random() * 9000) + 1000}`;
+  const buildOrderDraft = (): OrderDraft => {
     const orderItems: OrderItem[] = cart.map(item => ({
       id: item.id,
       productId: item.productId,
@@ -95,16 +94,15 @@ const CustomerView: React.FC = () => {
       details: item.details
     }));
 
-    return api.createOrder({
-      orderNumber,
+    return {
+      orderNumber: `GUIDO-${Math.floor(Math.random() * 9000) + 1000}`,
       customerName: customerInfo.name || 'Cliente',
       customerPhone: customerInfo.phone,
       address: customerInfo.address || 'Dirección por confirmar',
       items: orderItems,
       total: cartTotal,
-      estimatedTime: 30,
-      paymentMethod
-    });
+      estimatedTime: 30
+    };
   };
 
   const handleCheckout = () => {
@@ -112,25 +110,23 @@ const CustomerView: React.FC = () => {
     setShowPOS(true);
   };
 
-  const handlePaymentComplete = async (response: PaymentResponse) => {
+  // El pedido ya existe en la base de datos en este punto (POS lo crea antes
+  // de intentar el cobro, con el método real elegido) -- acá solo limpiamos
+  // el carrito y nos suscribimos a push. Ver PR6: antes el pedido se creaba
+  // recién aquí, después del pago, lo cual dejaba Bold/MercadoPago/Wompi
+  // rotos porque el link de pago necesitaba un orderId real desde el inicio.
+  const handlePaymentComplete = (response: PaymentResponse) => {
     if (!response.success) return;
-    try {
-      await createOrder('card');
-      window.dispatchEvent(new Event('new-order-submitted'));
-      setCart([]);
-      setIsCartOpen(false);
-      localStorage.removeItem('guido_cart');
-      if (customerInfo.phone) {
-        subscribeToPushNotifications(customerInfo.phone);
-      }
-    } catch (e) {
-      // El pago ya se cobró en este punto — no podemos perder el pedido en silencio.
-      window.alert(
-        `Tu pago fue exitoso pero hubo un error registrando el pedido. ` +
-        `Por favor contáctanos con este número de referencia: ${customerInfo.phone || customerInfo.name}. ` +
-        `(${e instanceof Error ? e.message : 'error desconocido'})`
-      );
+    setCart([]);
+    setIsCartOpen(false);
+    localStorage.removeItem('guido_cart');
+    if (customerInfo.phone) {
+      subscribeToPushNotifications(customerInfo.phone);
     }
+  };
+
+  const handleOrderCreated = (_order: Order) => {
+    window.dispatchEvent(new Event('new-order-submitted'));
   };
 
   const removeFromCart = (id: string) => {
@@ -275,11 +271,10 @@ const CustomerView: React.FC = () => {
   return (
     <div className="min-h-screen bg-stone-950 text-white">
       {showPOS && (
-        <POS 
-          orderId={`GUIDO-${Date.now()}`}
-          total={cartTotal}
-          customerName={customerInfo.name}
+        <POS
+          orderDraft={buildOrderDraft()}
           customerEmail={customerInfo.email || 'cliente@guido.com'}
+          onOrderCreated={handleOrderCreated}
           onPaymentComplete={handlePaymentComplete}
           onClose={() => setShowPOS(false)}
         />
