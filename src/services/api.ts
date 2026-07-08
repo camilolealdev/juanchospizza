@@ -1,11 +1,50 @@
 
-import type { Order, Campaign, OrderStatus, Client, LoyaltyReward } from '../types';
+import type { Order, Campaign, OrderStatus, Client, LoyaltyReward, Product, Category } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 type OrderPayload = Partial<Order>;
 type ClientPayload = Partial<Client>;
 type LoyaltyRewardPayload = Partial<LoyaltyReward>;
+type ProductPayload = Partial<Product>;
+
+export interface MenuVariant {
+  id: string;
+  productoId: string | null;
+  nombre: string;
+  precioModificador: number;
+  activo: boolean;
+}
+type MenuVariantPayload = Partial<MenuVariant>;
+
+export interface MenuCombo {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  productos: string[];
+  precioTotal: number;
+  ahorro: number;
+  imagen: string | null;
+  activo: boolean;
+}
+type MenuComboPayload = Partial<MenuCombo>;
+
+export interface MenuPromotion {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  tipo: string | null;
+  valor: number;
+  productoId: string | null;
+  categoriaId: string | null;
+  montoMinimo: number;
+  inicia: string | null;
+  termina: string | null;
+  activo: boolean;
+  usado: number;
+  limite: number;
+}
+type MenuPromotionPayload = Partial<MenuPromotion>;
 
 // ---- Auth/session storage helpers ----
 // Shared so every request can automatically attach the bearer token without
@@ -124,8 +163,28 @@ export const api = {
     return apiFetch(`/api/products/${id}`);
   },
 
+  async createProduct(product: ProductPayload) {
+    return apiFetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(product)
+    });
+  },
+
+  async updateProduct(id: string, data: ProductPayload) {
+    return apiFetch(`/api/products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async deleteProduct(id: string) {
+    return apiFetch(`/api/products/${id}`, { method: 'DELETE' });
+  },
+
   // Categories
-  async getCategories() {
+  async getCategories(): Promise<Category[]> {
     return apiFetch('/api/categories');
   },
 
@@ -273,6 +332,81 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
+  },
+
+  // Menu: variants
+  async getMenuVariants(): Promise<MenuVariant[]> {
+    return apiFetch('/api/menu/variants');
+  },
+
+  async createMenuVariant(variant: MenuVariantPayload) {
+    return apiFetch('/api/menu/variants', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(variant)
+    });
+  },
+
+  async updateMenuVariant(id: string, data: MenuVariantPayload) {
+    return apiFetch(`/api/menu/variants/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async deleteMenuVariant(id: string) {
+    return apiFetch(`/api/menu/variants/${id}`, { method: 'DELETE' });
+  },
+
+  // Menu: combos
+  async getMenuCombos(): Promise<MenuCombo[]> {
+    return apiFetch('/api/menu/combos');
+  },
+
+  async createMenuCombo(combo: MenuComboPayload) {
+    return apiFetch('/api/menu/combos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(combo)
+    });
+  },
+
+  async updateMenuCombo(id: string, data: MenuComboPayload) {
+    return apiFetch(`/api/menu/combos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async deleteMenuCombo(id: string) {
+    return apiFetch(`/api/menu/combos/${id}`, { method: 'DELETE' });
+  },
+
+  // Menu: promotions
+  async getMenuPromotions(): Promise<MenuPromotion[]> {
+    return apiFetch('/api/menu/promotions');
+  },
+
+  async createMenuPromotion(promotion: MenuPromotionPayload) {
+    return apiFetch('/api/menu/promotions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(promotion)
+    });
+  },
+
+  async updateMenuPromotion(id: string, data: MenuPromotionPayload) {
+    return apiFetch(`/api/menu/promotions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async deleteMenuPromotion(id: string) {
+    return apiFetch(`/api/menu/promotions/${id}`, { method: 'DELETE' });
   }
 };
 

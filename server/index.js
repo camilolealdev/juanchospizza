@@ -1505,7 +1505,7 @@ app.get('/api/loyalty/points/:clientId', authMiddleware, requireRole('ADMIN', 'M
 // --- MENU VARIANTS ---
 app.get('/api/menu/variants', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM menu_variants WHERE activo = true');
+    const result = await pool.query('SELECT * FROM menu_variants ORDER BY "productoId"');
     res.json(result.rows);
   } catch (e) { res.status(500).json({ error: 'Error fetching variants' }); }
 });
@@ -1582,7 +1582,7 @@ app.delete('/api/menu/variants/:id', authMiddleware, requireRole('ADMIN', 'MARKE
 
 app.get('/api/menu/combos', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM menu_combos WHERE activo = true');
+    const result = await pool.query('SELECT * FROM menu_combos ORDER BY id');
     // productos es JSON nativo: el driver ya lo devuelve parseado (array u null)
     res.json(result.rows.map(r => ({ ...r, productos: r.productos || [] })));
   } catch (e) { res.status(500).json({ error: 'Error fetching combos' }); }
