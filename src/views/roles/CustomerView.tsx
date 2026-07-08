@@ -5,7 +5,7 @@ import VisualPizzaBuilder from '../../components/VisualPizzaBuilder';
 import { getSmartRecommendations } from '../../services/geminiService';
 import { api } from '../../services/api';
 import { POS } from '../../services/payments';
-import { CartItem, Order, OrderStatus, Category, Product, OrderItem, PizzaSize } from '../../types';
+import { CartItem, Order, Category, Product, OrderItem, PizzaSize } from '../../types';
 import { PaymentResponse } from '../../services/payments/paymentService';
 
 const CustomerView: React.FC = () => {
@@ -79,10 +79,8 @@ const CustomerView: React.FC = () => {
     setIsAiLoading(false);
   };
 
-  const createOrder = (paymentMethod: Order['paymentMethod'] = 'cash') => {
+  const createOrder = async (paymentMethod: Order['paymentMethod'] = 'cash') => {
     const orderNumber = `GUIDO-${Math.floor(Math.random() * 9000) + 1000}`;
-    const savedOrders = localStorage.getItem('guido_live_orders');
-    const orders: Order[] = savedOrders ? JSON.parse(savedOrders) : [];
     const orderItems: OrderItem[] = cart.map(item => ({
       id: item.id,
       productId: item.productId,
@@ -92,28 +90,16 @@ const CustomerView: React.FC = () => {
       price: item.price,
       details: item.details
     }));
-    
-    const newOrder: Order = {
-      id: `ord_${Date.now()}`,
+
+    return api.createOrder({
       orderNumber,
-      userId: 'cliente_web',
       customerName: customerInfo.name || 'Cliente',
       address: customerInfo.address || 'Dirección por confirmar',
       items: orderItems,
       total: cartTotal,
-      status: OrderStatus.PENDING,
-      createdAt: new Date().toLocaleTimeString(),
       estimatedTime: 30,
       paymentMethod
-    };
-
-    const updatedOrders = [...orders, newOrder];
-    localStorage.setItem('guido_live_orders', JSON.stringify(updatedOrders));
-    
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('new-order-submitted'));
-    
-    return newOrder;
+    });
   };
 
   const handleCheckout = () => {
@@ -121,12 +107,21 @@ const CustomerView: React.FC = () => {
     setShowPOS(true);
   };
 
-  const handlePaymentComplete = (response: PaymentResponse) => {
-    if (response.success) {
-      createOrder('card');
+  const handlePaymentComplete = async (response: PaymentResponse) => {
+    if (!response.success) return;
+    try {
+      await createOrder('card');
+      window.dispatchEvent(new Event('new-order-submitted'));
       setCart([]);
       setIsCartOpen(false);
       localStorage.removeItem('guido_cart');
+    } catch (e) {
+      // El pago ya se cobró en este punto — no podemos perder el pedido en silencio.
+      window.alert(
+        `Tu pago fue exitoso pero hubo un error registrando el pedido. ` +
+        `Por favor contáctanos con este número de referencia: ${customerInfo.phone || customerInfo.name}. ` +
+        `(${e instanceof Error ? e.message : 'error desconocido'})`
+      );
     }
   };
 
