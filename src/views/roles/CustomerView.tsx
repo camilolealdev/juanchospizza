@@ -4,6 +4,7 @@ import { CATEGORIES, PRODUCTS } from '../../constants';
 import VisualPizzaBuilder from '../../components/VisualPizzaBuilder';
 import { getSmartRecommendations } from '../../services/geminiService';
 import { api } from '../../services/api';
+import { subscribeToPushNotifications } from '../../services/push';
 import { POS } from '../../services/payments';
 import { CartItem, Order, Category, Product, OrderItem, PizzaSize } from '../../types';
 import { PaymentResponse } from '../../services/payments/paymentService';
@@ -116,6 +117,9 @@ const CustomerView: React.FC = () => {
       setCart([]);
       setIsCartOpen(false);
       localStorage.removeItem('guido_cart');
+      if (customerInfo.phone) {
+        subscribeToPushNotifications(customerInfo.phone);
+      }
     } catch (e) {
       // El pago ya se cobró en este punto — no podemos perder el pedido en silencio.
       window.alert(
