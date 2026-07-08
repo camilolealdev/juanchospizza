@@ -1,20 +1,15 @@
-import React, { useState } from 'react';
-import { LoyaltyLevel, LoyaltyReward, LoyaltyChallenge } from '../../types';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Client, LoyaltyLevel, LoyaltyReward, LoyaltyChallenge } from '../../types';
+import { api } from '../../services/api';
 
+// Tier level definitions and monthly challenges have no backing table in the
+// schema (no loyalty_levels / loyalty_challenges concept exists server-side),
+// so these stay local presentational data per this pass's scope.
 const NIVELES: LoyaltyLevel[] = [
   { id: 'bronce', nombre: 'Bronce', puntosMinimos: 0, descuento: 0, color: 'bronze', icono: 'fa-shield', beneficios: ['Acceso a promociones generales', 'Notificaciones de ofertas'] },
   { id: 'plata', nombre: 'Plata', puntosMinimos: 500, descuento: 3, color: 'silver', icono: 'fa-shield', beneficios: ['3% descuento en todas tus órdenes', 'Prioridad en pedidos', 'Acceso a menú exclusivo'] },
   { id: 'oro', nombre: 'Oro', puntosMinimos: 2000, descuento: 7, color: 'gold', icono: 'fa-crown', beneficios: ['7% descuento en todas tus órdenes', 'Envío gratis ilimitado', 'Postre sorpresa cada 5 pedidos', 'Soporte prioritario'] },
   { id: 'platino', nombre: 'Platino', puntosMinimos: 5000, descuento: 15, color: 'platinum', icono: 'fa-gem', beneficios: ['15% descuento en todas tus órdenes', 'Envío gratis ilimitado', 'Pizza Personal Gratis cada mes', 'Acceso a eventos VIP', 'Deduplicador de puntos'] },
-];
-
-const RECOMPENSAS: LoyaltyReward[] = [
-  { id: 'r1', nombre: 'Pizza Personal Gratis', descripcion: 'Canjea por una pizza personal clásica', puntosCosto: 200, tipo: 'producto', valor: 0, vigente: true },
-  { id: 'r2', nombre: '15% Off', descripcion: 'Descuento en tu próxima orden', puntosCosto: 150, tipo: 'descuento', valor: 15, vigente: true },
-  { id: 'r3', nombre: 'Bebida Gratis', descripcion: 'Bebida de hasta $8,000', puntosCosto: 80, tipo: 'producto', valor: 0, vigente: true },
-  { id: 'r4', nombre: 'Lasaña Gratis', descripcion: 'Lasaña clásica de la casa', puntosCosto: 300, tipo: 'producto', valor: 0, vigente: true },
-  { id: 'r5', nombre: 'Envío Gratis', descripcion: 'Sin costo de domicilio', puntosCosto: 50, tipo: 'envio', valor: 0, vigente: true },
-  { id: 'r6', nombre: 'Postre Sorpresa', descripcion: 'Postre dulce seleccionado por el chef', puntosCosto: 100, tipo: 'producto', valor: 0, vigente: true },
 ];
 
 const RETOS: LoyaltyChallenge[] = [
@@ -23,20 +18,14 @@ const RETOS: LoyaltyChallenge[] = [
   { id: 'ch3', nombre: 'Weekend Warrior', descripcion: 'Pide viernes o sábado', objetivo: 2, progreso: 2, recompensa: '200pts extra', inicia: '2026-06-05', termina: '2026-06-07', activo: true },
 ];
 
-interface CanjeRecord {
-  cliente: string;
-  recompensa: string;
+interface PointsHistoryRow {
+  id: string;
+  clientId: string;
   puntos: number;
-  fecha: string;
+  concepto: string | null;
+  referencia: string | null;
+  creado: string;
 }
-
-const CANJES_RECIENTES: CanjeRecord[] = [
-  { cliente: 'María López', recompensa: 'Pizza Personal Gratis', puntos: 200, fecha: '04 Jun 2026' },
-  { cliente: 'Carlos Ruiz', recompensa: 'Bebida Gratis', puntos: 80, fecha: '03 Jun 2026' },
-  { cliente: 'Ana Martínez', recompensa: 'Envío Gratis', puntos: 50, fecha: '02 Jun 2026' },
-  { cliente: 'Pedro Gómez', recompensa: 'Postre Sorpresa', puntos: 100, fecha: '01 Jun 2026' },
-  { cliente: 'Laura Jiménez', recompensa: '15% Off', puntos: 150, fecha: '31 May 2026' },
-];
 
 const LEVEL_BORDER: Record<string, string> = {
   bronze: 'border-amber-700/60 bg-gradient-to-br from-amber-900/10 to-stone-900',
@@ -73,17 +62,40 @@ const REWARD_TYPE_LABEL: Record<string, string> = {
   envio: 'Envío',
 };
 
-const CLIENTES = ['María López', 'Carlos Ruiz', 'Ana Martínez', 'Pedro Gómez', 'Laura Jiménez', 'Diego Ramírez', 'Sofía Torres'];
+const formatDate = (d?: string | null) => {
+  if (!d) return '—';
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const normalizeReward = (raw: any): LoyaltyReward => ({
+  ...raw,
+  vigente: !!raw.vigente && raw.vigente !== 0,
+});
+
+const emptyForm: { nombre: string; descripcion: string; puntosCosto: number; tipo: LoyaltyReward['tipo']; valor: number } =
+  { nombre: '', descripcion: '', puntosCosto: 0, tipo: 'producto', valor: 0 };
 
 const FidelizacionView: React.FC = () => {
-  const [recompensas, setRecompensas] = useState<LoyaltyReward[]>(RECOMPENSAS);
-  const [retos] = useState<LoyaltyChallenge[]>(RETOS);
-  const [puntosActivos, setPuntosActivos] = useState(12450);
-  const [clientesCount] = useState(218);
-  const [cashbackTotal] = useState(1240000);
-  const [canjes, setCanjes] = useState<CanjeRecord[]>(CANJES_RECIENTES);
+  const [recompensas, setRecompensas] = useState<LoyaltyReward[]>([]);
+  const [rewardsLoading, setRewardsLoading] = useState(true);
+  const [rewardsError, setRewardsError] = useState<string | null>(null);
+
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(true);
+
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [pointsHistory, setPointsHistory] = useState<PointsHistoryRow[]>([]);
+  const [pointsLoading, setPointsLoading] = useState(false);
+  const [pointsError, setPointsError] = useState<string | null>(null);
+
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ nombre: '', descripcion: '', puntosCosto: 0, tipo: 'producto', valor: 0 });
+  const [editingRewardId, setEditingRewardId] = useState<string | null>(null);
+  const [formData, setFormData] = useState(emptyForm);
+  const [isSavingReward, setIsSavingReward] = useState(false);
+
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
 
   const showToastMessage = (message: string) => {
@@ -91,41 +103,126 @@ const FidelizacionView: React.FC = () => {
     setTimeout(() => setToast({ message: '', visible: false }), 3000);
   };
 
-  const handleCanjear = (r: LoyaltyReward) => {
-    if (puntosActivos < r.puntosCosto) {
-      showToastMessage('❌ No tienes suficientes puntos');
+  const fetchRewards = useCallback(async () => {
+    setRewardsLoading(true);
+    setRewardsError(null);
+    try {
+      const rows = await api.getLoyaltyRewards();
+      setRecompensas(rows.map(normalizeReward));
+    } catch (e) {
+      setRewardsError('No se pudieron cargar las recompensas.');
+    } finally {
+      setRewardsLoading(false);
+    }
+  }, []);
+
+  const fetchClients = useCallback(async () => {
+    setClientsLoading(true);
+    try {
+      const rows = await api.getClients();
+      setClients(rows);
+    } catch (e) {
+      // Non-fatal: the rewards catalog still works without the client picker.
+      setClients([]);
+    } finally {
+      setClientsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchRewards(); fetchClients(); }, [fetchRewards, fetchClients]);
+
+  useEffect(() => {
+    if (!selectedClientId) {
+      setPointsHistory([]);
+      setPointsError(null);
       return;
     }
-    const cliente = CLIENTES[Math.floor(Math.random() * CLIENTES.length)];
-    const newCanje: CanjeRecord = {
-      cliente,
-      recompensa: r.nombre,
-      puntos: r.puntosCosto,
-      fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' '),
-    };
-    setPuntosActivos((p) => p - r.puntosCosto);
-    setCanjes((prev) => [newCanje, ...prev]);
-    showToastMessage(`✅ ${r.nombre} canjeado por ${cliente}`);
+    let cancelled = false;
+    setPointsLoading(true);
+    setPointsError(null);
+    api.getLoyaltyPoints(selectedClientId)
+      .then((rows) => { if (!cancelled) setPointsHistory(rows); })
+      .catch(() => { if (!cancelled) setPointsError('No se pudo cargar el historial de puntos.'); })
+      .finally(() => { if (!cancelled) setPointsLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedClientId]);
+
+  const puntosActivos = clients.reduce((sum, c) => sum + (c.puntos || 0), 0);
+  const cashbackTotal = 1240000; // Cosmetic placeholder: no cashback ledger exists in the schema.
+  const selectedClient = clients.find(c => c.id === selectedClientId) || null;
+
+  const handleCanjear = async (r: LoyaltyReward) => {
+    if (!selectedClientId || !selectedClient) {
+      showToastMessage('❌ Selecciona un cliente en "Historial de Puntos" para canjear');
+      return;
+    }
+    if (selectedClient.puntos < r.puntosCosto) {
+      showToastMessage('❌ El cliente no tiene suficientes puntos');
+      return;
+    }
+    try {
+      await api.addLoyaltyPoints({
+        clientId: selectedClientId,
+        puntos: -r.puntosCosto,
+        concepto: `Canje: ${r.nombre}`,
+        referencia: r.id,
+      });
+      await fetchClients();
+      const rows = await api.getLoyaltyPoints(selectedClientId);
+      setPointsHistory(rows);
+      showToastMessage(`✅ ${r.nombre} canjeado por ${selectedClient.nombre}`);
+    } catch (e) {
+      showToastMessage('❌ No se pudo procesar el canje');
+    }
   };
 
-  const handleCrearRecompensa = () => {
+  const openCreateForm = () => {
+    setEditingRewardId(null);
+    setFormData(emptyForm);
+    setShowForm(true);
+  };
+
+  const openEditForm = (r: LoyaltyReward) => {
+    setEditingRewardId(r.id);
+    setFormData({ nombre: r.nombre, descripcion: r.descripcion, puntosCosto: r.puntosCosto, tipo: r.tipo, valor: r.valor });
+    setShowForm(true);
+  };
+
+  const handleGuardarRecompensa = async () => {
     if (!formData.nombre || !formData.descripcion || formData.puntosCosto <= 0) {
       showToastMessage('❌ Completa todos los campos requeridos');
       return;
     }
-    const newReward: LoyaltyReward = {
-      id: `r${Date.now()}`,
-      nombre: formData.nombre,
-      descripcion: formData.descripcion,
-      puntosCosto: formData.puntosCosto,
-      tipo: formData.tipo as LoyaltyReward['tipo'],
-      valor: formData.valor,
-      vigente: true,
-    };
-    setRecompensas((prev) => [...prev, newReward]);
-    setShowForm(false);
-    setFormData({ nombre: '', descripcion: '', puntosCosto: 0, tipo: 'producto', valor: 0 });
-    showToastMessage('✅ Recompensa creada exitosamente');
+    setIsSavingReward(true);
+    try {
+      if (editingRewardId) {
+        const updated = await api.updateLoyaltyReward(editingRewardId, formData);
+        setRecompensas((prev) => prev.map((r) => (r.id === editingRewardId ? normalizeReward(updated) : r)));
+        showToastMessage('✅ Recompensa actualizada');
+      } else {
+        const created = await api.createLoyaltyReward(formData);
+        setRecompensas((prev) => [...prev, normalizeReward(created)]);
+        showToastMessage('✅ Recompensa creada exitosamente');
+      }
+      setShowForm(false);
+      setEditingRewardId(null);
+      setFormData(emptyForm);
+    } catch (e) {
+      showToastMessage('❌ No se pudo guardar la recompensa');
+    } finally {
+      setIsSavingReward(false);
+    }
+  };
+
+  const handleEliminarRecompensa = async (r: LoyaltyReward) => {
+    if (!window.confirm(`¿Eliminar la recompensa "${r.nombre}"?`)) return;
+    try {
+      await api.deleteLoyaltyReward(r.id);
+      setRecompensas((prev) => prev.filter((x) => x.id !== r.id));
+      showToastMessage('✅ Recompensa eliminada');
+    } catch (e) {
+      showToastMessage('❌ No se pudo eliminar la recompensa');
+    }
   };
 
   return (
@@ -140,7 +237,7 @@ const FidelizacionView: React.FC = () => {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-stone-900 border border-stone-700 rounded-[3rem] p-10 w-full max-w-lg mx-4 shadow-2xl">
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-black text-white">Nueva Recompensa</h3>
+              <h3 className="text-2xl font-black text-white">{editingRewardId ? 'Editar Recompensa' : 'Nueva Recompensa'}</h3>
               <button onClick={() => setShowForm(false)} className="w-10 h-10 rounded-xl bg-stone-800 flex items-center justify-center text-stone-400 hover:text-white transition-colors">
                 <i className="fas fa-times"></i>
               </button>
@@ -188,7 +285,7 @@ const FidelizacionView: React.FC = () => {
                 <label className="block text-stone-400 text-xs font-bold uppercase tracking-wider mb-2">Tipo</label>
                 <select
                   value={formData.tipo}
-                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value as LoyaltyReward['tipo'] })}
                   className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-orange-500 transition-colors"
                 >
                   <option value="cupon">Cupón</option>
@@ -198,10 +295,12 @@ const FidelizacionView: React.FC = () => {
                 </select>
               </div>
               <button
-                onClick={handleCrearRecompensa}
-                className="w-full bg-orange-600 hover:bg-orange-500 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all shadow-xl text-white"
+                onClick={handleGuardarRecompensa}
+                disabled={isSavingReward}
+                className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest transition-all shadow-xl text-white"
               >
-                <i className="fas fa-plus-circle mr-3"></i> CREAR RECOMPENSA
+                <i className="fas fa-plus-circle mr-3"></i>
+                {isSavingReward ? 'Guardando...' : editingRewardId ? 'GUARDAR CAMBIOS' : 'CREAR RECOMPENSA'}
               </button>
             </div>
           </div>
@@ -214,7 +313,7 @@ const FidelizacionView: React.FC = () => {
           <p className="text-stone-500 mt-4 max-w-xl">Programa de lealtad, puntos y recompensas</p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={openCreateForm}
           className="bg-orange-600 hover:bg-orange-500 px-10 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-4 w-full md:w-auto justify-center"
         >
           <i className="fas fa-plus-circle"></i> CREAR RECOMPENSA
@@ -223,8 +322,8 @@ const FidelizacionView: React.FC = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
         {[
-          { label: 'Puntos Activos', value: puntosActivos.toLocaleString(), icon: 'star', color: 'text-orange-500' },
-          { label: 'Clientes en Programa', value: clientesCount.toLocaleString(), icon: 'users', color: 'text-blue-500' },
+          { label: 'Puntos Activos', value: clientsLoading ? '—' : puntosActivos.toLocaleString(), icon: 'star', color: 'text-orange-500' },
+          { label: 'Clientes en Programa', value: clientsLoading ? '—' : clients.length.toLocaleString(), icon: 'users', color: 'text-blue-500' },
           { label: 'Cashback Entregado', value: `$${cashbackTotal.toLocaleString()}`, icon: 'wallet', color: 'text-green-500' },
         ].map((stat, i) => (
           <div key={i} className="bg-stone-900/40 p-10 rounded-[4rem] border border-stone-800/50 shadow-2xl group hover:border-orange-500/40 transition-all">
@@ -283,37 +382,69 @@ const FidelizacionView: React.FC = () => {
             <p className="text-stone-600 text-xs mt-2 uppercase tracking-[0.4em] font-bold">Canjea tus puntos</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {recompensas.map((r) => (
-            <div key={r.id} className="bg-stone-900/40 p-8 rounded-[3.5rem] border border-stone-800 hover:border-orange-500/40 transition-all group shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 blur-3xl opacity-5 bg-orange-500 group-hover:opacity-10 transition-opacity"></div>
-              <div className="flex justify-between items-start mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-stone-950 flex items-center justify-center border border-white/5 text-orange-500 text-2xl group-hover:scale-110 transition-transform">
-                  <i className={`fas ${r.tipo === 'descuento' ? 'fa-percent' : r.tipo === 'envio' ? 'fa-truck' : 'fa-pizza-slice'}`}></i>
+
+        {rewardsError && (
+          <div className="bg-red-950/40 border border-red-500/20 rounded-[2rem] p-6 flex items-center justify-between gap-4">
+            <p className="text-red-400 text-sm font-bold"><i className="fas fa-triangle-exclamation mr-3"></i>{rewardsError}</p>
+            <button onClick={fetchRewards} className="text-[9px] font-black uppercase tracking-widest text-red-300 hover:text-white px-4 py-2 rounded-xl border border-red-500/30">
+              Reintentar
+            </button>
+          </div>
+        )}
+
+        {rewardsLoading ? (
+          <div className="p-16 text-center text-stone-500">
+            <i className="fas fa-circle-notch fa-spin text-3xl mb-4"></i>
+            <p className="text-sm font-bold uppercase tracking-widest">Cargando recompensas...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {recompensas.map((r) => (
+              <div key={r.id} className="bg-stone-900/40 p-8 rounded-[3.5rem] border border-stone-800 hover:border-orange-500/40 transition-all group shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 blur-3xl opacity-5 bg-orange-500 group-hover:opacity-10 transition-opacity"></div>
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-stone-950 flex items-center justify-center border border-white/5 text-orange-500 text-2xl group-hover:scale-110 transition-transform">
+                    <i className={`fas ${r.tipo === 'descuento' ? 'fa-percent' : r.tipo === 'envio' ? 'fa-truck' : 'fa-pizza-slice'}`}></i>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[8px] font-black uppercase px-4 py-2 rounded-full border ${REWARD_TYPE_BADGE[r.tipo]}`}>
+                      {REWARD_TYPE_LABEL[r.tipo]}
+                    </span>
+                    <button onClick={() => openEditForm(r)} title="Editar" className="w-8 h-8 rounded-lg bg-stone-950 border border-white/5 flex items-center justify-center text-stone-500 hover:text-white transition-colors">
+                      <i className="fas fa-pen text-[10px]"></i>
+                    </button>
+                    <button onClick={() => handleEliminarRecompensa(r)} title="Eliminar" className="w-8 h-8 rounded-lg bg-stone-950 border border-white/5 flex items-center justify-center text-stone-500 hover:text-red-400 transition-colors">
+                      <i className="fas fa-trash text-[10px]"></i>
+                    </button>
+                  </div>
                 </div>
-                <span className={`text-[8px] font-black uppercase px-4 py-2 rounded-full border ${REWARD_TYPE_BADGE[r.tipo]}`}>
-                  {REWARD_TYPE_LABEL[r.tipo]}
-                </span>
-              </div>
-              <h4 className="font-black text-xl text-white mb-2">{r.nombre}</h4>
-              <p className="text-stone-500 text-sm mb-8">{r.descripcion}</p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <i className="fas fa-coins text-yellow-500 text-lg"></i>
-                  <span className="text-2xl font-black text-yellow-500">{r.puntosCosto}</span>
-                  <span className="text-stone-500 text-[10px] uppercase font-bold tracking-wider">pts</span>
+                <h4 className="font-black text-xl text-white mb-2">{r.nombre}</h4>
+                <p className="text-stone-500 text-sm mb-8">{r.descripcion}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <i className="fas fa-coins text-yellow-500 text-lg"></i>
+                    <span className="text-2xl font-black text-yellow-500">{r.puntosCosto}</span>
+                    <span className="text-stone-500 text-[10px] uppercase font-bold tracking-wider">pts</span>
+                  </div>
+                  <button
+                    onClick={() => handleCanjear(r)}
+                    disabled={!selectedClientId || (selectedClient ? selectedClient.puntos < r.puntosCosto : true)}
+                    title={!selectedClientId ? 'Selecciona un cliente en Historial de Puntos' : undefined}
+                    className="bg-orange-600 hover:bg-orange-500 px-6 py-3 rounded-[2rem] font-black text-[9px] uppercase tracking-widest transition-all shadow-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    CANJEAR
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleCanjear(r)}
-                  disabled={puntosActivos < r.puntosCosto}
-                  className="bg-orange-600 hover:bg-orange-500 px-6 py-3 rounded-[2rem] font-black text-[9px] uppercase tracking-widest transition-all shadow-xl disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  CANJEAR
-                </button>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+            {recompensas.length === 0 && (
+              <div className="col-span-full p-16 text-center text-stone-600 bg-stone-900/30 rounded-[3rem] border border-white/5">
+                <i className="fas fa-gift text-3xl mb-4"></i>
+                <p className="text-sm font-bold uppercase tracking-widest">Aún no hay recompensas configuradas</p>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="space-y-8">
@@ -324,7 +455,7 @@ const FidelizacionView: React.FC = () => {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {retos.map((reto) => {
+          {RETOS.map((reto) => {
             const pct = Math.min(Math.round((reto.progreso / reto.objetivo) * 100), 100);
             return (
               <div key={reto.id} className="bg-stone-900/40 p-8 rounded-[3.5rem] border border-stone-800 hover:border-orange-500/40 transition-all group shadow-2xl relative overflow-hidden">
@@ -362,10 +493,22 @@ const FidelizacionView: React.FC = () => {
       </section>
 
       <section className="space-y-8">
-        <div className="flex justify-between items-end border-b border-white/5 pb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
           <div>
-            <h2 className="text-4xl font-brand">Últimos Canjes</h2>
-            <p className="text-stone-600 text-xs mt-2 uppercase tracking-[0.4em] font-bold">Actividad reciente del programa</p>
+            <h2 className="text-4xl font-brand">Historial de Puntos</h2>
+            <p className="text-stone-600 text-xs mt-2 uppercase tracking-[0.4em] font-bold">Movimientos de puntos por cliente (acumulación y canjes)</p>
+          </div>
+          <div className="w-full md:w-80">
+            <select
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-6 py-4 text-white text-sm font-bold outline-none focus:border-orange-500 transition-colors appearance-none cursor-pointer"
+            >
+              <option value="">{clientsLoading ? 'Cargando clientes...' : 'Selecciona un cliente...'}</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre} ({(c.puntos || 0).toLocaleString()} pts)</option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="bg-stone-900/40 rounded-[4rem] border border-stone-800 shadow-2xl">
@@ -373,28 +516,42 @@ const FidelizacionView: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/5">
-                  <th className="text-left text-[10px] font-black text-stone-600 uppercase tracking-[0.4em] px-10 py-6">Cliente</th>
-                  <th className="text-left text-[10px] font-black text-stone-600 uppercase tracking-[0.4em] px-10 py-6">Recompensa</th>
+                  <th className="text-left text-[10px] font-black text-stone-600 uppercase tracking-[0.4em] px-10 py-6">Concepto</th>
                   <th className="text-left text-[10px] font-black text-stone-600 uppercase tracking-[0.4em] px-10 py-6">Puntos</th>
+                  <th className="text-left text-[10px] font-black text-stone-600 uppercase tracking-[0.4em] px-10 py-6">Referencia</th>
                   <th className="text-left text-[10px] font-black text-stone-600 uppercase tracking-[0.4em] px-10 py-6">Fecha</th>
                 </tr>
               </thead>
               <tbody>
-                {canjes.map((canje, i) => (
-                  <tr key={i} className="border-b border-white/5 last:border-none hover:bg-stone-900/60 transition-colors">
+                {!selectedClientId && (
+                  <tr><td colSpan={4} className="px-10 py-10 text-center text-stone-600 text-sm">Selecciona un cliente para ver su historial de puntos.</td></tr>
+                )}
+                {selectedClientId && pointsLoading && (
+                  <tr><td colSpan={4} className="px-10 py-10 text-center text-stone-500 text-sm"><i className="fas fa-circle-notch fa-spin mr-2"></i>Cargando historial...</td></tr>
+                )}
+                {selectedClientId && !pointsLoading && pointsError && (
+                  <tr><td colSpan={4} className="px-10 py-10 text-center text-red-400 text-sm">{pointsError}</td></tr>
+                )}
+                {selectedClientId && !pointsLoading && !pointsError && pointsHistory.length === 0 && (
+                  <tr><td colSpan={4} className="px-10 py-10 text-center text-stone-600 text-sm">Este cliente aún no tiene movimientos de puntos.</td></tr>
+                )}
+                {selectedClientId && !pointsLoading && !pointsError && pointsHistory.map((p) => (
+                  <tr key={p.id} className="border-b border-white/5 last:border-none hover:bg-stone-900/60 transition-colors">
                     <td className="px-10 py-6">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-stone-950 flex items-center justify-center border border-white/5 text-stone-500">
-                          <i className="fas fa-user text-sm"></i>
+                          <i className={`fas ${p.puntos < 0 ? 'fa-arrow-down' : 'fa-arrow-up'} text-sm`}></i>
                         </div>
-                        <span className="text-white font-bold text-sm">{canje.cliente}</span>
+                        <span className="text-white font-bold text-sm">{p.concepto || 'Movimiento de puntos'}</span>
                       </div>
                     </td>
-                    <td className="px-10 py-6 text-stone-300 text-sm font-medium">{canje.recompensa}</td>
                     <td className="px-10 py-6">
-                      <span className="text-yellow-500 font-black">{canje.puntos} pts</span>
+                      <span className={`font-black ${p.puntos < 0 ? 'text-red-400' : 'text-green-500'}`}>
+                        {p.puntos > 0 ? '+' : ''}{p.puntos.toLocaleString()} pts
+                      </span>
                     </td>
-                    <td className="px-10 py-6 text-stone-500 text-sm">{canje.fecha}</td>
+                    <td className="px-10 py-6 text-stone-500 text-sm">{p.referencia || '—'}</td>
+                    <td className="px-10 py-6 text-stone-500 text-sm">{formatDate(p.creado)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,17 +1,7 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Client } from '../../types';
-
-const SAMPLE_CLIENTS: Client[] = [
-  { id: '1', nombre: 'Carlos Andrés Martínez', telefono: '+57 310 555 0101', email: 'carlos.martinez@email.com', direccion: 'Cra 15 #88-42, Bogotá', totalCompras: 47, totalGastado: 12500000, frecuenciaCompra: 4, ultimaCompra: '2026-06-01', creado: '2024-01-15', vip: true, puntos: 4800, nivel: 'Platino', tags: ['frecuente', 'postres'], estado: 'activo' },
-  { id: '2', nombre: 'María Fernanda López', telefono: '+57 300 555 0202', email: 'maria.lopez@email.com', direccion: 'Cl 72 #10-30, Bogotá', totalCompras: 32, totalGastado: 8900000, frecuenciaCompra: 3, ultimaCompra: '2026-05-28', creado: '2024-03-20', vip: true, puntos: 3200, nivel: 'Oro', tags: ['familia', 'domingos'], estado: 'activo' },
-  { id: '3', nombre: 'Jorge Eliécer Ramírez', telefono: '+57 315 555 0303', email: 'jorge.ramirez@email.com', direccion: 'Av Suba #120-50, Bogotá', totalCompras: 18, totalGastado: 4200000, frecuenciaCompra: 2, ultimaCompra: '2026-04-15', creado: '2024-06-10', vip: false, puntos: 1100, nivel: 'Plata', tags: ['ejecutivo', 'almuerzo'], estado: 'activo' },
-  { id: '4', nombre: 'Ana Milena Ochoa', telefono: '+57 320 555 0404', email: 'ana.ochoa@email.com', direccion: 'Cl 85 #19-60, Bogotá', totalCompras: 8, totalGastado: 1950000, frecuenciaCompra: 1, ultimaCompra: '2026-02-10', creado: '2025-01-05', vip: false, puntos: 400, nivel: 'Bronce', tags: ['nuevo', 'vegana'], estado: 'inactivo' },
-  { id: '5', nombre: 'Ricardo Andrés Peña', telefono: '+57 301 555 0505', email: 'ricardo.pena@email.com', direccion: 'Cra 7 #55-20, Bogotá', totalCompras: 63, totalGastado: 18900000, frecuenciaCompra: 5, ultimaCompra: '2026-06-03', creado: '2023-09-01', vip: true, puntos: 6200, nivel: 'Platino', tags: ['frecuente', 'eventos', 'premium'], estado: 'activo' },
-  { id: '6', nombre: 'Diana Patricia Rojas', telefono: '+57 311 555 0606', email: 'diana.rojas@email.com', direccion: 'Cl 127 #15-80, Bogotá', totalCompras: 12, totalGastado: 3100000, frecuenciaCompra: 1, ultimaCompra: '2026-01-20', creado: '2024-11-15', vip: false, puntos: 600, nivel: 'Bronce', tags: ['ocasional'], estado: 'inactivo' },
-  { id: '7', nombre: 'Luis Fernando Gómez', telefono: '+57 314 555 0707', email: 'luis.gomez@email.com', direccion: 'Av 68 #45-12, Bogotá', totalCompras: 24, totalGastado: 6800000, frecuenciaCompra: 2, ultimaCompra: '2026-05-20', creado: '2024-04-10', vip: false, puntos: 1800, nivel: 'Plata', tags: ['comparte', 'pizzas'], estado: 'activo' },
-  { id: '8', nombre: 'Carmen Helena Vargas', telefono: '+57 300 555 0808', email: 'carmen.vargas@email.com', direccion: 'Cl 53 #25-40, Bogotá', totalCompras: 41, totalGastado: 10500000, frecuenciaCompra: 3, ultimaCompra: '2026-05-30', creado: '2024-02-18', vip: true, puntos: 3900, nivel: 'Oro', tags: ['frecuente', 'postres', 'cumpleaños'], estado: 'activo' },
-];
+import { api } from '../../services/api';
 
 const NIVEL_COLORS: Record<string, string> = {
   Bronce: 'from-amber-700 to-amber-500',
@@ -29,64 +19,144 @@ const NIVEL_BG: Record<string, string> = {
 
 const getInitial = (name: string) => name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-const formatCurrency = (n: number) => '$' + n.toLocaleString('es-CO');
+const formatCurrency = (n: number) => '$' + (n || 0).toLocaleString('es-CO');
 
-const formatDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+// The backend returns full ISO timestamps (TIMESTAMPTZ/DATE columns serialize
+// through JSON.stringify as ISO strings), and some date fields (e.g.
+// ultimaCompra for a client with no completed orders yet) can be null.
+const formatDate = (d?: string | null) => {
+  if (!d) return 'Sin registro';
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return 'Sin registro';
+  return date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const daysSince = (d?: string | null) => {
+  if (!d) return Infinity;
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return Infinity;
+  return (Date.now() - date.getTime()) / 86400000;
+};
 
 const stripPhone = (phone: string) => phone.replace(/[^\d]/g, '');
 
-const getClientOrders = (clientId: string) => {
-  const items = [
-    { items: 'Pizza Margherita + Postre Tiramisú', total: 98000 },
-    { items: 'Pizza Pepperoni + Bebida 2L', total: 85000 },
-    { items: 'Combo Familiar + Postre 3 Leches', total: 156000 },
-    { items: '2x Pizza Tradicional + Entrada', total: 132000 },
-    { items: 'Pizza Premium D.O.P + Vino', total: 215000 },
-  ];
-  return items.map((item, i) => ({
-    id: `ORD-${clientId}-${String(i + 1).padStart(3, '0')}`,
-    fecha: new Date(Date.now() - i * 7 * 86400000).toISOString().split('T')[0],
-    ...item,
-  }));
+// nivel comes back from Postgres lowercase ('bronce', 'plata', 'oro',
+// 'platino') per the tier thresholds computed on order completion; the
+// existing badge/gradient lookups above are keyed by capitalized labels.
+const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const normalizeClient = (raw: any): Client => ({
+  ...raw,
+  tags: raw.tags || [],
+  vip: !!raw.vip,
+  nivel: capitalize(raw.nivel || 'bronce'),
+});
+
+interface ClientOrderSummary {
+  id: string;
+  fecha: string | null;
+  items: string;
+  total: number;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const summarizeOrder = (o: any): ClientOrderSummary => {
+  let items = o.items;
+  if (typeof items === 'string') {
+    try { items = JSON.parse(items); } catch { items = []; }
+  }
+  const itemsText = Array.isArray(items) && items.length
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? items.map((it: any) => `${it.quantity ?? 1}x ${it.name ?? 'Producto'}`).join(', ')
+    : 'Sin detalle';
+  return { id: o.orderNumber || o.id, fecha: o.createdAt ?? null, items: itemsText, total: o.total || 0 };
 };
 
+const emptyNewClient = { nombre: '', telefono: '', email: '', direccion: '' };
+
 const ClientesView: React.FC = () => {
-  const [clients, setClients] = useState<Client[]>(SAMPLE_CLIENTS);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [search, setSearch] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('todos');
   const [sortBy, setSortBy] = useState('nombre');
   const [segmentFilter, setSegmentFilter] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
-  const [newClient, setNewClient] = useState({ nombre: '', telefono: '', email: '', direccion: '' });
+  const [newClient, setNewClient] = useState(emptyNewClient);
+  const [isSavingNewClient, setIsSavingNewClient] = useState(false);
+
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editClient, setEditClient] = useState(emptyNewClient);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const [clientOrders, setClientOrders] = useState<ClientOrderSummary[]>([]);
+  const [clientOrdersLoading, setClientOrdersLoading] = useState(false);
+  const [clientOrdersError, setClientOrdersError] = useState<string | null>(null);
+
+  const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
+
+  const showToast = (message: string) => {
+    setToast({ message, visible: true });
+    setTimeout(() => setToast({ message: '', visible: false }), 3000);
+  };
+
+  const fetchClients = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const rows = await api.getClients();
+      setClients(rows.map(normalizeClient));
+    } catch (e) {
+      setLoadError('No se pudo cargar la lista de clientes.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchClients(); }, [fetchClients]);
+
+  // Fetch the real purchase history for whichever client is currently open in the modal.
+  useEffect(() => {
+    if (!selectedClient) {
+      setClientOrders([]);
+      setClientOrdersError(null);
+      return;
+    }
+    let cancelled = false;
+    setClientOrdersLoading(true);
+    setClientOrdersError(null);
+    api.getClientOrders(selectedClient.id)
+      .then((rows) => { if (!cancelled) setClientOrders(rows.map(summarizeOrder)); })
+      .catch(() => { if (!cancelled) setClientOrdersError('No se pudo cargar el historial de compras.'); })
+      .finally(() => { if (!cancelled) setClientOrdersLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedClient?.id]);
 
   const kpis = useMemo(() => [
     { label: 'Total Clientes', value: String(clients.length), icon: 'users', color: 'text-blue-400', bg: 'bg-blue-600/10 border-blue-600/20' },
     { label: 'Clientes VIP', value: String(clients.filter(c => c.vip).length), icon: 'crown', color: 'text-yellow-400', bg: 'bg-yellow-600/10 border-yellow-600/20' },
     { label: 'Clientes Inactivos', value: String(clients.filter(c => c.estado === 'inactivo').length), icon: 'user-clock', color: 'text-red-400', bg: 'bg-red-600/10 border-red-600/20' },
-    { label: 'LTV Promedio', value: formatCurrency(Math.round(clients.reduce((s, c) => s + c.totalGastado, 0) / clients.length)), icon: 'chart-line', color: 'text-green-400', bg: 'bg-green-600/10 border-green-600/20' },
+    { label: 'LTV Promedio', value: formatCurrency(clients.length ? Math.round(clients.reduce((s, c) => s + c.totalGastado, 0) / clients.length) : 0), icon: 'chart-line', color: 'text-green-400', bg: 'bg-green-600/10 border-green-600/20' },
   ], [clients]);
 
   const segments = useMemo(() => [
     { id: 'alta-frecuencia', label: 'Alta Frecuencia', count: clients.filter(c => c.frecuenciaCompra >= 3).length, desc: '> 3 compras en el último mes', icon: 'rocket', color: 'text-emerald-400', border: 'border-emerald-500/30' },
-    { id: 'alto-gasto', label: 'Alto Gasto', count: clients.filter(c => (c.totalGastado / c.totalCompras) > 150000).length, desc: 'Ticket promedio > $150,000', icon: 'gem', color: 'text-purple-400', border: 'border-purple-500/30' },
-    { id: 'en-riesgo', label: 'En Riesgo', count: clients.filter(c => (Date.now() - new Date(c.ultimaCompra + 'T00:00:00').getTime()) / 86400000 >= 45).length, desc: 'Sin compras en 45+ días', icon: 'exclamation-triangle', color: 'text-orange-400', border: 'border-orange-500/30' },
-    { id: 'nuevos', label: 'Nuevos', count: clients.filter(c => (Date.now() - new Date(c.creado + 'T00:00:00').getTime()) / 86400000 <= 30).length, desc: 'Primera compra < 30 días', icon: 'star', color: 'text-sky-400', border: 'border-sky-500/30' },
+    { id: 'alto-gasto', label: 'Alto Gasto', count: clients.filter(c => c.totalCompras > 0 && (c.totalGastado / c.totalCompras) > 150000).length, desc: 'Ticket promedio > $150,000', icon: 'gem', color: 'text-purple-400', border: 'border-purple-500/30' },
+    { id: 'en-riesgo', label: 'En Riesgo', count: clients.filter(c => daysSince(c.ultimaCompra) >= 45).length, desc: 'Sin compras en 45+ días', icon: 'exclamation-triangle', color: 'text-orange-400', border: 'border-orange-500/30' },
+    { id: 'nuevos', label: 'Nuevos', count: clients.filter(c => daysSince(c.creado) <= 30).length, desc: 'Primera compra < 30 días', icon: 'star', color: 'text-sky-400', border: 'border-sky-500/30' },
   ], [clients]);
 
   const filteredClients = useMemo(() => {
     let result = [...clients];
 
     if (segmentFilter === 'alta-frecuencia') result = result.filter(c => c.frecuenciaCompra >= 3);
-    if (segmentFilter === 'alto-gasto') result = result.filter(c => (c.totalGastado / c.totalCompras) > 150000);
-    if (segmentFilter === 'en-riesgo') result = result.filter(c => {
-      const days = (Date.now() - new Date(c.ultimaCompra + 'T00:00:00').getTime()) / 86400000;
-      return days >= 45;
-    });
-    if (segmentFilter === 'nuevos') result = result.filter(c => {
-      const days = (Date.now() - new Date(c.creado + 'T00:00:00').getTime()) / 86400000;
-      return days <= 30;
-    });
+    if (segmentFilter === 'alto-gasto') result = result.filter(c => c.totalCompras > 0 && (c.totalGastado / c.totalCompras) > 150000);
+    if (segmentFilter === 'en-riesgo') result = result.filter(c => daysSince(c.ultimaCompra) >= 45);
+    if (segmentFilter === 'nuevos') result = result.filter(c => daysSince(c.creado) <= 30);
 
     if (estadoFilter !== 'todos') {
       result = result.filter(c => c.estado === estadoFilter);
@@ -231,34 +301,36 @@ const ClientesView: React.FC = () => {
     </button>
   );
 
-  const handleToggleVip = (clientId: string) => {
-    setClients(prev => prev.map(c => c.id === clientId ? { ...c, vip: !c.vip } : c));
-    setSelectedClient(prev => prev && prev.id === clientId ? { ...prev, vip: !prev.vip } : prev);
+  const handleToggleVip = async (clientId: string) => {
+    const current = clients.find(c => c.id === clientId);
+    if (!current) return;
+    const nextVip = !current.vip;
+    // Optimistic update, reverted below if the request fails.
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, vip: nextVip } : c));
+    setSelectedClient(prev => prev && prev.id === clientId ? { ...prev, vip: nextVip } : prev);
+    try {
+      await api.updateClientStatus(clientId, { vip: nextVip });
+    } catch (e) {
+      setClients(prev => prev.map(c => c.id === clientId ? { ...c, vip: !nextVip } : c));
+      setSelectedClient(prev => prev && prev.id === clientId ? { ...prev, vip: !nextVip } : prev);
+      showToast('No se pudo actualizar el estado VIP.');
+    }
   };
 
-  const handleNewClientSubmit = (e: React.FormEvent) => {
+  const handleNewClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const id = String(Date.now());
-    const entry: Client = {
-      id,
-      nombre: newClient.nombre,
-      telefono: newClient.telefono,
-      email: newClient.email,
-      direccion: newClient.direccion,
-      totalCompras: 0,
-      totalGastado: 0,
-      frecuenciaCompra: 0,
-      ultimaCompra: new Date().toISOString().split('T')[0],
-      creado: new Date().toISOString().split('T')[0],
-      vip: false,
-      puntos: 0,
-      nivel: 'Bronce',
-      tags: [],
-      estado: 'activo',
-    };
-    setClients(prev => [...prev, entry]);
-    setNewClient({ nombre: '', telefono: '', email: '', direccion: '' });
-    setShowNewForm(false);
+    setIsSavingNewClient(true);
+    try {
+      await api.createClient(newClient);
+      await fetchClients();
+      setNewClient(emptyNewClient);
+      setShowNewForm(false);
+      showToast(`Cliente ${newClient.nombre} registrado.`);
+    } catch (e) {
+      showToast('No se pudo registrar el cliente.');
+    } finally {
+      setIsSavingNewClient(false);
+    }
   };
 
   const renderNewClientModal = () => {
@@ -290,8 +362,74 @@ const ClientesView: React.FC = () => {
               <label className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em] block mb-2">Dirección</label>
               <input type="text" value={newClient.direccion} onChange={e => setNewClient(p => ({ ...p, direccion: e.target.value }))} className="w-full bg-stone-800/50 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:border-orange-600/50 transition-all outline-none" placeholder="Dirección" />
             </div>
-            <button type="submit" disabled={!isValid} className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg">
-              <i className="fas fa-plus mr-2"></i>Registrar Cliente
+            <button type="submit" disabled={!isValid || isSavingNewClient} className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg">
+              <i className="fas fa-plus mr-2"></i>{isSavingNewClient ? 'Guardando...' : 'Registrar Cliente'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const openEditForm = (client: Client) => {
+    setEditClient({
+      nombre: client.nombre || '',
+      telefono: client.telefono || '',
+      email: client.email || '',
+      direccion: client.direccion || '',
+    });
+    setShowEditForm(true);
+  };
+
+  const handleEditClientSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedClient) return;
+    setIsSavingEdit(true);
+    try {
+      const updated = await api.updateClientProfile(selectedClient.id, editClient);
+      const normalized = normalizeClient(updated);
+      setClients(prev => prev.map(c => c.id === normalized.id ? normalized : c));
+      setSelectedClient(normalized);
+      setShowEditForm(false);
+      showToast('Datos del cliente actualizados.');
+    } catch (e) {
+      showToast('No se pudieron guardar los cambios.');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const renderEditClientModal = () => {
+    if (!showEditForm) return null;
+    const isValid = editClient.nombre.trim().length > 0 && editClient.telefono.trim().length > 0;
+    return (
+      <div className="fixed inset-0 z-[210] bg-stone-950/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowEditForm(false)}>
+        <div className="bg-stone-900/95 backdrop-blur-2xl rounded-[3rem] border border-white/10 max-w-lg w-full p-8 shadow-2xl shadow-black/50" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-black text-white">Editar Cliente</h2>
+            <button onClick={() => setShowEditForm(false)} className="w-12 h-12 rounded-2xl bg-stone-800 flex items-center justify-center text-stone-400 hover:text-white transition-all">
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+          <form onSubmit={handleEditClientSubmit} className="space-y-5">
+            <div>
+              <label className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em] block mb-2">Nombre *</label>
+              <input type="text" value={editClient.nombre} onChange={e => setEditClient(p => ({ ...p, nombre: e.target.value }))} className="w-full bg-stone-800/50 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:border-orange-600/50 transition-all outline-none" placeholder="Nombre completo" />
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em] block mb-2">Teléfono *</label>
+              <input type="text" value={editClient.telefono} onChange={e => setEditClient(p => ({ ...p, telefono: e.target.value }))} className="w-full bg-stone-800/50 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:border-orange-600/50 transition-all outline-none" placeholder="+57 300 000 0000" />
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em] block mb-2">Email</label>
+              <input type="email" value={editClient.email} onChange={e => setEditClient(p => ({ ...p, email: e.target.value }))} className="w-full bg-stone-800/50 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:border-orange-600/50 transition-all outline-none" placeholder="cliente@email.com" />
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em] block mb-2">Dirección</label>
+              <input type="text" value={editClient.direccion} onChange={e => setEditClient(p => ({ ...p, direccion: e.target.value }))} className="w-full bg-stone-800/50 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:border-orange-600/50 transition-all outline-none" placeholder="Dirección" />
+            </div>
+            <button type="submit" disabled={!isValid || isSavingEdit} className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg">
+              <i className="fas fa-save mr-2"></i>{isSavingEdit ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </form>
         </div>
@@ -302,7 +440,6 @@ const ClientesView: React.FC = () => {
   const renderModal = () => {
     if (!selectedClient) return null;
     const c = selectedClient;
-    const clientOrders = getClientOrders(c.id);
 
     return (
       <div className="fixed inset-0 z-[200] bg-stone-950/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedClient(null)}>
@@ -356,7 +493,7 @@ const ClientesView: React.FC = () => {
                   {c.email && <p className="text-white text-sm"><i className="fas fa-envelope mr-3 text-stone-600 w-4"></i>{c.email}</p>}
                   {c.direccion && <p className="text-white text-sm"><i className="fas fa-map-marker-alt mr-3 text-stone-600 w-4"></i>{c.direccion}</p>}
                   <p className="text-white text-sm"><i className="fas fa-calendar mr-3 text-stone-600 w-4"></i>Cliente desde {formatDate(c.creado)}</p>
-                  {c.cumpleanos && <p className="text-white text-sm"><i className="fas fa-birthday-cake mr-3 text-stone-600 w-4"></i>{c.cumpleanos}</p>}
+                  {c.cumpleanos && <p className="text-white text-sm"><i className="fas fa-birthday-cake mr-3 text-stone-600 w-4"></i>{formatDate(c.cumpleanos)}</p>}
                 </div>
               </div>
 
@@ -381,7 +518,18 @@ const ClientesView: React.FC = () => {
             <div className="space-y-3">
               <h4 className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em]">Historial de Compras</h4>
               <div className="bg-stone-800/30 rounded-2xl border border-white/5 overflow-hidden">
-                {clientOrders.map((o, i) => (
+                {clientOrdersLoading && (
+                  <div className="p-8 text-center text-stone-500 text-sm">
+                    <i className="fas fa-circle-notch fa-spin mr-2"></i>Cargando historial...
+                  </div>
+                )}
+                {!clientOrdersLoading && clientOrdersError && (
+                  <div className="p-8 text-center text-red-400 text-sm">{clientOrdersError}</div>
+                )}
+                {!clientOrdersLoading && !clientOrdersError && clientOrders.length === 0 && (
+                  <div className="p-8 text-center text-stone-600 text-sm">Sin compras registradas todavía.</div>
+                )}
+                {!clientOrdersLoading && !clientOrdersError && clientOrders.map((o, i) => (
                   <div key={o.id} className={`flex items-center justify-between p-4 md:p-5 ${i < clientOrders.length - 1 ? 'border-b border-white/5' : ''} hover:bg-stone-800/50 transition-colors`}>
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-stone-800 flex items-center justify-center text-stone-500">
@@ -408,24 +556,30 @@ const ClientesView: React.FC = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
               <button
                 onClick={() => window.open(`https://wa.me/${stripPhone(c.telefono)}`, '_blank')}
                 className="flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg"
               >
-                <i className="fab fa-whatsapp text-lg"></i>Enviar WhatsApp
+                <i className="fab fa-whatsapp text-lg"></i>WhatsApp
               </button>
               <button
-                onClick={() => alert(`Cupón asignado a ${c.nombre}`)}
+                onClick={() => showToast(`Cupón asignado a ${c.nombre} (simulado, sin backend)`)}
                 className="flex items-center justify-center gap-3 bg-orange-600 hover:bg-orange-500 text-white font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg"
               >
-                <i className="fas fa-ticket-alt text-lg"></i>Asignar Cupón
+                <i className="fas fa-ticket-alt text-lg"></i>Cupón
+              </button>
+              <button
+                onClick={() => openEditForm(c)}
+                className="flex items-center justify-center gap-3 bg-stone-800 text-stone-300 hover:bg-blue-600/20 hover:text-blue-400 hover:border-blue-500/30 border border-white/5 font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg"
+              >
+                <i className="fas fa-pen text-lg"></i>Editar
               </button>
               <button
                 onClick={() => handleToggleVip(c.id)}
                 className={`flex items-center justify-center gap-3 font-black py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all shadow-lg ${c.vip ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-600/30' : 'bg-stone-800 text-stone-300 hover:bg-yellow-600/20 hover:text-yellow-400 hover:border-yellow-500/30 border border-white/5'}`}
               >
-                <i className="fas fa-crown text-lg"></i>{c.vip ? 'Quitar VIP' : 'Marcar como VIP'}
+                <i className="fas fa-crown text-lg"></i>{c.vip ? 'Quitar VIP' : 'Marcar VIP'}
               </button>
             </div>
           </div>
@@ -436,8 +590,14 @@ const ClientesView: React.FC = () => {
 
   return (
     <div className="p-6 md:p-10 space-y-8 pb-40">
+      {toast.visible && (
+        <div className="fixed top-6 right-6 z-[300] bg-stone-900 border border-stone-700 text-white px-8 py-4 rounded-2xl shadow-2xl text-sm font-bold">
+          {toast.message}
+        </div>
+      )}
       {renderModal()}
       {renderNewClientModal()}
+      {renderEditClientModal()}
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
@@ -452,32 +612,57 @@ const ClientesView: React.FC = () => {
         </button>
       </div>
 
-      {renderKPIs()}
-      {renderSearchBar()}
+      {loadError && (
+        <div className="bg-red-950/40 border border-red-500/20 rounded-[2rem] p-6 flex items-center justify-between gap-4">
+          <p className="text-red-400 text-sm font-bold"><i className="fas fa-triangle-exclamation mr-3"></i>{loadError}</p>
+          <button onClick={fetchClients} className="text-[9px] font-black uppercase tracking-widest text-red-300 hover:text-white px-4 py-2 rounded-xl border border-red-500/30">
+            Reintentar
+          </button>
+        </div>
+      )}
 
-      <div>
-        <h3 className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em] mb-5">Segmentación Rápida</h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {segments.map(renderSegmentCard)}
+      {isLoading ? (
+        <div className="p-16 text-center text-stone-500">
+          <i className="fas fa-circle-notch fa-spin text-3xl mb-4"></i>
+          <p className="text-sm font-bold uppercase tracking-widest">Cargando clientes...</p>
         </div>
-      </div>
+      ) : (
+        <>
+          {renderKPIs()}
+          {renderSearchBar()}
 
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em]">
-            Clientes {segmentFilter ? `· ${segments.find(s => s.id === segmentFilter)?.label}` : ''}
-            <span className="ml-3 text-stone-700">({filteredClients.length})</span>
-          </h3>
-          {segmentFilter && (
-            <button onClick={() => setSegmentFilter(null)} className="text-[9px] font-black text-orange-500 uppercase tracking-widest hover:text-orange-400 transition-colors">
-              <i className="fas fa-times mr-1"></i>Limpiar filtro
-            </button>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-          {filteredClients.map(renderClientCard)}
-        </div>
-      </div>
+          <div>
+            <h3 className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em] mb-5">Segmentación Rápida</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {segments.map(renderSegmentCard)}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-[9px] font-black text-stone-500 uppercase tracking-[0.2em]">
+                Clientes {segmentFilter ? `· ${segments.find(s => s.id === segmentFilter)?.label}` : ''}
+                <span className="ml-3 text-stone-700">({filteredClients.length})</span>
+              </h3>
+              {segmentFilter && (
+                <button onClick={() => setSegmentFilter(null)} className="text-[9px] font-black text-orange-500 uppercase tracking-widest hover:text-orange-400 transition-colors">
+                  <i className="fas fa-times mr-1"></i>Limpiar filtro
+                </button>
+              )}
+            </div>
+            {filteredClients.length === 0 ? (
+              <div className="p-16 text-center text-stone-600 bg-stone-900/30 rounded-[2rem] border border-white/5">
+                <i className="fas fa-users-slash text-3xl mb-4"></i>
+                <p className="text-sm font-bold uppercase tracking-widest">No hay clientes que coincidan con estos filtros</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                {filteredClients.map(renderClientCard)}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };

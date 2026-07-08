@@ -5,9 +5,8 @@ dotenv.config();
 const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
-  turso: {
-    url: process.env.TURSO_DATABASE_URL,
-    authToken: process.env.TURSO_AUTH_TOKEN
+  database: {
+    url: process.env.DATABASE_URL
   },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY
@@ -21,8 +20,7 @@ const config = {
 
 function validateConfig() {
   const errors = [];
-  if (!config.turso.url) errors.push('TURSO_DATABASE_URL');
-  if (!config.turso.authToken) errors.push('TURSO_AUTH_TOKEN');
+  if (!config.database.url) errors.push('DATABASE_URL');
   if (!config.gemini.apiKey) errors.push('GEMINI_API_KEY');
   if (errors.length > 0) {
     console.error('Config errors:', errors);

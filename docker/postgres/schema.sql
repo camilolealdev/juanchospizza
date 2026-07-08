@@ -1,7 +1,21 @@
--- Postgres translation of the Turso/libSQL schema in server/index.js initDB().
--- SQLite TEXT ids stay TEXT (app generates ids like ord_<ts>_<rand>, not serial).
--- SQLite INTEGER-as-boolean (0/1) becomes native BOOLEAN.
--- datetime('now') becomes NOW(); TEXT timestamps become TIMESTAMPTZ.
+-- Postgres schema mirroring server/index.js initDB().
+-- This file matches the app-level initDB() exactly; initDB() is what actually
+-- runs against any pre-existing Postgres instance (this file only matters for
+-- a fresh docker-entrypoint-initdb.d bootstrap of an empty volume).
+--
+-- Design decisions (must stay in sync with server/index.js):
+--   * Column names stay camelCase, exactly as the existing frontend/API
+--     already expects. Postgres folds unquoted identifiers to lowercase, so
+--     every mixed-case identifier below is double-quoted to preserve case.
+--   * SQLite INTEGER-as-boolean (0/1) columns become native BOOLEAN.
+--   * SQLite TEXT columns holding ISO datetime strings become TIMESTAMPTZ
+--     (or DATE for pure calendar dates like cumpleanos).
+--   * SQLite TEXT columns holding JSON blobs (items, tags, productos) become
+--     native JSON columns.
+--   * No columns or constraints are added beyond this dialect/type
+--     translation -- ids stay plain TEXT (app generates ids like
+--     ord_<ts>_<rand>), and there are no FOREIGN KEY constraints because the
+--     original SQLite schema never had any.
 
 CREATE TABLE IF NOT EXISTS categories (
   id TEXT PRIMARY KEY,
@@ -12,19 +26,18 @@ CREATE TABLE IF NOT EXISTS categories (
 
 CREATE TABLE IF NOT EXISTS products (
   id TEXT PRIMARY KEY,
-  category_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
+  "categoryId" TEXT,
   nombre TEXT NOT NULL,
   descripcion TEXT,
-  base_price INTEGER,
+  "basePrice" INTEGER,
   type TEXT,
   image TEXT,
   tiempo INTEGER,
   popularidad INTEGER,
-  vegetariano BOOLEAN DEFAULT FALSE,
-  is_premium BOOLEAN DEFAULT FALSE,
-  exclusiva BOOLEAN DEFAULT FALSE
+  vegetariano BOOLEAN,
+  "isPremium" BOOLEAN,
+  exclusiva BOOLEAN
 );
-CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 
 CREATE TABLE IF NOT EXISTS ingredients (
   id TEXT PRIMARY KEY,
@@ -32,51 +45,26 @@ CREATE TABLE IF NOT EXISTS ingredients (
   descripcion TEXT,
   precio_extra INTEGER,
   categoria TEXT,
-  vegetariano BOOLEAN DEFAULT FALSE,
-  vegano BOOLEAN DEFAULT FALSE,
-  premium BOOLEAN DEFAULT FALSE,
-  dulce BOOLEAN DEFAULT FALSE,
-  disponible BOOLEAN DEFAULT TRUE,
-  default_ing BOOLEAN DEFAULT FALSE
+  vegetariano BOOLEAN,
+  vegano BOOLEAN,
+  premium BOOLEAN,
+  dulce BOOLEAN,
+  disponible BOOLEAN,
+  "defaultIng" BOOLEAN
 );
-
-CREATE TABLE IF NOT EXISTS clients (
-  id TEXT PRIMARY KEY,
-  nombre TEXT NOT NULL,
-  telefono TEXT,
-  email TEXT,
-  direccion TEXT,
-  notas TEXT,
-  total_compras INTEGER DEFAULT 0,
-  total_gastado INTEGER DEFAULT 0,
-  frecuencia_compra INTEGER DEFAULT 0,
-  ultima_compra TIMESTAMPTZ,
-  creado TIMESTAMPTZ DEFAULT NOW(),
-  vip BOOLEAN DEFAULT FALSE,
-  puntos INTEGER DEFAULT 0,
-  nivel TEXT DEFAULT 'bronce',
-  tags JSONB DEFAULT '[]',
-  estado TEXT DEFAULT 'activo',
-  cumpleanos DATE
-);
-CREATE INDEX IF NOT EXISTS idx_clients_estado ON clients(estado);
 
 CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
-  order_number TEXT,
-  client_id TEXT REFERENCES clients(id) ON DELETE SET NULL, -- NEW: was a fragile customerName string match, see gap analysis
-  customer_name TEXT,
+  "orderNumber" TEXT,
+  "customerName" TEXT,
   address TEXT,
-  items JSONB,
+  items JSON,
   total INTEGER,
   status TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  estimated_time INTEGER,
-  payment_method TEXT
+  "createdAt" TIMESTAMPTZ,
+  "estimatedTime" INTEGER,
+  "paymentMethod" TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
-CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
-CREATE INDEX IF NOT EXISTS idx_orders_client_id ON orders(client_id);
 
 CREATE TABLE IF NOT EXISTS campaigns (
   id TEXT PRIMARY KEY,
@@ -84,61 +72,79 @@ CREATE TABLE IF NOT EXISTS campaigns (
   type TEXT,
   discount INTEGER,
   status TEXT,
-  reach INTEGER DEFAULT 0,
-  conversions INTEGER DEFAULT 0,
+  reach INTEGER,
+  conversions INTEGER,
   budget INTEGER
+);
+
+-- === GASTROPRO CRM TABLES ===
+CREATE TABLE IF NOT EXISTS clients (
+  id TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  telefono TEXT,
+  email TEXT,
+  direccion TEXT,
+  notas TEXT,
+  "totalCompras" INTEGER DEFAULT 0,
+  "totalGastado" INTEGER DEFAULT 0,
+  "frecuenciaCompra" INTEGER DEFAULT 0,
+  "ultimaCompra" TIMESTAMPTZ,
+  creado TIMESTAMPTZ DEFAULT NOW(),
+  vip BOOLEAN DEFAULT FALSE,
+  puntos INTEGER DEFAULT 0,
+  nivel TEXT DEFAULT 'bronce',
+  tags JSON DEFAULT '[]'::json,
+  estado TEXT DEFAULT 'activo',
+  cumpleanos DATE
 );
 
 CREATE TABLE IF NOT EXISTS inventory_items (
   id TEXT PRIMARY KEY,
   nombre TEXT NOT NULL,
   categoria TEXT,
-  stock_actual INTEGER DEFAULT 0,
-  stock_minimo INTEGER DEFAULT 10,
-  stock_maximo INTEGER DEFAULT 100,
+  "stockActual" INTEGER DEFAULT 0,
+  "stockMinimo" INTEGER DEFAULT 10,
+  "stockMaximo" INTEGER DEFAULT 100,
   unidad TEXT DEFAULT 'unidad',
-  costo_unitario INTEGER DEFAULT 0,
+  "costoUnitario" INTEGER DEFAULT 0,
   proveedor TEXT,
   lote TEXT,
-  fecha_vencimiento DATE,
+  "fechaVencimiento" TIMESTAMPTZ,
   ubicacion TEXT,
   activo BOOLEAN DEFAULT TRUE
 );
-CREATE INDEX IF NOT EXISTS idx_inventory_categoria ON inventory_items(categoria);
 
 CREATE TABLE IF NOT EXISTS inventory_movements (
   id TEXT PRIMARY KEY,
-  item_id TEXT REFERENCES inventory_items(id) ON DELETE CASCADE,
+  "itemId" TEXT,
   tipo TEXT,
   cantidad INTEGER,
-  saldo_anterior INTEGER,
-  saldo_nuevo INTEGER,
+  "saldoAnterior" INTEGER,
+  "saldoNuevo" INTEGER,
   motivo TEXT,
   referencia TEXT,
   creado TIMESTAMPTZ DEFAULT NOW(),
   usuario TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_inventory_movements_item ON inventory_movements(item_id);
 
 CREATE TABLE IF NOT EXISTS recipes (
   id TEXT PRIMARY KEY,
   nombre TEXT,
-  producto_id TEXT REFERENCES products(id) ON DELETE SET NULL,
+  "productoId" TEXT,
   porciones INTEGER DEFAULT 1,
-  costo_total INTEGER DEFAULT 0,
+  "costoTotal" INTEGER DEFAULT 0,
   instrucciones TEXT
 );
 
 CREATE TABLE IF NOT EXISTS recipe_ingredients (
   id TEXT PRIMARY KEY,
-  recipe_id TEXT REFERENCES recipes(id) ON DELETE CASCADE,
-  item_id TEXT REFERENCES inventory_items(id) ON DELETE SET NULL,
+  "recipeId" TEXT,
+  "itemId" TEXT,
   nombre TEXT,
-  cantidad NUMERIC DEFAULT 0,
+  cantidad REAL DEFAULT 0,
   unidad TEXT DEFAULT 'unidad',
   costo INTEGER DEFAULT 0
 );
-CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipe ON recipe_ingredients(recipe_id);
 
 CREATE TABLE IF NOT EXISTS expenses (
   id TEXT PRIMARY KEY,
@@ -152,33 +158,34 @@ CREATE TABLE IF NOT EXISTS expenses (
   notas TEXT,
   recurrente BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_expenses_fecha ON expenses(fecha);
 
 CREATE TABLE IF NOT EXISTS loyalty_points (
   id TEXT PRIMARY KEY,
-  client_id TEXT REFERENCES clients(id) ON DELETE CASCADE,
+  "clientId" TEXT,
   puntos INTEGER,
   concepto TEXT,
   referencia TEXT,
   creado TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_loyalty_points_client ON loyalty_points(client_id);
 
 CREATE TABLE IF NOT EXISTS loyalty_rewards (
   id TEXT PRIMARY KEY,
   nombre TEXT,
   descripcion TEXT,
-  puntos_costo INTEGER,
+  "puntosCosto" INTEGER,
   tipo TEXT,
   valor INTEGER,
-  vigente BOOLEAN DEFAULT TRUE
+  -- NOTE: not in the enumerated boolean-column conversion list; left as
+  -- INTEGER (0/1) exactly like the original SQLite column, since no code
+  -- path writes to it and the only read compares it with the literal 1.
+  vigente INTEGER DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS menu_variants (
   id TEXT PRIMARY KEY,
-  producto_id TEXT REFERENCES products(id) ON DELETE CASCADE,
+  "productoId" TEXT,
   nombre TEXT,
-  precio_modificador INTEGER DEFAULT 0,
+  "precioModificador" INTEGER DEFAULT 0,
   activo BOOLEAN DEFAULT TRUE
 );
 
@@ -186,8 +193,8 @@ CREATE TABLE IF NOT EXISTS menu_combos (
   id TEXT PRIMARY KEY,
   nombre TEXT,
   descripcion TEXT,
-  productos JSONB,
-  precio_total INTEGER,
+  productos JSON,
+  "precioTotal" INTEGER,
   ahorro INTEGER DEFAULT 0,
   imagen TEXT,
   activo BOOLEAN DEFAULT TRUE
@@ -199,13 +206,23 @@ CREATE TABLE IF NOT EXISTS menu_promotions (
   descripcion TEXT,
   tipo TEXT,
   valor INTEGER,
-  producto_id TEXT REFERENCES products(id) ON DELETE CASCADE,
-  categoria_id TEXT REFERENCES categories(id) ON DELETE CASCADE,
-  monto_minimo INTEGER,
+  "productoId" TEXT,
+  "categoriaId" TEXT,
+  "montoMinimo" INTEGER,
   inicia TIMESTAMPTZ,
   termina TIMESTAMPTZ,
   activo BOOLEAN DEFAULT TRUE,
+  -- NOTE: not in the enumerated boolean-column conversion list; left as
+  -- INTEGER exactly like the original SQLite column (no code path reads or
+  -- writes it).
   usado INTEGER DEFAULT 0,
   limite INTEGER DEFAULT 100
 );
+
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders("createdAt");
+CREATE INDEX IF NOT EXISTS idx_clients_estado ON clients(estado);
+CREATE INDEX IF NOT EXISTS idx_inventory_categoria ON inventory_items(categoria);
+CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipeId ON recipe_ingredients("recipeId");
+CREATE INDEX IF NOT EXISTS idx_expenses_fecha ON expenses(fecha);
 CREATE INDEX IF NOT EXISTS idx_menu_promotions_activo ON menu_promotions(activo);

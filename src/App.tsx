@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { UserRole, GastroModule } from './types';
 import AdminLayout from './components/AdminLayout';
@@ -13,51 +13,90 @@ import FidelizacionView from './views/roles/FidelizacionView';
 import CampanasView from './views/roles/CampanasView';
 import FinanzasView from './views/roles/FinanzasView';
 import ReportesView from './views/roles/ReportesView';
+import api, { AUTH_UNAUTHORIZED_EVENT, clearAuthSession, getAuthToken, getStoredRole, setAuthSession } from './services/api';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   userRole: UserRole;
-  login: (role: UserRole, pin?: string) => boolean;
+  login: (role: UserRole, pin?: string) => Promise<boolean>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   userRole: UserRole.CLIENT,
-  login: () => false,
+  login: async () => false,
   logout: () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-const TEST_USERS: Record<string, { role: UserRole; pin: string; name: string }> = {
-  'admin': { role: UserRole.ADMIN, pin: '1234', name: 'Administrador' },
-  'cocina': { role: UserRole.OPERATOR, pin: '5678', name: 'Chef Principal' },
-  'repartidor': { role: UserRole.REPARTIDOR, pin: '0000', name: 'Repartidor' },
+// Only roles that have a login option in the UI map to a backend username.
+// The pizzeria's real users (see server/auth.js) are fixed per-role accounts.
+const ROLE_TO_USERNAME: Partial<Record<UserRole, string>> = {
+  [UserRole.ADMIN]: 'admin',
+  [UserRole.OPERATOR]: 'cocina',
+  [UserRole.REPARTIDOR]: 'repartidor'
 };
 
+// Cosmetic display names only, kept separate from auth now that credentials
+// are verified against the real backend rather than a local test list.
+const ROLE_DISPLAY_NAMES: Partial<Record<UserRole, string>> = {
+  [UserRole.ADMIN]: 'Administrador',
+  [UserRole.OPERATOR]: 'Chef Principal',
+  [UserRole.REPARTIDOR]: 'Repartidor'
+};
+
+const isKnownRole = (value: string | null): value is UserRole =>
+  !!value && (Object.values(UserRole) as string[]).includes(value);
+
 const App: React.FC = () => {
-  const [role, setRole] = useState<UserRole>(UserRole.CLIENT);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Initialize from whatever session was already persisted in local storage,
+  // so a page refresh doesn't silently drop a valid, still-live token.
+  const [role, setRole] = useState<UserRole>(() => {
+    const storedRole = getStoredRole();
+    return isKnownRole(storedRole) ? storedRole : UserRole.CLIENT;
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getAuthToken());
   const [showLogin, setShowLogin] = useState(false);
   const [gastroModule, setGastroModule] = useState<GastroModule>('dashboard');
   const menuMount = typeof document !== 'undefined' ? document.getElementById('menu-mount') : null;
   const cartMount = typeof document !== 'undefined' ? document.getElementById('cart-mount') : null;
 
-  const login = (selectedRole: UserRole, pin?: string): boolean => {
-    const userKey = Object.keys(TEST_USERS).find(k => TEST_USERS[k].role === selectedRole);
-    if (userKey && TEST_USERS[userKey].pin === pin) {
-      setRole(selectedRole);
+  const logout = () => {
+    clearAuthSession();
+    setRole(UserRole.CLIENT);
+    setIsAuthenticated(false);
+  };
+
+  // If any request comes back 401 (missing/expired token), api.ts clears the
+  // stored session and fires this event - react by kicking the user back to
+  // the logged-out state so they land on the login screen.
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setRole(UserRole.CLIENT);
+      setIsAuthenticated(false);
+      setShowLogin(true);
+    };
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+    return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+  }, []);
+
+  const login = async (selectedRole: UserRole, pin?: string): Promise<boolean> => {
+    const username = ROLE_TO_USERNAME[selectedRole];
+    if (!username || !pin) return false;
+    try {
+      const result = await api.login(username, pin);
+      if (!result?.token) return false;
+      setAuthSession({ token: result.token, role: result.role, username: result.username });
+      const resolvedRole = isKnownRole(result.role) ? result.role : selectedRole;
+      setRole(resolvedRole);
       setIsAuthenticated(true);
       setShowLogin(false);
       return true;
+    } catch {
+      return false;
     }
-    return false;
-  };
-
-  const logout = () => {
-    setRole(UserRole.CLIENT);
-    setIsAuthenticated(false);
   };
 
   const renderGastroModule = () => {
@@ -94,7 +133,7 @@ const App: React.FC = () => {
             <AdminLayout
               module={gastroModule}
               onModuleChange={setGastroModule}
-              userName={Object.values(TEST_USERS).find(u => u.role === role)?.name || role}
+              userName={ROLE_DISPLAY_NAMES[role] || role}
               userRole={role}
               onLogout={logout}
             >
@@ -113,20 +152,28 @@ const App: React.FC = () => {
   );
 };
 
-const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => boolean; onClose: () => void }> = ({ onLogin, onClose }) => {
+const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => Promise<boolean>; onClose: () => void }> = ({ onLogin, onClose }) => {
   const [selectedRole, setSelectedRole] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [showHint, setShowHint] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRole || !pin) {
       setError('Selecciona un rol e ingresa el PIN');
       return;
     }
-    const success = onLogin(selectedRole as UserRole, pin);
-    if (!success) setError('PIN incorrecto');
+    setIsSubmitting(true);
+    try {
+      const success = await onLogin(selectedRole as UserRole, pin);
+      if (!success) setError('PIN incorrecto');
+    } catch {
+      setError('No se pudo conectar con el servidor');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -171,9 +218,10 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => boolean; 
 
           <button
             type="submit"
-            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs transition-all shadow-lg shadow-orange-900/30 active:scale-[0.98]"
+            disabled={isSubmitting}
+            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs transition-all shadow-lg shadow-orange-900/30 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Entrar
+            {isSubmitting ? 'Ingresando...' : 'Entrar'}
           </button>
         </form>
 
