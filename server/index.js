@@ -718,6 +718,32 @@ app.get('/api/orders', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTI
   }
 });
 
+// Tracking público para clientes invitados (sin cuenta): requiere el
+// teléfono como verificación mínima ya que "orderNumber" es un número
+// corto y adivinable. Solo expone campos sin PII sensible (nada de
+// dirección/total/items) -- para eso está la ruta admin de arriba.
+app.get('/api/orders/track/:orderNumber', async (req, res) => {
+  try {
+    const { phone } = req.query;
+    if (!phone) {
+      return res.status(400).json({ error: 'Se requiere el teléfono del pedido' });
+    }
+
+    const result = await pool.query(
+      `SELECT id, "orderNumber", status, "createdAt", "estimatedTime" FROM orders WHERE "orderNumber" = $1 AND "customerPhone" = $2`,
+      [req.params.orderNumber, phone]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: 'Error tracking order' });
+  }
+});
+
 app.get('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);

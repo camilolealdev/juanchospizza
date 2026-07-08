@@ -13,6 +13,7 @@ import FidelizacionView from './views/roles/FidelizacionView';
 import CampanasView from './views/roles/CampanasView';
 import FinanzasView from './views/roles/FinanzasView';
 import ReportesView from './views/roles/ReportesView';
+import ReviewsView from './views/roles/ReviewsView';
 import api, { AUTH_UNAUTHORIZED_EVENT, clearAuthSession, getAuthToken, getStoredRole, setAuthSession } from './services/api';
 
 interface AuthContextType {
@@ -108,6 +109,7 @@ const App: React.FC = () => {
       case 'campanas': return <CampanasView />;
       case 'finanzas': return <FinanzasView />;
       case 'reportes': return <ReportesView />;
+      case 'reviews': return <ReviewsView />;
       default: return <GastroProDashboard />;
     }
   };

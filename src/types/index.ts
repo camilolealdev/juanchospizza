@@ -125,7 +125,8 @@ export type GastroModule =
   | 'fidelizacion'
   | 'campanas'
   | 'finanzas'
-  | 'reportes';
+  | 'reportes'
+  | 'reviews';
 
 export interface Client {
   id: string;

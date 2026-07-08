@@ -278,6 +278,11 @@ export const api = {
     return apiFetch(path);
   },
 
+  // Order tracking (guest, público, requiere teléfono)
+  async trackOrder(orderNumber: string, phone: string): Promise<{ id: string; orderNumber: string; status: string; createdAt: string; estimatedTime: number }> {
+    return apiFetch(`/api/orders/track/${encodeURIComponent(orderNumber)}?phone=${encodeURIComponent(phone)}`);
+  },
+
   // Orders
   async getOrders(status?: string) {
     const path = status ? `/api/orders?status=${status}` : '/api/orders';

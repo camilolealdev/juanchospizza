@@ -6,6 +6,8 @@ import { getSmartRecommendations } from '../../services/geminiService';
 import { api } from '../../services/api';
 import { subscribeToPushNotifications } from '../../services/push';
 import { POS } from '../../services/payments';
+import TrackOrderModal from '../../components/TrackOrderModal';
+import ApprovedReviews from '../../components/ApprovedReviews';
 import { CartItem, Order, Category, Product, OrderItem, PizzaSize } from '../../types';
 import { PaymentResponse } from '../../services/payments/paymentService';
 
@@ -19,6 +21,7 @@ const CustomerView: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showPOS, setShowPOS] = useState(false);
+  const [showTrackOrder, setShowTrackOrder] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({ name: '', email: '', address: '', phone: '' });
 
   useEffect(() => {
@@ -283,6 +286,7 @@ const CustomerView: React.FC = () => {
       )}
 
       {isCartOpen && renderCartModal()}
+      {showTrackOrder && <TrackOrderModal onClose={() => setShowTrackOrder(false)} />}
 
       <header className="fixed top-0 left-0 right-0 z-[100] px-6 md:px-10 py-6 md:py-8 flex justify-between items-center bg-stone-950/20 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center gap-4 group cursor-pointer">
@@ -290,6 +294,9 @@ const CustomerView: React.FC = () => {
           <span className="text-2xl md:text-3xl font-brand tracking-tighter">Guido Pizza</span>
         </div>
         <div className="flex items-center gap-4 md:gap-8">
+          <button onClick={() => setShowTrackOrder(true)} className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-stone-900/80 border border-stone-800 flex items-center justify-center text-stone-400 hover:border-orange-600 transition-all shadow-xl" title="Rastrear mi pedido">
+            <i className="fas fa-location-dot text-base md:text-lg"></i>
+          </button>
           <button onClick={() => setIsCartOpen(true)} className="relative w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-stone-900/80 border border-stone-800 flex items-center justify-center text-stone-400 hover:border-orange-600 transition-all shadow-xl group">
             <i className="fas fa-shopping-basket text-base md:text-lg"></i>
             <span className="absolute -top-3 -right-3 w-5 h-5 md:w-6 md:h-6 bg-orange-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-stone-950 shadow-lg">{cart.length}</span>
@@ -341,6 +348,7 @@ const CustomerView: React.FC = () => {
             <VisualPizzaBuilder onAddToCart={handleCustomPizzaAdd} />
           </div>
         </section>
+        <ApprovedReviews />
       </main>
       <footer className="px-6 md:px-10 py-32 border-t border-white/5 bg-[#0a0a0a] text-center">
          <div className="text-4xl font-brand mb-10">Guido <span className="text-orange-600 font-brand">Pizza</span></div>

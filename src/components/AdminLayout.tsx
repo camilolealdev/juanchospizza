@@ -19,6 +19,7 @@ const ALL_NAV: { module: GastroModule; label: string; icon: string; roles: UserR
   { module: 'campanas', label: 'Campañas', icon: 'bullhorn', roles: [UserRole.ADMIN] },
   { module: 'finanzas', label: 'Finanzas', icon: 'coins', roles: [UserRole.ADMIN] },
   { module: 'reportes', label: 'Reportes', icon: 'chart-line', roles: [UserRole.ADMIN] },
+  { module: 'reviews', label: 'Reseñas', icon: 'star', roles: [UserRole.ADMIN] },
 ];
 
 const MODULE_TITLES: Record<GastroModule, string> = {
@@ -30,6 +31,7 @@ const MODULE_TITLES: Record<GastroModule, string> = {
   campanas: 'Campañas',
   finanzas: 'Finanzas',
   reportes: 'Reportes',
+  reviews: 'Reseñas',
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
