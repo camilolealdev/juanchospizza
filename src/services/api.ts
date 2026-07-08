@@ -69,6 +69,55 @@ export interface FinanceSummary {
   gastosPorCategoria: { categoria: string; total: number }[];
 }
 
+export interface InventoryItem {
+  id: string;
+  nombre: string;
+  categoria: string;
+  stockActual: number;
+  stockMinimo: number;
+  stockMaximo: number;
+  unidad: string;
+  costoUnitario: number;
+  proveedor?: string;
+  lote?: string;
+  fechaVencimiento?: string;
+  ubicacion?: string;
+}
+type InventoryItemPayload = Partial<InventoryItem>;
+
+export interface InventoryMovement {
+  id: string;
+  itemId: string;
+  tipo: string;
+  cantidad: number;
+  saldoAnterior: number;
+  saldoNuevo: number;
+  motivo: string;
+  referencia?: string;
+  creado: string;
+  usuario: string;
+}
+
+export interface RecipeIngredient {
+  id: string;
+  recipeId: string;
+  itemId: string | null;
+  nombre: string;
+  cantidad: number;
+  unidad: string;
+  costo: number;
+}
+
+export interface Recipe {
+  id: string;
+  nombre: string;
+  productoId: string | null;
+  porciones: number;
+  costoTotal: number;
+  instrucciones: string | null;
+  ingredientes: RecipeIngredient[];
+}
+
 // ---- Auth/session storage helpers ----
 // Shared so every request can automatically attach the bearer token without
 // repeating the header logic at each call site.
@@ -451,6 +500,36 @@ export const api = {
 
   async getFinanceSummary(): Promise<FinanceSummary> {
     return apiFetch('/api/finance/summary');
+  },
+
+  // Inventory
+  async getInventory(): Promise<InventoryItem[]> {
+    return apiFetch('/api/inventory');
+  },
+
+  async createInventoryItem(item: InventoryItemPayload) {
+    return apiFetch('/api/inventory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    });
+  },
+
+  async createInventoryMovement(data: { itemId: string; tipo: 'entrada' | 'salida'; cantidad: number; motivo: string; referencia?: string; usuario?: string }) {
+    return apiFetch('/api/inventory/movement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async getInventoryMovements(): Promise<InventoryMovement[]> {
+    return apiFetch('/api/inventory/movements');
+  },
+
+  // Recipes
+  async getRecipes(): Promise<Recipe[]> {
+    return apiFetch('/api/recipes');
   }
 };
 
