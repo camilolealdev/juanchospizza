@@ -1,64 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { api, FinanceSummary, InventoryItem } from '../../services/api';
+import { Campaign, LoyaltyReward, Order, OrderStatus } from '../../types';
 
 const reportTypes = ['Ventas', 'Inventario', 'Marketing', 'Fidelización', 'Finanzas'];
 const groupOptions = ['Diario', 'Semanal', 'Mensual'];
 
-const quickReports = [
-  { title: 'Ventas del Día', value: '$1,284,500', trend: '+12.3%', icon: 'fa-chart-line', color: 'text-green-500', bg: 'from-green-600/10' },
-  { title: 'Productos Más Vendidos', value: 'Pizza Tradicional', trend: '+8.7%', icon: 'fa-pizza-slice', color: 'text-orange-500', bg: 'from-orange-600/10' },
-  { title: 'Clientes Nuevos', value: '147', trend: '+23.5%', icon: 'fa-users', color: 'text-blue-500', bg: 'from-blue-600/10' },
-  { title: 'Inventario Crítico', value: '6 ítems', trend: '-2', icon: 'fa-exclamation-triangle', color: 'text-red-500', bg: 'from-red-600/10' },
-  { title: 'Campañas Activas', value: '4', trend: '+1', icon: 'fa-bullhorn', color: 'text-purple-500', bg: 'from-purple-600/10' },
-  { title: 'Utilidad del Mes', value: '$3,892,000', trend: '+15.2%', icon: 'fa-coins', color: 'text-amber-500', bg: 'from-amber-600/10' },
-];
-
-const mockVentas = [
-  { day: 'Lunes', ventas: 1245000, pedidos: 32, ticketPromedio: 38906 },
-  { day: 'Martes', ventas: 982000, pedidos: 27, ticketPromedio: 36370 },
-  { day: 'Miércoles', ventas: 1103000, pedidos: 30, ticketPromedio: 36767 },
-  { day: 'Jueves', ventas: 1456000, pedidos: 38, ticketPromedio: 38316 },
-  { day: 'Viernes', ventas: 1820000, pedidos: 45, ticketPromedio: 40444 },
-  { day: 'Sábado', ventas: 2100000, pedidos: 52, ticketPromedio: 40385 },
-  { day: 'Domingo', ventas: 1680000, pedidos: 41, ticketPromedio: 40976 },
-];
-
-const mockInventario = [
-  { item: 'Harina (kg)', stock: 120, minimo: 50, estado: 'Disponible' },
-  { item: 'Queso Mozzarella (kg)', stock: 45, minimo: 20, estado: 'Disponible' },
-  { item: 'Salsa de Tomate (L)', stock: 8, minimo: 15, estado: 'Crítico' },
-  { item: 'Pepperoni (kg)', stock: 22, minimo: 10, estado: 'Disponible' },
-  { item: 'Champiñones (kg)', stock: 5, minimo: 8, estado: 'Por Agotarse' },
-  { item: 'Aceite de Oliva (L)', stock: 3, minimo: 5, estado: 'Por Agotarse' },
-];
-
-const mockMarketing = [
-  { campana: 'Promo Verano', alcance: 45000, conversiones: 1200, tasa: '2.67%' },
-  { campana: '2x1 en Pizzas', alcance: 32000, conversiones: 980, tasa: '3.06%' },
-  { campana: 'Descuento Estudiantes', alcance: 18000, conversiones: 720, tasa: '4.00%' },
-  { campana: 'Lanzamiento BBQ', alcance: 28000, conversiones: 560, tasa: '2.00%' },
-];
-
-const mockFidelizacion = [
-  { recompensa: 'Pizza Gratis', puntos: 1000, canjes: 45, disponibles: 12 },
-  { recompensa: 'Bebida 2x1', puntos: 300, canjes: 128, disponibles: 55 },
-  { recompensa: 'Postre Gratis', puntos: 500, canjes: 67, disponibles: 28 },
-  { recompensa: 'Descuento 20%', puntos: 750, canjes: 34, disponibles: 8 },
-];
-
-const mockFinanzas = [
-  { concepto: 'Ventas Totales', ingresos: 12450000, egresos: 0, tipo: 'ingreso' },
-  { concepto: 'Nómina', ingresos: 0, egresos: 3200000, tipo: 'egreso' },
-  { concepto: 'Insumos', ingresos: 0, egresos: 2800000, tipo: 'egreso' },
-  { concepto: 'Servicios', ingresos: 0, egresos: 950000, tipo: 'egreso' },
-  { concepto: 'Marketing', ingresos: 0, egresos: 1200000, tipo: 'egreso' },
-  { concepto: 'Otros Ingresos', ingresos: 480000, egresos: 0, tipo: 'ingreso' },
-];
-
-const savedReports = [
-  { name: 'Reporte de Ventas Semanal', date: '15/05/2026', type: 'Ventas' },
-  { name: 'Inventario Crítico - Mayo', date: '12/05/2026', type: 'Inventario' },
-  { name: 'Rendimiento de Campañas', date: '08/05/2026', type: 'Marketing' },
-];
+type ApiOrder = Omit<Order, 'items'> & { items: string | Order['items'] };
+const normalizeOrder = (order: ApiOrder): Order => ({
+  ...order,
+  items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items
+});
 
 const ReportesView: React.FC = () => {
   const [fechaDesde, setFechaDesde] = useState('');
@@ -67,6 +18,13 @@ const ReportesView: React.FC = () => {
   const [groupBy, setGroupBy] = useState('Diario');
   const [showGenerated, setShowGenerated] = useState(false);
   const [toast, setToast] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [rewards, setRewards] = useState<LoyaltyReward[]>([]);
+  const [finance, setFinance] = useState<FinanceSummary | null>(null);
 
   useEffect(() => {
     if (toast) {
@@ -75,12 +33,67 @@ const ReportesView: React.FC = () => {
     }
   }, [toast]);
 
-  const totalSales = mockVentas.reduce((a, b) => a + b.ventas, 0);
-  const totalOrders = mockVentas.reduce((a, b) => a + b.pedidos, 0);
-  const avgTicket = Math.round(totalSales / totalOrders);
+  useEffect(() => {
+    const loadAll = async () => {
+      setLoading(true);
+      try {
+        const [ord, inv, camp, rew, fin] = await Promise.all([
+          api.getOrders(),
+          api.getInventory(),
+          api.getCampaigns(),
+          api.getLoyaltyRewards(),
+          api.getFinanceSummary(),
+        ]);
+        setOrders(ord.map(normalizeOrder));
+        setInventory(inv);
+        setCampaigns(camp);
+        setRewards(rew);
+        setFinance(fin);
+      } catch (e) {
+        setToast(`Error cargando reportes: ${e instanceof Error ? e.message : 'error desconocido'}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadAll();
+  }, []);
 
-  const totalIncomeFinanzas = mockFinanzas.filter(f => f.tipo === 'ingreso').reduce((a, b) => a + b.ingresos, 0);
-  const totalExpenseFinanzas = mockFinanzas.filter(f => f.tipo === 'egreso').reduce((a, b) => a + b.egresos, 0);
+  const validOrders = orders.filter(o => o.status !== OrderStatus.CANCELLED);
+
+  const ventasPorDia = Object.entries(
+    validOrders.reduce<Record<string, { ventas: number; pedidos: number }>>((acc, o) => {
+      const key = new Date(o.createdAt).toLocaleDateString('es-CO', { weekday: 'long', day: '2-digit', month: 'short' });
+      if (!acc[key]) acc[key] = { ventas: 0, pedidos: 0 };
+      acc[key].ventas += o.total;
+      acc[key].pedidos += 1;
+      return acc;
+    }, {})
+  ).map(([day, v]) => ({ day, ventas: v.ventas, pedidos: v.pedidos, ticketPromedio: Math.round(v.ventas / v.pedidos) }));
+
+  const totalSales = validOrders.reduce((a, o) => a + o.total, 0);
+  const totalOrders = validOrders.length;
+  const avgTicket = totalOrders > 0 ? Math.round(totalSales / totalOrders) : 0;
+
+  const productCounts = validOrders.flatMap(o => o.items).reduce<Record<string, number>>((acc, item) => {
+    acc[item.name] = (acc[item.name] || 0) + item.quantity;
+    return acc;
+  }, {});
+  const topProduct = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0];
+
+  const inventarioCritico = inventory.filter(i => i.stockActual < i.stockMinimo).length;
+  const campanasActivas = campaigns.filter(c => c.status === 'active').length;
+
+  const todayKey = new Date().toDateString();
+  const ventasHoy = validOrders.filter(o => new Date(o.createdAt).toDateString() === todayKey).reduce((a, o) => a + o.total, 0);
+
+  const quickReports = [
+    { title: 'Ventas del Día', value: `$${ventasHoy.toLocaleString()}`, icon: 'fa-chart-line', color: 'text-green-500', bg: 'from-green-600/10' },
+    { title: 'Producto Más Vendido', value: topProduct ? `${topProduct[0]}` : 'Sin datos', icon: 'fa-pizza-slice', color: 'text-orange-500', bg: 'from-orange-600/10' },
+    { title: 'Clientes Totales', value: `${finance?.totalClientes ?? 0}`, icon: 'fa-users', color: 'text-blue-500', bg: 'from-blue-600/10' },
+    { title: 'Inventario Crítico', value: `${inventarioCritico} ítems`, icon: 'fa-exclamation-triangle', color: 'text-red-500', bg: 'from-red-600/10' },
+    { title: 'Campañas Activas', value: `${campanasActivas}`, icon: 'fa-bullhorn', color: 'text-purple-500', bg: 'from-purple-600/10' },
+    { title: 'Utilidad del Mes', value: `$${(finance?.utilidad ?? 0).toLocaleString()}`, icon: 'fa-coins', color: 'text-amber-500', bg: 'from-amber-600/10' },
+  ];
 
   const renderTable = () => {
     switch (reportType) {
@@ -97,22 +110,25 @@ const ReportesView: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {mockInventario.map((row, i) => (
-                  <tr key={i} className="border-b border-stone-800/40 text-sm group hover:bg-stone-800/20 transition-colors">
-                    <td className="py-5 pr-6 font-bold text-white">{row.item}</td>
-                    <td className="py-5 pr-6 text-stone-300">{row.stock}</td>
-                    <td className="py-5 pr-6 text-stone-500">{row.minimo}</td>
-                    <td className="py-5">
-                      <span className={`text-[10px] font-black px-3 py-1.5 rounded-full border ${
-                        row.estado === 'Crítico' ? 'text-red-400 border-red-500/30 bg-red-500/10' :
-                        row.estado === 'Por Agotarse' ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' :
-                        'text-green-400 border-green-500/30 bg-green-500/10'
-                      }`}>
-                        {row.estado}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {inventory.map((row) => {
+                  const estado = row.stockActual < row.stockMinimo ? 'Crítico' : row.stockActual < row.stockMinimo * 1.5 ? 'Por Agotarse' : 'Disponible';
+                  return (
+                    <tr key={row.id} className="border-b border-stone-800/40 text-sm group hover:bg-stone-800/20 transition-colors">
+                      <td className="py-5 pr-6 font-bold text-white">{row.nombre} ({row.unidad})</td>
+                      <td className="py-5 pr-6 text-stone-300">{row.stockActual}</td>
+                      <td className="py-5 pr-6 text-stone-500">{row.stockMinimo}</td>
+                      <td className="py-5">
+                        <span className={`text-[10px] font-black px-3 py-1.5 rounded-full border ${
+                          estado === 'Crítico' ? 'text-red-400 border-red-500/30 bg-red-500/10' :
+                          estado === 'Por Agotarse' ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' :
+                          'text-green-400 border-green-500/30 bg-green-500/10'
+                        }`}>
+                          {estado}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -130,12 +146,12 @@ const ReportesView: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {mockMarketing.map((row, i) => (
-                  <tr key={i} className="border-b border-stone-800/40 text-sm group hover:bg-stone-800/20 transition-colors">
-                    <td className="py-5 pr-6 font-bold text-white">{row.campana}</td>
-                    <td className="py-5 pr-6 text-stone-300">{row.alcance.toLocaleString()}</td>
-                    <td className="py-5 pr-6 text-purple-400 font-bold">{row.conversiones.toLocaleString()}</td>
-                    <td className="py-5 text-amber-400 font-bold">{row.tasa}</td>
+                {campaigns.map((row) => (
+                  <tr key={row.id} className="border-b border-stone-800/40 text-sm group hover:bg-stone-800/20 transition-colors">
+                    <td className="py-5 pr-6 font-bold text-white">{row.name}</td>
+                    <td className="py-5 pr-6 text-stone-300">{row.reach.toLocaleString()}</td>
+                    <td className="py-5 pr-6 text-purple-400 font-bold">{row.conversions.toLocaleString()}</td>
+                    <td className="py-5 text-amber-400 font-bold">{row.reach > 0 ? ((row.conversions / row.reach) * 100).toFixed(2) : '0.00'}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -150,20 +166,18 @@ const ReportesView: React.FC = () => {
                 <tr className="border-b border-stone-800 text-[10px] font-black text-stone-500 uppercase tracking-[0.3em]">
                   <th className="pb-5 pr-6">Recompensa</th>
                   <th className="pb-5 pr-6">Puntos Necesarios</th>
-                  <th className="pb-5 pr-6">Canjes Realizados</th>
-                  <th className="pb-5">Disponibles</th>
+                  <th className="pb-5 pr-6">Tipo</th>
+                  <th className="pb-5">Vigente</th>
                 </tr>
               </thead>
               <tbody>
-                {mockFidelizacion.map((row, i) => (
-                  <tr key={i} className="border-b border-stone-800/40 text-sm group hover:bg-stone-800/20 transition-colors">
-                    <td className="py-5 pr-6 font-bold text-white">{row.recompensa}</td>
-                    <td className="py-5 pr-6 text-stone-300">{row.puntos}</td>
-                    <td className="py-5 pr-6 text-orange-400 font-bold">{row.canjes}</td>
+                {rewards.map((row) => (
+                  <tr key={row.id} className="border-b border-stone-800/40 text-sm group hover:bg-stone-800/20 transition-colors">
+                    <td className="py-5 pr-6 font-bold text-white">{row.nombre}</td>
+                    <td className="py-5 pr-6 text-stone-300">{row.puntosCosto}</td>
+                    <td className="py-5 pr-6 text-orange-400 font-bold capitalize">{row.tipo}</td>
                     <td className="py-5">
-                      <span className={`font-bold ${row.disponibles < 15 ? 'text-red-400' : row.disponibles < 30 ? 'text-amber-400' : 'text-green-400'}`}>
-                        {row.disponibles}
-                      </span>
+                      <span className={`font-bold ${row.vigente ? 'text-green-400' : 'text-stone-600'}`}>{row.vigente ? 'Sí' : 'No'}</span>
                     </td>
                   </tr>
                 ))}
@@ -172,6 +186,7 @@ const ReportesView: React.FC = () => {
           </div>
         );
       case 'Finanzas':
+        if (!finance) return null;
         return (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -184,23 +199,25 @@ const ReportesView: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {mockFinanzas.map((row, i) => (
+                <tr className="border-b border-stone-800/40 text-sm group hover:bg-stone-800/20 transition-colors">
+                  <td className="py-5 pr-6 font-bold text-white">Ventas Totales</td>
+                  <td className="py-5 pr-6 text-green-400 font-bold">${finance.ingresos.toLocaleString()}</td>
+                  <td className="py-5 pr-6 text-red-400 font-bold">-</td>
+                  <td className="py-5 font-bold text-green-400">${finance.ingresos.toLocaleString()}</td>
+                </tr>
+                {finance.gastosPorCategoria.map((row, i) => (
                   <tr key={i} className="border-b border-stone-800/40 text-sm group hover:bg-stone-800/20 transition-colors">
-                    <td className="py-5 pr-6 font-bold text-white">{row.concepto}</td>
-                    <td className="py-5 pr-6 text-green-400 font-bold">{row.ingresos > 0 ? `$${row.ingresos.toLocaleString()}` : '-'}</td>
-                    <td className="py-5 pr-6 text-red-400 font-bold">{row.egresos > 0 ? `$${row.egresos.toLocaleString()}` : '-'}</td>
-                    <td className={`py-5 font-bold ${row.ingresos - row.egresos >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      ${(row.ingresos - row.egresos).toLocaleString()}
-                    </td>
+                    <td className="py-5 pr-6 font-bold text-white">{row.categoria}</td>
+                    <td className="py-5 pr-6 text-green-400 font-bold">-</td>
+                    <td className="py-5 pr-6 text-red-400 font-bold">${row.total.toLocaleString()}</td>
+                    <td className="py-5 font-bold text-red-400">-${row.total.toLocaleString()}</td>
                   </tr>
                 ))}
                 <tr className="border-t-2 border-stone-700 text-sm font-black">
                   <td className="py-5 pr-6 text-stone-400 uppercase tracking-wider">Totales</td>
-                  <td className="py-5 pr-6 text-green-400">${totalIncomeFinanzas.toLocaleString()}</td>
-                  <td className="py-5 pr-6 text-red-400">${totalExpenseFinanzas.toLocaleString()}</td>
-                  <td className={`py-5 ${totalIncomeFinanzas - totalExpenseFinanzas >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    ${(totalIncomeFinanzas - totalExpenseFinanzas).toLocaleString()}
-                  </td>
+                  <td className="py-5 pr-6 text-green-400">${finance.ingresos.toLocaleString()}</td>
+                  <td className="py-5 pr-6 text-red-400">${finance.egresos.toLocaleString()}</td>
+                  <td className={`py-5 ${finance.utilidad >= 0 ? 'text-green-400' : 'text-red-400'}`}>${finance.utilidad.toLocaleString()}</td>
                 </tr>
               </tbody>
             </table>
@@ -219,9 +236,12 @@ const ReportesView: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {mockVentas.map((row, i) => (
+                {ventasPorDia.length === 0 && (
+                  <tr><td colSpan={4} className="py-10 text-center text-stone-600 font-bold text-xs uppercase tracking-widest">Sin ventas registradas todavía</td></tr>
+                )}
+                {ventasPorDia.map((row, i) => (
                   <tr key={i} className="border-b border-stone-800/40 text-sm group hover:bg-stone-800/20 transition-colors">
-                    <td className="py-5 pr-6 font-bold text-white">{row.day}</td>
+                    <td className="py-5 pr-6 font-bold text-white capitalize">{row.day}</td>
                     <td className="py-5 pr-6 text-orange-400 font-bold">${row.ventas.toLocaleString()}</td>
                     <td className="py-5 pr-6 text-stone-300">{row.pedidos}</td>
                     <td className="py-5 text-stone-400">${row.ticketPromedio.toLocaleString()}</td>
@@ -240,16 +260,16 @@ const ReportesView: React.FC = () => {
         return (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
-              <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Total Productos</p>
-              <p className="text-3xl font-black text-white">{mockInventario.length}</p>
+              <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Total Insumos</p>
+              <p className="text-3xl font-black text-white">{inventory.length}</p>
             </div>
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
               <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Stock Crítico</p>
-              <p className="text-3xl font-black text-red-400">{mockInventario.filter(i => i.estado === 'Crítico').length}</p>
+              <p className="text-3xl font-black text-red-400">{inventarioCritico}</p>
             </div>
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
-              <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Por Agotarse</p>
-              <p className="text-3xl font-black text-amber-400">{mockInventario.filter(i => i.estado === 'Por Agotarse').length}</p>
+              <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Valor Total</p>
+              <p className="text-3xl font-black text-amber-400">${inventory.reduce((a, i) => a + i.stockActual * i.costoUnitario, 0).toLocaleString()}</p>
             </div>
           </div>
         );
@@ -258,17 +278,15 @@ const ReportesView: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
               <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Alcance Total</p>
-              <p className="text-3xl font-black text-white">{mockMarketing.reduce((a, b) => a + b.alcance, 0).toLocaleString()}</p>
+              <p className="text-3xl font-black text-white">{campaigns.reduce((a, b) => a + b.reach, 0).toLocaleString()}</p>
             </div>
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
               <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Conversiones Totales</p>
-              <p className="text-3xl font-black text-purple-400">{mockMarketing.reduce((a, b) => a + b.conversiones, 0).toLocaleString()}</p>
+              <p className="text-3xl font-black text-purple-400">{campaigns.reduce((a, b) => a + b.conversions, 0).toLocaleString()}</p>
             </div>
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
-              <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Tasa Promedio</p>
-              <p className="text-3xl font-black text-amber-400">
-                {(mockMarketing.reduce((a, b) => a + parseFloat(b.tasa), 0) / mockMarketing.length).toFixed(2)}%
-              </p>
+              <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Campañas Activas</p>
+              <p className="text-3xl font-black text-amber-400">{campanasActivas}</p>
             </div>
           </div>
         );
@@ -277,15 +295,15 @@ const ReportesView: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
               <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Recompensas</p>
-              <p className="text-3xl font-black text-white">{mockFidelizacion.length}</p>
+              <p className="text-3xl font-black text-white">{rewards.length}</p>
             </div>
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
-              <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Total Canjes</p>
-              <p className="text-3xl font-black text-orange-400">{mockFidelizacion.reduce((a, b) => a + b.canjes, 0)}</p>
+              <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Vigentes</p>
+              <p className="text-3xl font-black text-orange-400">{rewards.filter(r => r.vigente).length}</p>
             </div>
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
               <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Puntos Más Altos</p>
-              <p className="text-3xl font-black text-amber-400">{Math.max(...mockFidelizacion.map(r => r.puntos))}</p>
+              <p className="text-3xl font-black text-amber-400">{rewards.length > 0 ? Math.max(...rewards.map(r => r.puntosCosto)) : 0}</p>
             </div>
           </div>
         );
@@ -294,16 +312,16 @@ const ReportesView: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
               <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Ingresos Totales</p>
-              <p className="text-3xl font-black text-green-400">${totalIncomeFinanzas.toLocaleString()}</p>
+              <p className="text-3xl font-black text-green-400">${(finance?.ingresos ?? 0).toLocaleString()}</p>
             </div>
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
               <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Egresos Totales</p>
-              <p className="text-3xl font-black text-red-400">${totalExpenseFinanzas.toLocaleString()}</p>
+              <p className="text-3xl font-black text-red-400">${(finance?.egresos ?? 0).toLocaleString()}</p>
             </div>
             <div className="bg-stone-950/60 rounded-[2.5rem] p-6 border border-stone-800/50 text-center">
               <p className="text-[9px] text-stone-600 font-black uppercase tracking-[0.3em] mb-2">Utilidad Neta</p>
-              <p className={`text-3xl font-black ${totalIncomeFinanzas - totalExpenseFinanzas >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
-                ${(totalIncomeFinanzas - totalExpenseFinanzas).toLocaleString()}
+              <p className={`text-3xl font-black ${(finance?.utilidad ?? 0) >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
+                ${(finance?.utilidad ?? 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -328,6 +346,15 @@ const ReportesView: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="p-10 flex items-center justify-center min-h-[50vh] text-stone-500">
+        <i className="fas fa-spinner fa-spin text-3xl mr-4"></i>
+        <span className="font-bold uppercase tracking-widest text-sm">Cargando reportes...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="p-10 space-y-12 pb-40 animate-fade-in">
       {/* Toast */}
@@ -342,7 +369,7 @@ const ReportesView: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
           <h1 className="text-5xl font-brand">Centro de Reportes</h1>
-          <p className="text-stone-500 mt-4 max-w-xl">Exporta y analiza datos de tu negocio</p>
+          <p className="text-stone-500 mt-4 max-w-xl">Analiza datos reales de tu negocio</p>
         </div>
       </div>
 
@@ -414,10 +441,7 @@ const ReportesView: React.FC = () => {
                 <i className={`fas ${r.icon} text-lg`}></i>
               </div>
             </div>
-            <div className="flex items-end gap-4">
-              <p className="text-3xl font-black text-white tracking-tight">{r.value}</p>
-              <span className={`text-[10px] font-black mb-1 px-3 py-1 rounded-full border border-white/5 ${r.color} ${r.color.replace('text', 'bg')}/10`}>{r.trend}</span>
-            </div>
+            <p className="text-3xl font-black text-white tracking-tight">{r.value}</p>
           </div>
         ))}
       </div>
@@ -429,18 +453,18 @@ const ReportesView: React.FC = () => {
             <div>
               <h3 className="text-2xl font-brand">Reporte de {reportType}</h3>
               <p className="text-stone-500 text-xs mt-2 uppercase tracking-[0.3em] font-bold">
-                {fechaDesde || 'Últimos 7 días'} — {fechaHasta || 'Hoy'} · Agrupado por {groupBy}
+                {fechaDesde || 'Histórico'} — {fechaHasta || 'Hoy'} · Agrupado por {groupBy}
               </p>
             </div>
             <div className="flex gap-4">
               <button
-                onClick={() => setToast(`Reporte PDF exportado: ${reportType}`)}
+                onClick={() => setToast('La exportación a PDF todavía no está implementada')}
                 className="bg-stone-800 hover:bg-stone-700 px-8 py-4 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95"
               >
                 <i className="fas fa-file-pdf text-red-400"></i> EXPORTAR PDF
               </button>
               <button
-                onClick={() => setToast(`Reporte Excel exportado: ${reportType}`)}
+                onClick={() => setToast('La exportación a Excel todavía no está implementada')}
                 className="bg-stone-800 hover:bg-stone-700 px-8 py-4 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95"
               >
                 <i className="fas fa-file-excel text-green-400"></i> EXPORTAR EXCEL
@@ -455,39 +479,6 @@ const ReportesView: React.FC = () => {
           {renderTable()}
         </div>
       )}
-
-      {/* Saved Reports */}
-      <div className="space-y-8">
-        <div className="flex items-center gap-4 border-b border-white/5 pb-6">
-          <i className="fas fa-folder-open text-orange-500 text-xl"></i>
-          <h2 className="text-3xl font-brand">Reportes Guardados</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {savedReports.map((r, i) => (
-            <div key={i} className="bg-stone-900/40 p-8 rounded-[3.5rem] border border-stone-800 hover:border-orange-500/40 transition-all group shadow-xl">
-              <div className="flex items-start justify-between mb-8">
-                <div className="w-14 h-14 rounded-2xl bg-stone-950 flex items-center justify-center border border-white/5 text-orange-500">
-                  <i className="fas fa-file-lines text-xl"></i>
-                </div>
-                <span className="text-[9px] font-black text-stone-600 uppercase tracking-[0.3em] px-4 py-1.5 rounded-full bg-stone-950 border border-white/5">{r.type}</span>
-              </div>
-              <h4 className="font-black text-lg text-white mb-3">{r.name}</h4>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-stone-500 text-xs">
-                  <i className="fas fa-calendar"></i>
-                  <span>{r.date}</span>
-                </div>
-                <button
-                  onClick={() => setToast(`Descargando: ${r.name}`)}
-                  className="w-10 h-10 rounded-full bg-stone-950 border border-white/5 flex items-center justify-center text-orange-500 hover:bg-orange-600 hover:text-white transition-all active:scale-90"
-                >
-                  <i className="fas fa-download text-xs"></i>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };
