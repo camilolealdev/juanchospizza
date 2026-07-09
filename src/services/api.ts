@@ -237,6 +237,11 @@ export const api = {
     return apiFetch('/api/health');
   },
 
+  // Payments (admin)
+  async getPaymentStatus(): Promise<Record<string, { configured: boolean; webhookSecret: boolean | null }>> {
+    return apiFetch('/api/payments/status');
+  },
+
   // Products
   async getProducts(category?: string) {
     const path = category ? `/api/products?category=${category}` : '/api/products';
@@ -279,7 +284,7 @@ export const api = {
   },
 
   // Order tracking (guest, público, requiere teléfono)
-  async trackOrder(orderNumber: string, phone: string): Promise<{ id: string; orderNumber: string; status: string; createdAt: string; estimatedTime: number }> {
+  async trackOrder(orderNumber: string, phone: string): Promise<{ id: string; orderNumber: string; status: string; createdAt: string; estimatedTime: number; paymentStatus: string | null; paymentMethod: string }> {
     return apiFetch(`/api/orders/track/${encodeURIComponent(orderNumber)}?phone=${encodeURIComponent(phone)}`);
   },
 

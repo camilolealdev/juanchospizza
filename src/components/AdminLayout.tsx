@@ -11,15 +11,16 @@ interface AdminLayoutProps {
 }
 
 const ALL_NAV: { module: GastroModule; label: string; icon: string; roles: UserRole[] }[] = [
-  { module: 'dashboard', label: 'Dashboard', icon: 'chart-simple', roles: [UserRole.ADMIN, UserRole.OPERATOR, UserRole.REPARTIDOR] },
+  { module: 'dashboard', label: 'Dashboard', icon: 'chart-simple', roles: [UserRole.ADMIN, UserRole.OPERATOR, UserRole.REPARTIDOR, UserRole.MARKETING] },
   { module: 'menu', label: 'Menú Inteligente', icon: 'book', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
   { module: 'inventario', label: 'Inventario', icon: 'warehouse', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
   { module: 'clientes', label: 'Clientes', icon: 'users', roles: [UserRole.ADMIN] },
   { module: 'fidelizacion', label: 'Fidelización', icon: 'gift', roles: [UserRole.ADMIN] },
-  { module: 'campanas', label: 'Campañas', icon: 'bullhorn', roles: [UserRole.ADMIN] },
+  { module: 'campanas', label: 'Campañas', icon: 'bullhorn', roles: [UserRole.ADMIN, UserRole.MARKETING] },
   { module: 'finanzas', label: 'Finanzas', icon: 'coins', roles: [UserRole.ADMIN] },
   { module: 'reportes', label: 'Reportes', icon: 'chart-line', roles: [UserRole.ADMIN] },
   { module: 'reviews', label: 'Reseñas', icon: 'star', roles: [UserRole.ADMIN] },
+  { module: 'pagos', label: 'Pagos', icon: 'credit-card', roles: [UserRole.ADMIN] },
 ];
 
 const MODULE_TITLES: Record<GastroModule, string> = {
@@ -32,6 +33,7 @@ const MODULE_TITLES: Record<GastroModule, string> = {
   finanzas: 'Finanzas',
   reportes: 'Reportes',
   reviews: 'Reseñas',
+  pagos: 'Pagos',
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -39,6 +41,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   [UserRole.OPERATOR]: 'Cocina',
   [UserRole.REPARTIDOR]: 'Repartidor',
   [UserRole.CLIENT]: 'Cliente',
+  [UserRole.MARKETING]: 'Marketing',
 };
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({

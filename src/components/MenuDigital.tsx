@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
+import BoldCheckoutButton from './payments/BoldCheckoutButton';
+import type { OrderDraft } from '../services/payments/paymentService';
+import { PizzaSize, OrderItem } from '../types';
 
 interface MenuProduct {
   id: string;
@@ -129,9 +132,11 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
   const [showCrossSell, setShowCrossSell] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
   const tabsRef = useRef<HTMLDivElement>(null);
 
-  const { cart, cartCount, cartTotal, addToCart: contextAddToCart, removeFromCart, updateQuantity } = useCart();
+  const { cart, cartCount, cartTotal, addToCart: contextAddToCart, removeFromCart, updateQuantity, clearCart } = useCart();
 
   const filteredProducts = useMemo(() => {
     let items = PRODUCTS.filter(p => p.category === activeCategory);
@@ -189,6 +194,30 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
     const url = `https://wa.me/573117074843?text=${encodeURIComponent(whatsappMessage)}`;
     window.open(url, '_blank');
   }, [whatsappMessage]);
+
+  const canCheckoutWithBold = !!customerName && !!customerAddress && !!customerPhone;
+
+  const buildOrderDraft = useCallback((): OrderDraft => {
+    const items: OrderItem[] = cart.map(item => ({
+      id: item.id,
+      productId: item.productId,
+      name: item.name,
+      size: PizzaSize.PERSONAL,
+      quantity: item.quantity,
+      price: item.price,
+      details: item.details,
+    }));
+
+    return {
+      orderNumber: `GUIDO-${Math.floor(Math.random() * 9000) + 1000}`,
+      customerName,
+      customerPhone,
+      address: customerAddress,
+      items,
+      total: cartTotal,
+      estimatedTime: 30,
+    };
+  }, [cart, customerName, customerPhone, customerAddress, cartTotal]);
 
   const scrollTab = useCallback((dir: number) => {
     if (tabsRef.current) tabsRef.current.scrollBy({ left: dir * 200, behavior: 'smooth' });
@@ -594,6 +623,23 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
                       placeholder="Dirección de entrega *"
                       className="w-full bg-[#F4EFEA]/60 border border-[#8B572A]/10 rounded-xl p-3.5 text-sm font-medium text-[#1A1A1A] outline-none focus:border-[#C0392B]/30 transition-all placeholder:text-[#8B572A]/30"
                     />
+                    <input
+                      type="tel"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="Teléfono (para pago y seguimiento) *"
+                      className="w-full bg-[#F4EFEA]/60 border border-[#8B572A]/10 rounded-xl p-3.5 text-sm font-medium text-[#1A1A1A] outline-none focus:border-[#C0392B]/30 transition-all placeholder:text-[#8B572A]/30"
+                    />
+                    <BoldCheckoutButton
+                      orderDraft={buildOrderDraft()}
+                      disabled={!canCheckoutWithBold}
+                      className="w-full"
+                      onOrderCreated={() => clearCart()}
+                      onError={msg => setCheckoutError(msg)}
+                    />
+                    {checkoutError && (
+                      <p className="text-xs text-red-600 font-bold text-center">{checkoutError}</p>
+                    )}
                     <button
                       onClick={handleWhatsApp}
                       disabled={!customerName || !customerAddress}

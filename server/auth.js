@@ -76,11 +76,15 @@ function verifyToken(token) {
 
 // Usuarios autorizados (en producción, estos datos deben estar en DB)
 // Los pines deben ser hasheados con salt único por usuario
+// Salts son random de 16 bytes, sin relación con el PIN -- antes el salt
+// literalmente contenía el PIN en texto plano (ej. "admin_salt_1234"), lo
+// que volvía el hashing decorativo. Rotados 2026-07-09; PINs default sin
+// cambiar (mismos que en README) pero ya no derivables del código fuente.
 const USERS = [
-  { username: 'admin', role: 'ADMIN', pinHash: '7c8e412e662bac5e072311b4581516c0177c11b0987e917d87c0995a08511920d1aaa3ea69f8b6a0aa3b944e50dbecb7c6ea6d4cba023ee32be3729a7186acef', salt: 'admin_salt_1234' }, // PIN: 1234
-  { username: 'cocina', role: 'OPERATOR', pinHash: '8ee13a114078fa68cf7198ec543eb34e4eed8a1fa48a3c94ec57930eab385fcbbc7717278d251ca0fbbc777ec696a02f9ed15bb09533c79c0fce70d965381824', salt: 'cocina_salt_5678' }, // PIN: 5678
-  { username: 'repartidor', role: 'REPARTIDOR', pinHash: 'b00acf37b4058cc555f92cc69eb9741adf6a7f701bb9a51f459664a2e556040a77a9a38c6727e1c77fe15239e1508959bcef584ec9038e5754d7a7f44397f56a', salt: 'repartidor_salt_0000' }, // PIN: 0000
-  { username: 'marketing', role: 'MARKETING', pinHash: '01ba420d5ff67db2aa890bdf61e9e3dee8f861b5f333e1fef35a50e51c118f74f4107f588fa87c216370a3514e298f89831173c3e576aa1a653c5d4ee19d0f60', salt: 'marketing_salt_9999' }, // PIN: 9999
+  { username: 'admin', role: 'ADMIN', pinHash: '8e5d8021909b49b5348d09be091a43d155648eb3476380a7e6dccaf6c2d2568eaeda23e1facb55e78332aab21df2dbe3547c04daab240f2ab55f9dbd29e082c4', salt: '1f60d58e3fdaed5a2c891abdb6c97802' },
+  { username: 'cocina', role: 'OPERATOR', pinHash: '367522e4972ee9963efe1f9f1e05b7f75962857cbeedcebad68413f02268e01649b62c6159222961c5a6b3bdfdabbb9be1da489548a1c5a209eb5b8904ecd2d4', salt: 'c02d2416277251b5b166299d4460370d' },
+  { username: 'repartidor', role: 'REPARTIDOR', pinHash: 'dde694168749243d81e9eb22fd6e674d2546b1f7eda5c7bc764339b56fb464ee79d058c752e31af475bad714d1c23d05cbf02f1245260646953b36a651236b31', salt: '449fb9c5f1d91593894092d51ef46eea' },
+  { username: 'marketing', role: 'MARKETING', pinHash: 'fc520073c3d1a43726422e9b10a0926d9027d9bed599664202ae48ebd04e358b762988ec6285f8ca5f8f7b35eeede4d4ba0a8722c15b9ff7268731be4327fce0', salt: '755e3acdf526949c9a9dc434daeb50cf' },
 ];
 
 // Función para gerar hashes de PIN (para usar en setup)

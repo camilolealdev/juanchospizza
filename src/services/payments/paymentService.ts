@@ -1,5 +1,15 @@
 export type PaymentMethod = 'mercadopago' | 'nequi' | 'paypal' | 'wompi' | 'bold' | 'cash' | 'card';
 
+export interface OrderDraft {
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  items: import('../../types').OrderItem[];
+  total: number;
+  estimatedTime: number;
+}
+
 export interface PaymentConfig {
   NEQUI?: {
     apiKey: string;
@@ -177,7 +187,7 @@ class PaymentService {
       { id: 'cash', name: 'Efectivo', icon: 'fas fa-money-bill-wave' },
       { id: 'mercadopago', name: 'MercadoPago', icon: 'fab fa-mercury' },
       { id: 'nequi', name: 'NEQUI', icon: 'fas fa-mobile-alt' },
-      { id: 'paypal', name: 'PayPal', icon: 'fab fa-paypal' },
+      // PayPal: stub sin API real ni webhook -- oculto hasta implementarlo de verdad (ver auditoría 2026-07-09).
       { id: 'wompi', name: 'Wompi', icon: 'fas fa-credit-card' },
       { id: 'bold', name: 'Bold', icon: 'fas fa-bolt' },
       { id: 'card', name: 'Tarjeta', icon: 'fas fa-credit-card' },

@@ -749,7 +749,7 @@ app.get('/api/orders/track/:orderNumber', async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT id, "orderNumber", status, "createdAt", "estimatedTime" FROM orders WHERE "orderNumber" = $1 AND "customerPhone" = $2`,
+      `SELECT id, "orderNumber", status, "createdAt", "estimatedTime", "paymentStatus", "paymentMethod" FROM orders WHERE "orderNumber" = $1 AND "customerPhone" = $2`,
       [req.params.orderNumber, phone]
     );
 
@@ -779,7 +779,7 @@ app.get('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REP
 
 app.post('/api/orders', async (req, res) => {
   try {
-    const { orderNumber, customerName, customerPhone, address, items, total, estimatedTime, paymentMethod, clientId } = req.body;
+    const { orderNumber, customerName, customerPhone, address, items, total, estimatedTime, paymentMethod } = req.body;
 
     // Validación de inputs
     if (!orderNumber || !customerName || !address || !items || !total) {
@@ -804,10 +804,19 @@ app.post('/api/orders', async (req, res) => {
       address: String(address).slice(0, 200),
       total: Math.max(0, Math.min(Number(total), 999999999)),
       estimatedTime: Math.max(0, Math.min(Number(estimatedTime || 30), 180)),
-      paymentMethod: String(paymentMethod || 'cash').slice(0, 20),
-      // clientId es opcional: pedidos legacy o de invitado no lo traen
-      clientId: (clientId !== undefined && clientId !== null && clientId !== '') ? String(clientId).slice(0, 100) : null
+      paymentMethod: String(paymentMethod || 'cash').slice(0, 20)
     };
+
+    // clientId nunca se confía del body: cualquiera podía mandar el id de otro
+    // cliente y sus pedidos falsos le inflaban el gasto/puntos de fidelización
+    // ajenos. Se resuelve server-side buscando por teléfono, que es el mismo
+    // valor que ya usamos como verificador para tracking/reviews.
+    let resolvedClientId = null;
+    if (sanitized.customerPhone) {
+      const clientMatch = await pool.query('SELECT id FROM clients WHERE telefono = $1 LIMIT 1', [sanitized.customerPhone]);
+      resolvedClientId = clientMatch.rows[0]?.id || null;
+    }
+    sanitized.clientId = resolvedClientId;
 
     const id = `ord_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const status = 'PENDING';
@@ -1008,6 +1017,17 @@ function verifyWompiChecksum(event, secret) {
   }
 }
 
+// Estado de proveedores de pago para el panel admin -- solo booleanos de si
+// la env var está presente, nunca el valor real del secreto.
+app.get('/api/payments/status', authMiddleware, requireRole('ADMIN'), (req, res) => {
+  res.json({
+    bold: { configured: !!process.env.BOLD_API_KEY, webhookSecret: !!process.env.BOLD_WEBHOOK_SECRET },
+    mercadopago: { configured: !!process.env.MP_ACCESS_TOKEN, webhookSecret: !!process.env.MP_WEBHOOK_SECRET },
+    wompi: { configured: !!process.env.WOMPI_MERCHANT_ID, webhookSecret: !!process.env.WOMPI_EVENTS_SECRET },
+    paypal: { configured: !!process.env.PAYPAL_CLIENT_ID, webhookSecret: null },
+  });
+});
+
 // PAYMENTS — Bold (Colombia)
 app.post('/api/payments/bold/create-link', async (req, res) => {
   try {
@@ -1027,6 +1047,9 @@ app.post('/api/payments/bold/create-link', async (req, res) => {
     }
     if (order.status === 'CANCELLED' || order.status === 'COMPLETED') {
       return res.status(400).json({ error: `No se puede pagar un pedido ${order.status.toLowerCase()}` });
+    }
+    if (order.paymentStatus === 'paid') {
+      return res.status(400).json({ error: 'Este pedido ya está pagado' });
     }
 
     const boldResponse = await fetch('https://integrations.api.bold.co/online/link/v1', {
@@ -1074,6 +1097,9 @@ app.post('/api/payments/mercadopago/create-payment', async (req, res) => {
     const order = orderResult.rows[0];
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
+    }
+    if (order.paymentStatus === 'paid') {
+      return res.status(400).json({ error: 'Este pedido ya está pagado' });
     }
 
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
@@ -1124,6 +1150,9 @@ app.post('/api/payments/wompi/create-transaction', async (req, res) => {
     const order = orderResult.rows[0];
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
+    }
+    if (order.paymentStatus === 'paid') {
+      return res.status(400).json({ error: 'Este pedido ya está pagado' });
     }
 
     const wompiResponse = await fetch('https://sandbox.wompi.co/v1/transactions', {
@@ -1244,13 +1273,13 @@ app.post('/api/payments/wompi/webhook', async (req, res) => {
     const transaction = event?.data?.transaction;
     if (!transaction) return res.sendStatus(200);
 
-    if (process.env.WOMPI_EVENTS_SECRET) {
-      if (!verifyWompiChecksum(event, process.env.WOMPI_EVENTS_SECRET)) {
-        console.error('Wompi webhook: checksum inválido, ignorado');
-        return res.sendStatus(200);
-      }
-    } else {
-      console.warn('⚠️  WOMPI_EVENTS_SECRET no configurado -- webhook de Wompi procesándose sin verificar checksum');
+    if (!process.env.WOMPI_EVENTS_SECRET) {
+      console.error('Wompi webhook: WOMPI_EVENTS_SECRET no configurado -- rechazado (fail-closed)');
+      return res.sendStatus(503);
+    }
+    if (!verifyWompiChecksum(event, process.env.WOMPI_EVENTS_SECRET)) {
+      console.error('Wompi webhook: checksum inválido, ignorado');
+      return res.sendStatus(200);
     }
 
     const orderResult = await pool.query('SELECT * FROM orders WHERE "orderNumber" = $1', [transaction.reference]);
@@ -1280,14 +1309,14 @@ app.post('/api/payments/bold/webhook', async (req, res) => {
   try {
     const body = req.body;
 
-    if (process.env.BOLD_WEBHOOK_SECRET) {
-      const providedSecret = req.headers['x-bold-signature'] || req.headers['x-webhook-secret'];
-      if (providedSecret !== process.env.BOLD_WEBHOOK_SECRET) {
-        console.error('Bold webhook: secreto inválido, ignorado');
-        return res.sendStatus(200);
-      }
-    } else {
-      console.warn('⚠️  BOLD_WEBHOOK_SECRET no configurado -- webhook de Bold procesándose sin verificar');
+    if (!process.env.BOLD_WEBHOOK_SECRET) {
+      console.error('Bold webhook: BOLD_WEBHOOK_SECRET no configurado -- rechazado (fail-closed)');
+      return res.sendStatus(503);
+    }
+    const providedSecret = req.headers['x-bold-signature'] || req.headers['x-webhook-secret'];
+    if (providedSecret !== process.env.BOLD_WEBHOOK_SECRET) {
+      console.error('Bold webhook: secreto inválido, ignorado');
+      return res.sendStatus(200);
     }
 
     const reference = body?.data?.reference || body?.reference || body?.payload?.reference;
@@ -2129,7 +2158,7 @@ app.post('/api/reviews', async (req, res) => {
   try {
     const { orderId, clientPhone, clientName, rating, comment } = req.body;
 
-    if (!orderId || !rating) {
+    if (!orderId || !rating || !clientPhone) {
       return res.status(400).json({ error: 'Faltan datos requeridos' });
     }
 
@@ -2138,12 +2167,23 @@ app.post('/api/reviews', async (req, res) => {
       return res.status(400).json({ error: 'La calificación debe ser entre 1 y 5' });
     }
 
-    const order = await pool.query('SELECT status FROM orders WHERE id = $1', [orderId]);
+    const order = await pool.query('SELECT status, "customerPhone" FROM orders WHERE id = $1', [orderId]);
     if (!order.rows.length) {
       return res.status(404).json({ error: 'Pedido no encontrado' });
     }
     if (order.rows[0].status !== 'COMPLETED') {
       return res.status(400).json({ error: 'Solo se puede reseñar un pedido completado' });
+    }
+    // El teléfono es el mismo verificador mínimo que usa el tracking público de
+    // pedidos -- sin esto, cualquiera con un orderId podía postear reseñas
+    // falsas a nombre de otro cliente.
+    if (order.rows[0].customerPhone !== String(clientPhone).trim()) {
+      return res.status(403).json({ error: 'El teléfono no coincide con el pedido' });
+    }
+
+    const existing = await pool.query('SELECT id FROM reviews WHERE "orderId" = $1', [orderId]);
+    if (existing.rows.length) {
+      return res.status(409).json({ error: 'Este pedido ya tiene una reseña' });
     }
 
     const sanitized = {

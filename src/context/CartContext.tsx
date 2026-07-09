@@ -37,16 +37,31 @@ declare global {
   }
 }
 
+const CART_ITEMS_KEY = 'juanchos_cart_items';
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  // 'juanchos_cart' (below) only ever stored the item COUNT, read by the
+  // vanilla-JS badge counter in index.html -- the actual cart contents were
+  // never persisted, so refreshing the page silently emptied the cart. This
+  // second key stores the real array; the count key stays untouched so the
+  // vanilla counter keeps working as-is.
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(CART_ITEMS_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
   const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.quantity, 0), [cart]);
 
   useEffect(() => {
+    localStorage.setItem(CART_ITEMS_KEY, JSON.stringify(cart));
     localStorage.setItem('juanchos_cart', cartCount.toString());
     window.dispatchEvent(new CustomEvent('cart-updated', { detail: cartCount }));
-  }, [cartCount]);
+  }, [cart, cartCount]);
 
   const addToCart = useCallback((item: Omit<CartItem, 'id'>) => {
     const id = item.productId + '-' + Date.now();

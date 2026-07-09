@@ -3,7 +3,8 @@ export enum UserRole {
   CLIENT = 'CLIENT',
   ADMIN = 'ADMIN',
   OPERATOR = 'OPERATOR',
-  REPARTIDOR = 'REPARTIDOR'
+  REPARTIDOR = 'REPARTIDOR',
+  MARKETING = 'MARKETING'
 }
 
 export enum PizzaSize {
@@ -126,7 +127,8 @@ export type GastroModule =
   | 'campanas'
   | 'finanzas'
   | 'reportes'
-  | 'reviews';
+  | 'reviews'
+  | 'pagos';
 
 export interface Client {
   id: string;

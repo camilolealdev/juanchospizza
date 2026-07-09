@@ -1,12 +1,42 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
+import BoldCheckoutButton from './payments/BoldCheckoutButton';
+import TrackOrderModal from './TrackOrderModal';
+import type { OrderDraft } from '../services/payments/paymentService';
+import { PizzaSize, OrderItem } from '../types';
 
 const CartSection: React.FC = () => {
   const { cart, cartCount, cartTotal, removeFromCart, updateQuantity, clearCart } = useCart();
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [toast, setToast] = useState('');
+  const [showTrackOrder, setShowTrackOrder] = useState(false);
+
+  const canCheckout = !!customerName && !!customerAddress && !!customerPhone;
+
+  const buildOrderDraft = (): OrderDraft => {
+    const items: OrderItem[] = cart.map(item => ({
+      id: item.id,
+      productId: item.productId,
+      name: item.name,
+      size: PizzaSize.PERSONAL,
+      quantity: item.quantity,
+      price: item.price,
+      details: item.details,
+    }));
+
+    return {
+      orderNumber: `GUIDO-${Math.floor(Math.random() * 9000) + 1000}`,
+      customerName,
+      customerPhone,
+      address: customerAddress,
+      items,
+      total: cartTotal,
+      estimatedTime: 30,
+    };
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -51,7 +81,19 @@ const CartSection: React.FC = () => {
             <p style={{ color: '#8B7355', fontStyle: 'italic', fontFamily: "'Bitter', serif", fontSize: 'clamp(.85rem, 2vw, 1.05rem)' }}>
               {cartCount === 0 ? 'No hay productos aún' : `${cartCount} producto${cartCount !== 1 ? 's' : ''} seleccionado${cartCount !== 1 ? 's' : ''}`}
             </p>
+            <button
+              onClick={() => setShowTrackOrder(true)}
+              style={{
+                marginTop: '12px', border: 'none', background: 'transparent',
+                color: '#C0392B', fontWeight: 700, fontSize: '.8rem',
+                textDecoration: 'underline', cursor: 'pointer'
+              }}
+            >
+              ¿Ya pediste? Rastrea tu pedido
+            </button>
           </div>
+
+          {showTrackOrder && <TrackOrderModal onClose={() => setShowTrackOrder(false)} />}
 
           {cart.length === 0 ? (
             <div style={{
@@ -183,8 +225,28 @@ const CartSection: React.FC = () => {
                     onFocus={e => e.target.style.borderColor = 'rgba(192,57,43,.3)'}
                     onBlur={e => e.target.style.borderColor = 'rgba(139,87,42,.12)'}
                   />
+                  <input
+                    type="tel"
+                    value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value)}
+                    placeholder="Teléfono (para pago y seguimiento) *"
+                    className="w-full p-3 sm:p-3.5 text-sm rounded-xl sm:rounded-2xl outline-none transition-colors"
+                    style={{
+                      border: '1px solid rgba(139,87,42,.12)',
+                      background: 'rgba(244,239,234,.6)', fontWeight: '500', color: '#1A1A1A'
+                    }}
+                    onFocus={e => e.target.style.borderColor = 'rgba(192,57,43,.3)'}
+                    onBlur={e => e.target.style.borderColor = 'rgba(139,87,42,.12)'}
+                  />
 
                   <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                    <BoldCheckoutButton
+                      orderDraft={buildOrderDraft()}
+                      disabled={!canCheckout}
+                      className="flex-1"
+                      onOrderCreated={() => clearCart()}
+                      onError={msg => showToast(msg)}
+                    />
                     <button
                       onClick={handleWhatsApp}
                       disabled={!customerName || !customerAddress}

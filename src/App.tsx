@@ -10,10 +10,13 @@ import MenuInteligente from './views/roles/MenuInteligente';
 import InventarioView from './views/roles/InventarioView';
 import ClientesView from './views/roles/ClientesView';
 import FidelizacionView from './views/roles/FidelizacionView';
-import CampanasView from './views/roles/CampanasView';
+import MarketingView from './views/roles/MarketingView';
 import FinanzasView from './views/roles/FinanzasView';
 import ReportesView from './views/roles/ReportesView';
 import ReviewsView from './views/roles/ReviewsView';
+import PaymentSettingsView from './views/roles/PaymentSettingsView';
+import OrderConfirmationPage from './pages/OrderConfirmationPage';
+import ApprovedReviews from './components/ApprovedReviews';
 import api, { AUTH_UNAUTHORIZED_EVENT, clearAuthSession, getAuthToken, getStoredRole, setAuthSession } from './services/api';
 
 interface AuthContextType {
@@ -37,7 +40,8 @@ export const useAuth = () => useContext(AuthContext);
 const ROLE_TO_USERNAME: Partial<Record<UserRole, string>> = {
   [UserRole.ADMIN]: 'admin',
   [UserRole.OPERATOR]: 'cocina',
-  [UserRole.REPARTIDOR]: 'repartidor'
+  [UserRole.REPARTIDOR]: 'repartidor',
+  [UserRole.MARKETING]: 'marketing'
 };
 
 // Cosmetic display names only, kept separate from auth now that credentials
@@ -45,7 +49,8 @@ const ROLE_TO_USERNAME: Partial<Record<UserRole, string>> = {
 const ROLE_DISPLAY_NAMES: Partial<Record<UserRole, string>> = {
   [UserRole.ADMIN]: 'Administrador',
   [UserRole.OPERATOR]: 'Chef Principal',
-  [UserRole.REPARTIDOR]: 'Repartidor'
+  [UserRole.REPARTIDOR]: 'Repartidor',
+  [UserRole.MARKETING]: 'Marketing'
 };
 
 const isKnownRole = (value: string | null): value is UserRole =>
@@ -63,6 +68,7 @@ const App: React.FC = () => {
   const [gastroModule, setGastroModule] = useState<GastroModule>('dashboard');
   const menuMount = typeof document !== 'undefined' ? document.getElementById('menu-mount') : null;
   const cartMount = typeof document !== 'undefined' ? document.getElementById('cart-mount') : null;
+  const reviewsMount = typeof document !== 'undefined' ? document.getElementById('reviews-mount') : null;
 
   const logout = () => {
     clearAuthSession();
@@ -82,6 +88,12 @@ const App: React.FC = () => {
     window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
     return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
   }, []);
+
+  // Standalone page landed on after a Bold checkout -- bypasses the rest of
+  // the app tree entirely (no CRM/login chrome needed here).
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/confirmacion')) {
+    return <OrderConfirmationPage />;
+  }
 
   const login = async (selectedRole: UserRole, pin?: string): Promise<boolean> => {
     const username = ROLE_TO_USERNAME[selectedRole];
@@ -106,10 +118,11 @@ const App: React.FC = () => {
       case 'inventario': return <InventarioView />;
       case 'clientes': return <ClientesView />;
       case 'fidelizacion': return <FidelizacionView />;
-      case 'campanas': return <CampanasView />;
+      case 'campanas': return <MarketingView />;
       case 'finanzas': return <FinanzasView />;
       case 'reportes': return <ReportesView />;
       case 'reviews': return <ReviewsView />;
+      case 'pagos': return <PaymentSettingsView />;
       default: return <GastroProDashboard />;
     }
   };
@@ -130,7 +143,7 @@ const App: React.FC = () => {
         {showLogin && !isAuthenticated && <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />}
 
         {/* Admin CRM Overlay */}
-        {isAuthenticated && (role === UserRole.ADMIN || role === UserRole.OPERATOR || role === UserRole.REPARTIDOR) && (
+        {isAuthenticated && (role === UserRole.ADMIN || role === UserRole.OPERATOR || role === UserRole.REPARTIDOR || role === UserRole.MARKETING) && (
           <div className="fixed inset-0 z-[9998] animate-fade-in">
             <AdminLayout
               module={gastroModule}
@@ -149,6 +162,11 @@ const App: React.FC = () => {
 
         {/* CartSection — rendered as inline section via portal into #cart-mount */}
         {cartMount && createPortal(<CartSection />, cartMount)}
+
+        {/* Approved reviews — rendered as inline section via portal into #reviews-mount.
+            Was previously only wired inside dead CustomerView.tsx (never rendered since
+            2026-06-05's move to this portal architecture) — moved onto the live surface. */}
+        {reviewsMount && createPortal(<ApprovedReviews />, reviewsMount)}
       </AuthContext.Provider>
     </CartProvider>
   );
@@ -201,6 +219,7 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => Promise<b
               <option value={UserRole.ADMIN}>Administrador</option>
               <option value={UserRole.OPERATOR}>Cocina</option>
               <option value={UserRole.REPARTIDOR}>Repartidor</option>
+              <option value={UserRole.MARKETING}>Marketing</option>
             </select>
           </div>
 
