@@ -1,0 +1,100 @@
+import express from 'express';
+import { pool } from '../db.js';
+import { authMiddleware, requireRole } from '../auth.js';
+
+const router = express.Router();
+
+// --- REVIEWS ---
+router.post('/api/reviews', async (req, res) => {
+  try {
+    const { orderId, clientPhone, clientName, rating, comment } = req.body;
+
+    if (!orderId || !rating || !clientPhone) {
+      return res.status(400).json({ error: 'Faltan datos requeridos' });
+    }
+
+    const ratingNum = Math.round(Number(rating));
+    if (!Number.isFinite(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+      return res.status(400).json({ error: 'La calificación debe ser entre 1 y 5' });
+    }
+
+    const order = await pool.query('SELECT status, "customerPhone" FROM orders WHERE id = $1', [orderId]);
+    if (!order.rows.length) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+    if (order.rows[0].status !== 'COMPLETED') {
+      return res.status(400).json({ error: 'Solo se puede reseñar un pedido completado' });
+    }
+    // El teléfono es el mismo verificador mínimo que usa el tracking público de
+    // pedidos -- sin esto, cualquiera con un orderId podía postear reseñas
+    // falsas a nombre de otro cliente.
+    if (order.rows[0].customerPhone !== String(clientPhone).trim()) {
+      return res.status(403).json({ error: 'El teléfono no coincide con el pedido' });
+    }
+
+    const existing = await pool.query('SELECT id FROM reviews WHERE "orderId" = $1', [orderId]);
+    if (existing.rows.length) {
+      return res.status(409).json({ error: 'Este pedido ya tiene una reseña' });
+    }
+
+    const sanitized = {
+      orderId: String(orderId).slice(0, 100),
+      clientPhone: clientPhone ? String(clientPhone).slice(0, 30) : null,
+      clientName: clientName ? String(clientName).slice(0, 100) : null,
+      rating: ratingNum,
+      comment: comment ? String(comment).slice(0, 500) : null
+    };
+
+    const id = `rev_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    await pool.query(
+      `INSERT INTO reviews (id, "orderId", "clientPhone", "clientName", rating, comment, status) VALUES ($1,$2,$3,$4,$5,$6,'pending')`,
+      [id, sanitized.orderId, sanitized.clientPhone, sanitized.clientName, sanitized.rating, sanitized.comment]
+    );
+
+    res.status(201).json({ id, ...sanitized, status: 'pending' });
+  } catch (e) {
+    res.status(500).json({ error: 'Error creating review' });
+  }
+});
+
+router.get('/api/reviews/approved', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, rating, comment, "clientName", "createdAt" FROM reviews WHERE status = 'approved' ORDER BY "createdAt" DESC LIMIT 50`
+    );
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: 'Error fetching reviews' }); }
+});
+
+router.get('/api/reviews', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+  try {
+    const { status } = req.query;
+    const result = status
+      ? await pool.query('SELECT * FROM reviews WHERE status = $1 ORDER BY "createdAt" DESC', [status])
+      : await pool.query('SELECT * FROM reviews ORDER BY "createdAt" DESC');
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: 'Error fetching reviews' }); }
+});
+
+router.patch('/api/reviews/:id/status', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Estado inválido' });
+    }
+
+    const result = await pool.query(
+      'UPDATE reviews SET status = $1 WHERE id = $2 RETURNING *',
+      [status, req.params.id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (e) { res.status(500).json({ error: 'Error updating review status' }); }
+});
+
+export default router;
