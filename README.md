@@ -8,7 +8,7 @@ El proyecto utiliza una arquitectura híbrida única:
 
 1.  **Frontend Cliente (Landing Page):** Una interfaz estática de carga ultra-rápida integrada directamente en `index.html`.
 2.  **GastroPro CRM (Overlay React):** Una aplicación React 18 que se monta como una capa administrativa (Overlay) y portaliza componentes dinámicos (Menú Digital, Carrito) en la Landing Page.
-3.  **Backend API:** Servidor Express.js que gestiona la persistencia con Turso (SQLite en el edge).
+3.  **Backend API:** Servidor Express.js que gestiona la persistencia con PostgreSQL.
 
 ## 🚀 Módulos de GastroPro CRM
 
@@ -27,7 +27,7 @@ El panel administrativo incluye herramientas avanzadas para la gestión total de
 
 -   **Frontend:** React 18 + TypeScript + Vite.
 -   **Styling:** Tailwind CSS + Framer Motion.
--   **Base de Datos:** Turso (libSQL edge SQLite).
+-   **Base de Datos:** PostgreSQL.
 -   **IA:** Google Gemini (Asistente "Concierge" y generación visual).
 -   **Backend:** Node.js + Express.js.
 -   **Despliegue:** Vercel.
@@ -47,7 +47,7 @@ PIZZERIAv2/
 │   │   ├── ClientesView.tsx
 │   │   └── ... (otros módulos)
 │   ├── services/            # Lógica de negocio y API
-│   │   ├── api.ts           # Cliente API Turso
+│   │   ├── api.ts           # Cliente API
 │   │   └── geminiService.ts # Integración con IA
 │   ├── types/               # Definiciones TypeScript centralizadas
 │   └── context/             # Estados globales (Cart, Auth)
@@ -68,8 +68,7 @@ PIZZERIAv2/
 2.  **Variables de Entorno:**
     Crea un `.env` basado en `.env.example`:
     ```env
-    TURSO_DATABASE_URL=tu_url_de_turso
-    TURSO_AUTH_TOKEN=tu_token_de_turso
+    DATABASE_URL=postgresql://usuario:password@localhost:5432/nombre_db
     GEMINI_API_KEY=tu_api_key_de_google
     ```
 

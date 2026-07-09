@@ -58,7 +58,13 @@ const ReportesView: React.FC = () => {
     loadAll();
   }, []);
 
-  const validOrders = orders.filter(o => o.status !== OrderStatus.CANCELLED);
+  const validOrders = orders.filter(o => {
+    if (o.status === OrderStatus.CANCELLED) return false;
+    const created = o.createdAt.slice(0, 10); // 'YYYY-MM-DD', comparable a los <input type="date">
+    if (fechaDesde && created < fechaDesde) return false;
+    if (fechaHasta && created > fechaHasta) return false;
+    return true;
+  });
 
   const ventasPorDia = Object.entries(
     validOrders.reduce<Record<string, { ventas: number; pedidos: number }>>((acc, o) => {

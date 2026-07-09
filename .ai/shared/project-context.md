@@ -11,7 +11,7 @@ Plataforma unificada para la gestión y operación de **Juancho's Pizza** (Nemoc
 ## Stack Tecnológico
 -   **Frontend:** React 18 + Vite + Tailwind CSS + Framer Motion.
 -   **Backend:** Express.js + Node.js.
--   **Base de Datos:** Turso (libSQL edge SQLite).
+-   **Base de Datos:** PostgreSQL.
 -   **IA:** Google Gemini SDK (`@google/generative-ai`).
 -   **Hosting:** Vercel (Frontend & API).
 
@@ -30,6 +30,6 @@ PENDING → CONFIRMED → PREPARING → READY → ASSIGNED → DELIVERING → CO
 -   **Types:** Definiciones centralizadas en `src/types/index.ts`.
 
 ## Deuda Técnica & Roadmap
-1.  **Auth:** Transicionar de PINs hardcodeados a JWT + DB Auth.
-2.  **Validación:** Implementar Zod para validación de esquemas en API.
-3.  **ORM:** Evaluar migración a Drizzle ORM para tipado seguro en queries SQL.
+1.  **Validación:** Implementar Zod para validación de esquemas en API.
+2.  **ORM:** Evaluar migración a Drizzle ORM para tipado seguro en queries SQL.
+3.  **PINs:** siguen siendo la lista hardcodeada en `server/auth.js` (ya con salts random, ver auditoría 2026-07-09) -- mover a DB sigue pendiente si se necesita gestión dinámica de staff.

@@ -853,7 +853,7 @@ const MenuInteligente: React.FC = () => {
                   <i className="fas fa-arrow-right text-stone-600 group-hover:text-orange-500 transition-all"></i>
                 </button>
 
-                <button onClick={() => showToast('Generando PDF del menú...')} className="w-full flex items-center justify-between bg-stone-950/60 hover:bg-stone-950 px-8 py-6 rounded-[2rem] border border-white/5 group transition-all">
+                <button onClick={() => window.print()} className="w-full flex items-center justify-between bg-stone-950/60 hover:bg-stone-950 px-8 py-6 rounded-[2rem] border border-white/5 group transition-all">
                   <div className="flex items-center gap-5">
                     <div className="w-12 h-12 rounded-2xl bg-orange-600/20 flex items-center justify-center text-orange-500">
                       <i className="fas fa-file-pdf text-xl"></i>

@@ -9,7 +9,7 @@ Este archivo contiene las directrices fundamentales para el desarrollo y manteni
 
 ## 🔒 Seguridad & Privacidad
 - **Variables de Entorno:** Nunca commitear `.env`. Usar siempre el prefijo `VITE_` para variables del frontend.
-- **Secrets:** Las claves de Turso y Gemini deben manejarse exclusivamente en el server-side cuando sea posible.
+- **Secrets:** Las credenciales de Postgres y Gemini deben manejarse exclusivamente en el server-side cuando sea posible.
 - **Sanitización:** Todo input del usuario debe ser sanitizado antes de llegar a `turso.execute`.
 
 ## 🎨 Branding & UX
@@ -20,7 +20,7 @@ Este archivo contiene las directrices fundamentales para el desarrollo y manteni
 
 ## 🛠️ Convenciones de Código
 - **TypeScript:** No usar `any`. Definir interfaces para todas las respuestas de API.
-- **Servicios:** La lógica de comunicación con APIs externas (Gemini, Turso) debe residir en `src/services/`.
+- **Servicios:** La lógica de comunicación con APIs externas (Gemini, backend propio) debe residir en `src/services/`.
 - **Backend:** Mantener `server/index.js` organizado por responsabilidades. Planear migración a estructura de controladores.
 
 ## 🤖 AI Mandates

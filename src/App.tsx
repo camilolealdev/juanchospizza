@@ -1,23 +1,27 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { UserRole, GastroModule } from './types';
 import AdminLayout from './components/AdminLayout';
 import MenuDigital from './components/MenuDigital';
 import CartSection from './components/CartSection';
 import { CartProvider } from './context/CartContext';
-import GastroProDashboard from './views/roles/GastroProDashboard';
-import MenuInteligente from './views/roles/MenuInteligente';
-import InventarioView from './views/roles/InventarioView';
-import ClientesView from './views/roles/ClientesView';
-import FidelizacionView from './views/roles/FidelizacionView';
-import MarketingView from './views/roles/MarketingView';
-import FinanzasView from './views/roles/FinanzasView';
-import ReportesView from './views/roles/ReportesView';
-import ReviewsView from './views/roles/ReviewsView';
-import PaymentSettingsView from './views/roles/PaymentSettingsView';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import ApprovedReviews from './components/ApprovedReviews';
 import api, { AUTH_UNAUTHORIZED_EVENT, clearAuthSession, getAuthToken, getStoredRole, setAuthSession } from './services/api';
+
+// CRM modules only ever render behind a staff login -- lazy-loaded so an
+// anonymous landing-page visitor's bundle isn't paying for admin code they
+// never see (this app has no router to split by route, so it's done here).
+const GastroProDashboard = lazy(() => import('./views/roles/GastroProDashboard'));
+const MenuInteligente = lazy(() => import('./views/roles/MenuInteligente'));
+const InventarioView = lazy(() => import('./views/roles/InventarioView'));
+const ClientesView = lazy(() => import('./views/roles/ClientesView'));
+const FidelizacionView = lazy(() => import('./views/roles/FidelizacionView'));
+const MarketingView = lazy(() => import('./views/roles/MarketingView'));
+const FinanzasView = lazy(() => import('./views/roles/FinanzasView'));
+const ReportesView = lazy(() => import('./views/roles/ReportesView'));
+const ReviewsView = lazy(() => import('./views/roles/ReviewsView'));
+const PaymentSettingsView = lazy(() => import('./views/roles/PaymentSettingsView'));
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -152,7 +156,9 @@ const App: React.FC = () => {
               userRole={role}
               onLogout={logout}
             >
-              {renderGastroModule()}
+              <Suspense fallback={<div className="p-10 text-stone-500 text-sm font-bold uppercase tracking-widest">Cargando...</div>}>
+                {renderGastroModule()}
+              </Suspense>
             </AdminLayout>
           </div>
         )}
