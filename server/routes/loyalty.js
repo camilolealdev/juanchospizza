@@ -1,6 +1,8 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
+import { validate } from '../middleware/validate.js';
+import { createRewardSchema, updateRewardSchema, addPointsSchema } from '../schemas/loyalty.js';
 
 const router = express.Router();
 
@@ -12,23 +14,9 @@ router.get('/api/loyalty/rewards', authMiddleware, requireRole('ADMIN', 'MARKETI
   } catch (e) { res.status(500).json({ error: 'Error fetching rewards' }); }
 });
 
-router.post('/api/loyalty/rewards', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+router.post('/api/loyalty/rewards', authMiddleware, requireRole('ADMIN', 'MARKETING'), validate(createRewardSchema), async (req, res) => {
   try {
-    const { nombre, descripcion, puntosCosto, tipo, valor, vigente } = req.body;
-
-    if (!nombre) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
-
-    const sanitized = {
-      nombre: String(nombre).slice(0, 100),
-      descripcion: (descripcion !== undefined && descripcion !== null) ? String(descripcion).slice(0, 300) : null,
-      puntosCosto: Math.max(0, Math.min(Number(puntosCosto || 0), 999999)),
-      tipo: (tipo !== undefined && tipo !== null) ? String(tipo).slice(0, 30) : null,
-      valor: Math.max(0, Math.min(Number(valor || 0), 999999999)),
-      vigente: vigente !== undefined ? Math.max(0, Math.min(Number(vigente), 1)) : 1
-    };
-
+    const sanitized = req.body;
     const id = `rwd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     await pool.query(
@@ -42,18 +30,18 @@ router.post('/api/loyalty/rewards', authMiddleware, requireRole('ADMIN', 'MARKET
   }
 });
 
-router.put('/api/loyalty/rewards/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+router.put('/api/loyalty/rewards/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), validate(updateRewardSchema), async (req, res) => {
   try {
     const { nombre, descripcion, puntosCosto, tipo, valor, vigente } = req.body;
 
     const updates = [];
     const params = [];
-    if (nombre !== undefined) { params.push(String(nombre).slice(0, 100)); updates.push(`nombre = $${params.length}`); }
-    if (descripcion !== undefined) { params.push(descripcion !== null ? String(descripcion).slice(0, 300) : null); updates.push(`descripcion = $${params.length}`); }
-    if (puntosCosto !== undefined) { params.push(Math.max(0, Math.min(Number(puntosCosto), 999999))); updates.push(`"puntosCosto" = $${params.length}`); }
-    if (tipo !== undefined) { params.push(tipo !== null ? String(tipo).slice(0, 30) : null); updates.push(`tipo = $${params.length}`); }
-    if (valor !== undefined) { params.push(Math.max(0, Math.min(Number(valor), 999999999))); updates.push(`valor = $${params.length}`); }
-    if (vigente !== undefined) { params.push(Math.max(0, Math.min(Number(vigente), 1))); updates.push(`vigente = $${params.length}`); }
+    if (nombre !== undefined) { params.push(nombre); updates.push(`nombre = $${params.length}`); }
+    if (descripcion !== undefined) { params.push(descripcion); updates.push(`descripcion = $${params.length}`); }
+    if (puntosCosto !== undefined) { params.push(puntosCosto); updates.push(`"puntosCosto" = $${params.length}`); }
+    if (tipo !== undefined) { params.push(tipo); updates.push(`tipo = $${params.length}`); }
+    if (valor !== undefined) { params.push(valor); updates.push(`valor = $${params.length}`); }
+    if (vigente !== undefined) { params.push(vigente); updates.push(`vigente = $${params.length}`); }
 
     if (updates.length) {
       params.push(req.params.id);
@@ -86,7 +74,7 @@ router.delete('/api/loyalty/rewards/:id', authMiddleware, requireRole('ADMIN', '
   }
 });
 
-router.post('/api/loyalty/points', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+router.post('/api/loyalty/points', authMiddleware, requireRole('ADMIN', 'MARKETING'), validate(addPointsSchema), async (req, res) => {
   try {
     const { clientId, puntos, concepto, referencia } = req.body;
     const id = `lpt_${Date.now()}`;

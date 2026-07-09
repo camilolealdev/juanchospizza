@@ -21,6 +21,13 @@ export const strOpt = (max) => z.string().trim().max(max).nullish();
 export const strDefault = (max, def) =>
   z.string().trim().max(max).optional().transform(v => (v || def));
 
+// Espeja `x !== undefined ? clamp(Number(x)) : def` -- a diferencia de
+// clampedNumber, acá SOLO undefined dispara el default; un 0 explícito se
+// respeta (necesario para columnas tipo "vigente" 0/1 donde 0 es un valor
+// real y válido, no "usá el default").
+export const clampedNumberDefaultOnUndef = (min, max, def) =>
+  z.coerce.number().optional().transform(v => Math.max(min, Math.min(v === undefined ? def : v, max)));
+
 // Campo numérico REQUERIDO y > 0 (espeja `if (!total) return 400`, donde
 // total es un número -- 0/undefined/NaN son inválidos, negativos técnicamente
 // pasaban el check original pero se recortaban a 0 después; acá se rechazan

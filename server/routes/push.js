@@ -1,25 +1,14 @@
 import express from 'express';
 import { pool } from '../db.js';
+import { validate } from '../middleware/validate.js';
+import { pushSubscribeSchema } from '../schemas/push.js';
 
 const router = express.Router();
 
 // --- PUSH NOTIFICATIONS ---
-router.post('/api/push/subscribe', async (req, res) => {
+router.post('/api/push/subscribe', validate(pushSubscribeSchema), async (req, res) => {
   try {
-    const { phone, clientId, endpoint, p256dh, auth } = req.body;
-
-    if (!endpoint || !p256dh || !auth) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
-
-    const sanitized = {
-      phone: phone ? String(phone).slice(0, 30) : null,
-      clientId: (clientId !== undefined && clientId !== null && clientId !== '') ? String(clientId).slice(0, 100) : null,
-      endpoint: String(endpoint).slice(0, 500),
-      p256dh: String(p256dh).slice(0, 200),
-      auth: String(auth).slice(0, 200)
-    };
-
+    const sanitized = req.body;
     const id = `push_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     await pool.query(
