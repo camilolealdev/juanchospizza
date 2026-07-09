@@ -70,10 +70,6 @@ CREATE TABLE IF NOT EXISTS orders (
   "paymentProviderRef" TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
-CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders("createdAt");
-CREATE INDEX IF NOT EXISTS idx_orders_clientId ON orders("clientId");
-
 CREATE TABLE IF NOT EXISTS campaigns (
   id TEXT PRIMARY KEY,
   name TEXT,
@@ -250,6 +246,7 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders("createdAt");
+CREATE INDEX IF NOT EXISTS idx_orders_clientId ON orders("clientId");
 CREATE INDEX IF NOT EXISTS idx_clients_estado ON clients(estado);
 CREATE INDEX IF NOT EXISTS idx_inventory_categoria ON inventory_items(categoria);
 CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipeId ON recipe_ingredients("recipeId");

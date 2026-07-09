@@ -185,7 +185,9 @@ class PaymentService {
   getPaymentMethods(): { id: PaymentMethod; name: string; icon: string }[] {
     return [
       { id: 'cash', name: 'Efectivo', icon: 'fas fa-money-bill-wave' },
-      { id: 'mercadopago', name: 'MercadoPago', icon: 'fab fa-mercury' },
+      // MercadoPago: backend hardcodea payment_method_id='pix' (Brasil,
+      // inválido pa Colombia) -- oculto hasta implementarlo de verdad
+      // (mismo tratamiento que PayPal, ver auditoría 2026-07-09).
       { id: 'nequi', name: 'NEQUI', icon: 'fas fa-mobile-alt' },
       // PayPal: stub sin API real ni webhook -- oculto hasta implementarlo de verdad (ver auditoría 2026-07-09).
       { id: 'wompi', name: 'Wompi', icon: 'fas fa-credit-card' },

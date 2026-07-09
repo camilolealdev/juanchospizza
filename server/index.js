@@ -1137,6 +1137,11 @@ app.post('/api/payments/mercadopago/create-payment', async (req, res) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`
       },
+      // payment_method_id hardcodeado a 'pix' -- Brasil, inválido pa una
+      // cuenta MercadoPago colombiana. El método real depende de qué tenga
+      // habilitado la cuenta del comercio (GET /v1/payment_methods), no es
+      // un valor fijo -- oculto de la lista de métodos hasta armar eso bien
+      // (ver services/payments/paymentService.ts).
       body: JSON.stringify({
         transaction_amount: order.total,
         description: `Pedido Juancho's Pizza #${order.orderNumber}`.slice(0, 100),
