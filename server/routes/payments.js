@@ -263,15 +263,15 @@ router.post('/api/payments/mercadopago/webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    if (process.env.MP_WEBHOOK_SECRET) {
-      const xSignature = req.headers['x-signature'];
-      const xRequestId = req.headers['x-request-id'];
-      if (!xSignature || !xRequestId || !verifyMercadoPagoSignature(xSignature, xRequestId, paymentId, process.env.MP_WEBHOOK_SECRET)) {
-        console.error('MercadoPago webhook: firma inválida, ignorado');
-        return res.sendStatus(200);
-      }
-    } else {
-      console.warn('⚠️  MP_WEBHOOK_SECRET no configurado -- webhook de MercadoPago procesándose sin verificar firma');
+    if (!process.env.MP_WEBHOOK_SECRET) {
+      console.error('MercadoPago webhook: MP_WEBHOOK_SECRET no configurado -- rechazado (fail-closed)');
+      return res.sendStatus(503);
+    }
+    const xSignature = req.headers['x-signature'];
+    const xRequestId = req.headers['x-request-id'];
+    if (!xSignature || !xRequestId || !verifyMercadoPagoSignature(xSignature, xRequestId, paymentId, process.env.MP_WEBHOOK_SECRET)) {
+      console.error('MercadoPago webhook: firma inválida, ignorado');
+      return res.sendStatus(200);
     }
 
     // Nunca confiar en el status del body del webhook: se consulta la API
