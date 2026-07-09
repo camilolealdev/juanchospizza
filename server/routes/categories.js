@@ -1,6 +1,8 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
+import { validate } from '../middleware/validate.js';
+import { createCategorySchema, updateCategorySchema } from '../schemas/categories.js';
 
 const router = express.Router();
 
@@ -14,20 +16,9 @@ router.get('/api/categories', async (req, res) => {
   }
 });
 
-router.post('/api/categories', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+router.post('/api/categories', authMiddleware, requireRole('ADMIN'), validate(createCategorySchema), async (req, res) => {
   try {
-    const { name, icon, color } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
-
-    const sanitized = {
-      name: String(name).slice(0, 100),
-      icon: (icon !== undefined && icon !== null) ? String(icon).slice(0, 50) : null,
-      color: (color !== undefined && color !== null) ? String(color).slice(0, 50) : null
-    };
-
+    const sanitized = req.body;
     const id = `cat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     await pool.query(
@@ -41,15 +32,15 @@ router.post('/api/categories', authMiddleware, requireRole('ADMIN'), async (req,
   }
 });
 
-router.put('/api/categories/:id', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+router.put('/api/categories/:id', authMiddleware, requireRole('ADMIN'), validate(updateCategorySchema), async (req, res) => {
   try {
     const { name, icon, color } = req.body;
 
     const updates = [];
     const params = [];
-    if (name !== undefined) { params.push(String(name).slice(0, 100)); updates.push(`name = $${params.length}`); }
-    if (icon !== undefined) { params.push(icon !== null ? String(icon).slice(0, 50) : null); updates.push(`icon = $${params.length}`); }
-    if (color !== undefined) { params.push(color !== null ? String(color).slice(0, 50) : null); updates.push(`color = $${params.length}`); }
+    if (name !== undefined) { params.push(name); updates.push(`name = $${params.length}`); }
+    if (icon !== undefined) { params.push(icon); updates.push(`icon = $${params.length}`); }
+    if (color !== undefined) { params.push(color); updates.push(`color = $${params.length}`); }
 
     if (updates.length) {
       params.push(req.params.id);

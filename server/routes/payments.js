@@ -3,6 +3,8 @@ import crypto from 'crypto';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
 import { sendPushToPhone } from '../push.js';
+import { validate } from '../middleware/validate.js';
+import { createPaymentSchema } from '../schemas/payments.js';
 
 const router = express.Router();
 
@@ -68,16 +70,13 @@ router.get('/api/payments/status', authMiddleware, requireRole('ADMIN'), (req, r
 });
 
 // PAYMENTS — Bold (Colombia)
-router.post('/api/payments/bold/create-link', async (req, res) => {
+router.post('/api/payments/bold/create-link', validate(createPaymentSchema), async (req, res) => {
   try {
     if (!process.env.BOLD_API_KEY) {
       return res.status(503).json({ error: 'Bold no configurado' });
     }
 
     const { orderId } = req.body;
-    if (!orderId) {
-      return res.status(400).json({ error: 'Falta orderId' });
-    }
 
     const orderResult = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
     const order = orderResult.rows[0];
@@ -121,16 +120,13 @@ router.post('/api/payments/bold/create-link', async (req, res) => {
 });
 
 // PAYMENTS — MercadoPago
-router.post('/api/payments/mercadopago/create-payment', async (req, res) => {
+router.post('/api/payments/mercadopago/create-payment', validate(createPaymentSchema), async (req, res) => {
   try {
     if (!process.env.MP_ACCESS_TOKEN) {
       return res.status(503).json({ error: 'MercadoPago no configurado' });
     }
 
     const { orderId, customerEmail } = req.body;
-    if (!orderId) {
-      return res.status(400).json({ error: 'Falta orderId' });
-    }
 
     const orderResult = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
     const order = orderResult.rows[0];
@@ -179,16 +175,13 @@ router.post('/api/payments/mercadopago/create-payment', async (req, res) => {
 });
 
 // PAYMENTS — Wompi
-router.post('/api/payments/wompi/create-transaction', async (req, res) => {
+router.post('/api/payments/wompi/create-transaction', validate(createPaymentSchema), async (req, res) => {
   try {
     if (!process.env.WOMPI_MERCHANT_ID) {
       return res.status(503).json({ error: 'Wompi no configurado' });
     }
 
     const { orderId, customerEmail } = req.body;
-    if (!orderId) {
-      return res.status(400).json({ error: 'Falta orderId' });
-    }
 
     const orderResult = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
     const order = orderResult.rows[0];
@@ -232,16 +225,13 @@ router.post('/api/payments/wompi/create-transaction', async (req, res) => {
 });
 
 // PAYMENTS — PayPal
-router.post('/api/payments/paypal/create-order', async (req, res) => {
+router.post('/api/payments/paypal/create-order', validate(createPaymentSchema), async (req, res) => {
   try {
     if (!process.env.PAYPAL_CLIENT_ID) {
       return res.status(503).json({ error: 'PayPal no configurado' });
     }
 
     const { orderId } = req.body;
-    if (!orderId) {
-      return res.status(400).json({ error: 'Falta orderId' });
-    }
 
     const orderResult = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
     const order = orderResult.rows[0];

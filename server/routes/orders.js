@@ -2,6 +2,8 @@ import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
 import { sendPushToPhone } from '../push.js';
+import { validate } from '../middleware/validate.js';
+import { createOrderSchema, updateOrderSchema, updateOrderStatusSchema } from '../schemas/orders.js';
 
 const router = express.Router();
 
@@ -76,14 +78,9 @@ router.get('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR', '
   }
 });
 
-router.post('/api/orders', async (req, res) => {
+router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
   try {
     const { orderNumber, customerName, customerPhone, address, items, total, estimatedTime, paymentMethod } = req.body;
-
-    // Validación de inputs
-    if (!orderNumber || !customerName || !address || !items || !total) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
 
     // items es una columna JSON nativa: el pg driver serializa/parsea objetos
     // planos automáticamente, pero los arrays de nivel superior (como este)
@@ -91,19 +88,16 @@ router.post('/api/orders', async (req, res) => {
     // pasan tal cual, así que seguimos stringificando en la escritura; la
     // lectura ya no necesita JSON.parse porque la columna se auto-parsea.
     const itemsForDb = JSON.stringify(items);
-    if (itemsForDb.length > 5000) {
-      return res.status(400).json({ error: 'Items demasiado grandes' });
-    }
 
     // Sanitización básica
     const sanitized = {
-      orderNumber: String(orderNumber).slice(0, 50),
-      customerName: String(customerName).slice(0, 100),
-      customerPhone: customerPhone ? String(customerPhone).slice(0, 30) : null,
-      address: String(address).slice(0, 200),
-      total: Math.max(0, Math.min(Number(total), 999999999)),
-      estimatedTime: Math.max(0, Math.min(Number(estimatedTime || 30), 180)),
-      paymentMethod: String(paymentMethod || 'cash').slice(0, 20)
+      orderNumber,
+      customerName,
+      customerPhone: customerPhone || null,
+      address,
+      total,
+      estimatedTime,
+      paymentMethod
     };
 
     // clientId nunca se confía del body: cualquiera podía mandar el id de otro
@@ -178,15 +172,9 @@ async function updateClientSpendAggregate(clientId, orderTotal) {
   );
 }
 
-router.patch('/api/orders/:id/status', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'), async (req, res) => {
+router.patch('/api/orders/:id/status', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'), validate(updateOrderStatusSchema), async (req, res) => {
   try {
     const { status } = req.body;
-
-    // Validar status permitido
-    const validStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'ASSIGNED', 'DELIVERING', 'COMPLETED', 'CANCELLED'];
-    if (!status || !validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Status inválido' });
-    }
 
     await pool.query('UPDATE orders SET status = $1 WHERE id = $2', [status, req.params.id]);
 
@@ -231,23 +219,19 @@ router.patch('/api/orders/:id/status', authMiddleware, requireRole('ADMIN', 'OPE
   }
 });
 
-router.put('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
+router.put('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR'), validate(updateOrderSchema), async (req, res) => {
   try {
     const { address, items, total, estimatedTime, paymentMethod } = req.body;
 
     const updates = [];
     const params = [];
-    if (address !== undefined) { params.push(String(address).slice(0, 200)); updates.push(`address = $${params.length}`); }
+    if (address !== undefined) { params.push(address); updates.push(`address = $${params.length}`); }
     if (items !== undefined) {
-      const itemsForDb = JSON.stringify(items);
-      if (itemsForDb.length > 5000) {
-        return res.status(400).json({ error: 'Items demasiado grandes' });
-      }
-      params.push(itemsForDb); updates.push(`items = $${params.length}`);
+      params.push(JSON.stringify(items)); updates.push(`items = $${params.length}`);
     }
-    if (total !== undefined) { params.push(Math.max(0, Math.min(Number(total), 999999999))); updates.push(`total = $${params.length}`); }
-    if (estimatedTime !== undefined) { params.push(Math.max(0, Math.min(Number(estimatedTime), 180))); updates.push(`"estimatedTime" = $${params.length}`); }
-    if (paymentMethod !== undefined) { params.push(String(paymentMethod).slice(0, 20)); updates.push(`"paymentMethod" = $${params.length}`); }
+    if (total !== undefined) { params.push(total); updates.push(`total = $${params.length}`); }
+    if (estimatedTime !== undefined) { params.push(estimatedTime); updates.push(`"estimatedTime" = $${params.length}`); }
+    if (paymentMethod !== undefined) { params.push(paymentMethod); updates.push(`"paymentMethod" = $${params.length}`); }
 
     if (updates.length) {
       params.push(req.params.id);

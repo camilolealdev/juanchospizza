@@ -1,6 +1,8 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
+import { validate } from '../middleware/validate.js';
+import { createIngredientSchema, updateIngredientSchema } from '../schemas/ingredients.js';
 
 const router = express.Router();
 
@@ -23,27 +25,9 @@ router.get('/api/ingredients', async (req, res) => {
   }
 });
 
-router.post('/api/ingredients', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+router.post('/api/ingredients', authMiddleware, requireRole('ADMIN'), validate(createIngredientSchema), async (req, res) => {
   try {
-    const { nombre, descripcion, precio_extra, categoria, vegetariano, vegano, premium, dulce, disponible, defaultIng } = req.body;
-
-    if (!nombre) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
-
-    const sanitized = {
-      nombre: String(nombre).slice(0, 100),
-      descripcion: (descripcion !== undefined && descripcion !== null) ? String(descripcion).slice(0, 300) : null,
-      precio_extra: Math.max(0, Math.min(Number(precio_extra || 0), 999999999)),
-      categoria: (categoria !== undefined && categoria !== null) ? String(categoria).slice(0, 50) : null,
-      vegetariano: !!vegetariano,
-      vegano: !!vegano,
-      premium: !!premium,
-      dulce: !!dulce,
-      disponible: disponible !== undefined ? !!disponible : true,
-      defaultIng: !!defaultIng
-    };
-
+    const sanitized = req.body;
     const id = `ing_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     await pool.query(
@@ -57,22 +41,22 @@ router.post('/api/ingredients', authMiddleware, requireRole('ADMIN'), async (req
   }
 });
 
-router.put('/api/ingredients/:id', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+router.put('/api/ingredients/:id', authMiddleware, requireRole('ADMIN'), validate(updateIngredientSchema), async (req, res) => {
   try {
     const { nombre, descripcion, precio_extra, categoria, vegetariano, vegano, premium, dulce, disponible, defaultIng } = req.body;
 
     const updates = [];
     const params = [];
-    if (nombre !== undefined) { params.push(String(nombre).slice(0, 100)); updates.push(`nombre = $${params.length}`); }
-    if (descripcion !== undefined) { params.push(descripcion !== null ? String(descripcion).slice(0, 300) : null); updates.push(`descripcion = $${params.length}`); }
-    if (precio_extra !== undefined) { params.push(Math.max(0, Math.min(Number(precio_extra), 999999999))); updates.push(`precio_extra = $${params.length}`); }
-    if (categoria !== undefined) { params.push(categoria !== null ? String(categoria).slice(0, 50) : null); updates.push(`categoria = $${params.length}`); }
-    if (vegetariano !== undefined) { params.push(!!vegetariano); updates.push(`vegetariano = $${params.length}`); }
-    if (vegano !== undefined) { params.push(!!vegano); updates.push(`vegano = $${params.length}`); }
-    if (premium !== undefined) { params.push(!!premium); updates.push(`premium = $${params.length}`); }
-    if (dulce !== undefined) { params.push(!!dulce); updates.push(`dulce = $${params.length}`); }
-    if (disponible !== undefined) { params.push(!!disponible); updates.push(`disponible = $${params.length}`); }
-    if (defaultIng !== undefined) { params.push(!!defaultIng); updates.push(`"defaultIng" = $${params.length}`); }
+    if (nombre !== undefined) { params.push(nombre); updates.push(`nombre = $${params.length}`); }
+    if (descripcion !== undefined) { params.push(descripcion); updates.push(`descripcion = $${params.length}`); }
+    if (precio_extra !== undefined) { params.push(precio_extra); updates.push(`precio_extra = $${params.length}`); }
+    if (categoria !== undefined) { params.push(categoria); updates.push(`categoria = $${params.length}`); }
+    if (vegetariano !== undefined) { params.push(vegetariano); updates.push(`vegetariano = $${params.length}`); }
+    if (vegano !== undefined) { params.push(vegano); updates.push(`vegano = $${params.length}`); }
+    if (premium !== undefined) { params.push(premium); updates.push(`premium = $${params.length}`); }
+    if (dulce !== undefined) { params.push(dulce); updates.push(`dulce = $${params.length}`); }
+    if (disponible !== undefined) { params.push(disponible); updates.push(`disponible = $${params.length}`); }
+    if (defaultIng !== undefined) { params.push(defaultIng); updates.push(`"defaultIng" = $${params.length}`); }
 
     if (updates.length) {
       params.push(req.params.id);

@@ -1,6 +1,8 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
+import { validate } from '../middleware/validate.js';
+import { createProductSchema, updateProductSchema } from '../schemas/products.js';
 
 const router = express.Router();
 
@@ -37,28 +39,9 @@ router.get('/api/products/:id', async (req, res) => {
   }
 });
 
-router.post('/api/products', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+router.post('/api/products', authMiddleware, requireRole('ADMIN'), validate(createProductSchema), async (req, res) => {
   try {
-    const { categoryId, nombre, descripcion, basePrice, type, image, tiempo, popularidad, vegetariano, isPremium, exclusiva } = req.body;
-
-    if (!nombre) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
-
-    const sanitized = {
-      categoryId: (categoryId !== undefined && categoryId !== null) ? String(categoryId).slice(0, 50) : null,
-      nombre: String(nombre).slice(0, 100),
-      descripcion: (descripcion !== undefined && descripcion !== null) ? String(descripcion).slice(0, 500) : null,
-      basePrice: Math.max(0, Math.min(Number(basePrice || 0), 999999999)),
-      type: (type !== undefined && type !== null) ? String(type).slice(0, 30) : null,
-      image: (image !== undefined && image !== null) ? String(image).slice(0, 300) : null,
-      tiempo: Math.max(0, Math.min(Number(tiempo || 0), 999)),
-      popularidad: Math.max(0, Math.min(Number(popularidad || 0), 100)),
-      vegetariano: !!vegetariano,
-      isPremium: !!isPremium,
-      exclusiva: !!exclusiva
-    };
-
+    const sanitized = req.body;
     const id = `prod_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     await pool.query(
@@ -72,23 +55,23 @@ router.post('/api/products', authMiddleware, requireRole('ADMIN'), async (req, r
   }
 });
 
-router.put('/api/products/:id', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+router.put('/api/products/:id', authMiddleware, requireRole('ADMIN'), validate(updateProductSchema), async (req, res) => {
   try {
     const { categoryId, nombre, descripcion, basePrice, type, image, tiempo, popularidad, vegetariano, isPremium, exclusiva } = req.body;
 
     const updates = [];
     const params = [];
-    if (categoryId !== undefined) { params.push(categoryId !== null ? String(categoryId).slice(0, 50) : null); updates.push(`"categoryId" = $${params.length}`); }
-    if (nombre !== undefined) { params.push(String(nombre).slice(0, 100)); updates.push(`nombre = $${params.length}`); }
-    if (descripcion !== undefined) { params.push(descripcion !== null ? String(descripcion).slice(0, 500) : null); updates.push(`descripcion = $${params.length}`); }
-    if (basePrice !== undefined) { params.push(Math.max(0, Math.min(Number(basePrice), 999999999))); updates.push(`"basePrice" = $${params.length}`); }
-    if (type !== undefined) { params.push(type !== null ? String(type).slice(0, 30) : null); updates.push(`type = $${params.length}`); }
-    if (image !== undefined) { params.push(image !== null ? String(image).slice(0, 300) : null); updates.push(`image = $${params.length}`); }
-    if (tiempo !== undefined) { params.push(Math.max(0, Math.min(Number(tiempo), 999))); updates.push(`tiempo = $${params.length}`); }
-    if (popularidad !== undefined) { params.push(Math.max(0, Math.min(Number(popularidad), 100))); updates.push(`popularidad = $${params.length}`); }
-    if (vegetariano !== undefined) { params.push(!!vegetariano); updates.push(`vegetariano = $${params.length}`); }
-    if (isPremium !== undefined) { params.push(!!isPremium); updates.push(`"isPremium" = $${params.length}`); }
-    if (exclusiva !== undefined) { params.push(!!exclusiva); updates.push(`exclusiva = $${params.length}`); }
+    if (categoryId !== undefined) { params.push(categoryId); updates.push(`"categoryId" = $${params.length}`); }
+    if (nombre !== undefined) { params.push(nombre); updates.push(`nombre = $${params.length}`); }
+    if (descripcion !== undefined) { params.push(descripcion); updates.push(`descripcion = $${params.length}`); }
+    if (basePrice !== undefined) { params.push(basePrice); updates.push(`"basePrice" = $${params.length}`); }
+    if (type !== undefined) { params.push(type); updates.push(`type = $${params.length}`); }
+    if (image !== undefined) { params.push(image); updates.push(`image = $${params.length}`); }
+    if (tiempo !== undefined) { params.push(tiempo); updates.push(`tiempo = $${params.length}`); }
+    if (popularidad !== undefined) { params.push(popularidad); updates.push(`popularidad = $${params.length}`); }
+    if (vegetariano !== undefined) { params.push(vegetariano); updates.push(`vegetariano = $${params.length}`); }
+    if (isPremium !== undefined) { params.push(isPremium); updates.push(`"isPremium" = $${params.length}`); }
+    if (exclusiva !== undefined) { params.push(exclusiva); updates.push(`exclusiva = $${params.length}`); }
 
     if (updates.length) {
       params.push(req.params.id);
