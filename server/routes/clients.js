@@ -1,6 +1,8 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
+import { validate } from '../middleware/validate.js';
+import { createClientSchema, patchClientSchema, updateClientSchema } from '../schemas/clients.js';
 
 const router = express.Router();
 
@@ -39,23 +41,23 @@ router.get('/api/clients/:id', authMiddleware, requireRole('ADMIN', 'MARKETING')
   } catch (e) { res.status(500).json({ error: 'Error fetching client' }); }
 });
 
-router.post('/api/clients', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+router.post('/api/clients', authMiddleware, requireRole('ADMIN', 'MARKETING'), validate(createClientSchema), async (req, res) => {
   try {
     const { nombre, telefono, email, direccion, notas, cumpleanos } = req.body;
     const id = `cli_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
     await pool.query(
       `INSERT INTO clients (id, nombre, telefono, email, direccion, notas, cumpleanos, creado) VALUES ($1,$2,$3,$4,$5,$6,$7, NOW())`,
-      [id, nombre?.slice(0,100), telefono?.slice(0,20), email?.slice(0,100), direccion?.slice(0,200), notas?.slice(0,500), cumpleanos]
+      [id, nombre, telefono, email, direccion, notas, cumpleanos]
     );
     res.status(201).json({ id, nombre, telefono, email, direccion, notas, cumpleanos });
   } catch (e) { res.status(500).json({ error: 'Error creating client' }); }
 });
 
-router.patch('/api/clients/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+router.patch('/api/clients/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), validate(patchClientSchema), async (req, res) => {
   try {
     const { vip, notas, tags, estado } = req.body;
     const updates = []; const params = [];
-    if (vip !== undefined) { params.push(!!vip); updates.push(`vip = $${params.length}`); }
+    if (vip !== undefined) { params.push(vip); updates.push(`vip = $${params.length}`); }
     if (notas !== undefined) { params.push(notas); updates.push(`notas = $${params.length}`); }
     if (tags !== undefined) { params.push(JSON.stringify(tags)); updates.push(`tags = $${params.length}`); }
     if (estado !== undefined) { params.push(estado); updates.push(`estado = $${params.length}`); }
@@ -69,16 +71,16 @@ router.patch('/api/clients/:id', authMiddleware, requireRole('ADMIN', 'MARKETING
 
 // Full profile edit (name/phone/email/address/notes/birthday). Separate from
 // the PATCH route above, which only ever covered vip/notas/tags/estado.
-router.put('/api/clients/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+router.put('/api/clients/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), validate(updateClientSchema), async (req, res) => {
   try {
     const { nombre, telefono, email, direccion, notas, cumpleanos } = req.body;
     const updates = []; const params = [];
-    if (nombre !== undefined) { params.push(String(nombre).slice(0, 100)); updates.push(`nombre = $${params.length}`); }
-    if (telefono !== undefined) { params.push(telefono !== null ? String(telefono).slice(0, 20) : null); updates.push(`telefono = $${params.length}`); }
-    if (email !== undefined) { params.push(email !== null ? String(email).slice(0, 100) : null); updates.push(`email = $${params.length}`); }
-    if (direccion !== undefined) { params.push(direccion !== null ? String(direccion).slice(0, 200) : null); updates.push(`direccion = $${params.length}`); }
-    if (notas !== undefined) { params.push(notas !== null ? String(notas).slice(0, 500) : null); updates.push(`notas = $${params.length}`); }
-    if (cumpleanos !== undefined) { params.push(cumpleanos || null); updates.push(`cumpleanos = $${params.length}`); }
+    if (nombre !== undefined) { params.push(nombre); updates.push(`nombre = $${params.length}`); }
+    if (telefono !== undefined) { params.push(telefono); updates.push(`telefono = $${params.length}`); }
+    if (email !== undefined) { params.push(email); updates.push(`email = $${params.length}`); }
+    if (direccion !== undefined) { params.push(direccion); updates.push(`direccion = $${params.length}`); }
+    if (notas !== undefined) { params.push(notas); updates.push(`notas = $${params.length}`); }
+    if (cumpleanos !== undefined) { params.push(cumpleanos); updates.push(`cumpleanos = $${params.length}`); }
 
     if (updates.length) {
       params.push(req.params.id);

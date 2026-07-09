@@ -1,6 +1,8 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
+import { validate } from '../middleware/validate.js';
+import { createRecipeSchema, updateRecipeSchema } from '../schemas/recipes.js';
 
 const router = express.Router();
 
@@ -19,22 +21,10 @@ router.get('/api/recipes', authMiddleware, requireRole('ADMIN', 'OPERATOR'), asy
   } catch (e) { res.status(500).json({ error: 'Error fetching recipes' }); }
 });
 
-router.post('/api/recipes', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+router.post('/api/recipes', authMiddleware, requireRole('ADMIN'), validate(createRecipeSchema), async (req, res) => {
   try {
     const { nombre, productoId, porciones, costoTotal, instrucciones, ingredientes } = req.body;
-
-    if (!nombre) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
-
-    const sanitized = {
-      nombre: String(nombre).slice(0, 100),
-      productoId: (productoId !== undefined && productoId !== null) ? String(productoId).slice(0, 50) : null,
-      porciones: Math.max(1, Math.min(Number(porciones || 1), 9999)),
-      costoTotal: Math.max(0, Math.min(Number(costoTotal || 0), 999999999)),
-      instrucciones: (instrucciones !== undefined && instrucciones !== null) ? String(instrucciones).slice(0, 2000) : null
-    };
-
+    const sanitized = { nombre, productoId, porciones, costoTotal, instrucciones };
     const id = `rcp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     await pool.query(
@@ -42,22 +32,14 @@ router.post('/api/recipes', authMiddleware, requireRole('ADMIN'), async (req, re
       [id, sanitized.nombre, sanitized.productoId, sanitized.porciones, sanitized.costoTotal, sanitized.instrucciones]
     );
 
-    const ingredientesList = Array.isArray(ingredientes) ? ingredientes.slice(0, 100) : [];
     const savedIngredients = [];
-    for (const ing of ingredientesList) {
+    for (const ing of ingredientes) {
       const ingId = `rci_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const ingSanitized = {
-        itemId: (ing?.itemId !== undefined && ing?.itemId !== null) ? String(ing.itemId).slice(0, 50) : null,
-        nombre: (ing?.nombre !== undefined && ing?.nombre !== null) ? String(ing.nombre).slice(0, 100) : null,
-        cantidad: Math.max(0, Math.min(Number(ing?.cantidad || 0), 999999)),
-        unidad: (ing?.unidad !== undefined && ing?.unidad !== null) ? String(ing.unidad).slice(0, 20) : 'unidad',
-        costo: Math.max(0, Math.min(Number(ing?.costo || 0), 999999999))
-      };
       await pool.query(
         `INSERT INTO recipe_ingredients (id, "recipeId", "itemId", nombre, cantidad, unidad, costo) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [ingId, id, ingSanitized.itemId, ingSanitized.nombre, ingSanitized.cantidad, ingSanitized.unidad, ingSanitized.costo]
+        [ingId, id, ing.itemId, ing.nombre, ing.cantidad, ing.unidad, ing.costo]
       );
-      savedIngredients.push({ id: ingId, recipeId: id, ...ingSanitized });
+      savedIngredients.push({ id: ingId, recipeId: id, ...ing });
     }
 
     res.status(201).json({ id, ...sanitized, ingredientes: savedIngredients });
@@ -66,17 +48,17 @@ router.post('/api/recipes', authMiddleware, requireRole('ADMIN'), async (req, re
   }
 });
 
-router.put('/api/recipes/:id', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+router.put('/api/recipes/:id', authMiddleware, requireRole('ADMIN'), validate(updateRecipeSchema), async (req, res) => {
   try {
     const { nombre, productoId, porciones, costoTotal, instrucciones, ingredientes } = req.body;
 
     const updates = [];
     const params = [];
-    if (nombre !== undefined) { params.push(String(nombre).slice(0, 100)); updates.push(`nombre = $${params.length}`); }
-    if (productoId !== undefined) { params.push(productoId !== null ? String(productoId).slice(0, 50) : null); updates.push(`"productoId" = $${params.length}`); }
-    if (porciones !== undefined) { params.push(Math.max(1, Math.min(Number(porciones), 9999))); updates.push(`porciones = $${params.length}`); }
-    if (costoTotal !== undefined) { params.push(Math.max(0, Math.min(Number(costoTotal), 999999999))); updates.push(`"costoTotal" = $${params.length}`); }
-    if (instrucciones !== undefined) { params.push(instrucciones !== null ? String(instrucciones).slice(0, 2000) : null); updates.push(`instrucciones = $${params.length}`); }
+    if (nombre !== undefined) { params.push(nombre); updates.push(`nombre = $${params.length}`); }
+    if (productoId !== undefined) { params.push(productoId); updates.push(`"productoId" = $${params.length}`); }
+    if (porciones !== undefined) { params.push(porciones); updates.push(`porciones = $${params.length}`); }
+    if (costoTotal !== undefined) { params.push(costoTotal); updates.push(`"costoTotal" = $${params.length}`); }
+    if (instrucciones !== undefined) { params.push(instrucciones); updates.push(`instrucciones = $${params.length}`); }
 
     if (updates.length) {
       params.push(req.params.id);
@@ -93,20 +75,13 @@ router.put('/api/recipes/:id', authMiddleware, requireRole('ADMIN'), async (req,
     if (Array.isArray(ingredientes)) {
       await pool.query('DELETE FROM recipe_ingredients WHERE "recipeId" = $1', [req.params.id]);
       savedIngredients = [];
-      for (const ing of ingredientes.slice(0, 100)) {
+      for (const ing of ingredientes) {
         const ingId = `rci_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const ingSanitized = {
-          itemId: (ing?.itemId !== undefined && ing?.itemId !== null) ? String(ing.itemId).slice(0, 50) : null,
-          nombre: (ing?.nombre !== undefined && ing?.nombre !== null) ? String(ing.nombre).slice(0, 100) : null,
-          cantidad: Math.max(0, Math.min(Number(ing?.cantidad || 0), 999999)),
-          unidad: (ing?.unidad !== undefined && ing?.unidad !== null) ? String(ing.unidad).slice(0, 20) : 'unidad',
-          costo: Math.max(0, Math.min(Number(ing?.costo || 0), 999999999))
-        };
         await pool.query(
           `INSERT INTO recipe_ingredients (id, "recipeId", "itemId", nombre, cantidad, unidad, costo) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-          [ingId, req.params.id, ingSanitized.itemId, ingSanitized.nombre, ingSanitized.cantidad, ingSanitized.unidad, ingSanitized.costo]
+          [ingId, req.params.id, ing.itemId, ing.nombre, ing.cantidad, ing.unidad, ing.costo]
         );
-        savedIngredients.push({ id: ingId, recipeId: req.params.id, ...ingSanitized });
+        savedIngredients.push({ id: ingId, recipeId: req.params.id, ...ing });
       }
     } else {
       const existingIngredients = await pool.query('SELECT * FROM recipe_ingredients WHERE "recipeId" = $1', [req.params.id]);

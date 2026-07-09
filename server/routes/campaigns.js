@@ -1,6 +1,8 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
+import { validate } from '../middleware/validate.js';
+import { createCampaignSchema, updateCampaignSchema } from '../schemas/campaigns.js';
 
 const router = express.Router();
 
@@ -14,33 +16,33 @@ router.get('/api/campaigns', authMiddleware, requireRole('ADMIN', 'MARKETING'), 
   }
 });
 
-router.post('/api/campaigns', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+router.post('/api/campaigns', authMiddleware, requireRole('ADMIN', 'MARKETING'), validate(createCampaignSchema), async (req, res) => {
   try {
     const { name, type, discount, status, budget } = req.body;
     const id = `camp_${Date.now()}`;
 
     await pool.query(
       `INSERT INTO campaigns (id, name, type, discount, status, reach, conversions, budget) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [id, String(name).slice(0, 100), String(type).slice(0, 20), Math.max(0, Math.min(Number(discount || 0), 100)), String(status || 'draft').slice(0, 20), 0, 0, Math.max(0, Math.min(Number(budget || 0), 999999999))]
+      [id, name, type, discount, status, 0, 0, budget]
     );
 
-    res.status(201).json({ id, name, type, discount, status: status || 'draft', reach: 0, conversions: 0, budget });
+    res.status(201).json({ id, name, type, discount, status, reach: 0, conversions: 0, budget });
   } catch (e) {
     res.status(500).json({ error: 'Error creating campaign' });
   }
 });
 
-router.put('/api/campaigns/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+router.put('/api/campaigns/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), validate(updateCampaignSchema), async (req, res) => {
   try {
     const { name, type, discount, status, budget } = req.body;
 
     const updates = [];
     const params = [];
-    if (name !== undefined) { params.push(String(name).slice(0, 100)); updates.push(`name = $${params.length}`); }
-    if (type !== undefined) { params.push(String(type).slice(0, 20)); updates.push(`type = $${params.length}`); }
-    if (discount !== undefined) { params.push(Math.max(0, Math.min(Number(discount), 100))); updates.push(`discount = $${params.length}`); }
-    if (status !== undefined) { params.push(String(status).slice(0, 20)); updates.push(`status = $${params.length}`); }
-    if (budget !== undefined) { params.push(Math.max(0, Math.min(Number(budget), 999999999))); updates.push(`budget = $${params.length}`); }
+    if (name !== undefined) { params.push(name); updates.push(`name = $${params.length}`); }
+    if (type !== undefined) { params.push(type); updates.push(`type = $${params.length}`); }
+    if (discount !== undefined) { params.push(discount); updates.push(`discount = $${params.length}`); }
+    if (status !== undefined) { params.push(status); updates.push(`status = $${params.length}`); }
+    if (budget !== undefined) { params.push(budget); updates.push(`budget = $${params.length}`); }
 
     if (updates.length) {
       params.push(req.params.id);
