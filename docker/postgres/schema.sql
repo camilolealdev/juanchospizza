@@ -57,14 +57,22 @@ CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
   "orderNumber" TEXT,
   "customerName" TEXT,
+  "customerPhone" TEXT,
   address TEXT,
   items JSON,
   total INTEGER,
   status TEXT,
   "createdAt" TIMESTAMPTZ,
   "estimatedTime" INTEGER,
-  "paymentMethod" TEXT
+  "paymentMethod" TEXT,
+  "clientId" TEXT,
+  "paymentStatus" TEXT,
+  "paymentProviderRef" TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders("createdAt");
+CREATE INDEX IF NOT EXISTS idx_orders_clientId ON orders("clientId");
 
 CREATE TABLE IF NOT EXISTS campaigns (
   id TEXT PRIMARY KEY,

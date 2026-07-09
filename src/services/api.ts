@@ -523,6 +523,18 @@ export const api = {
     });
   },
 
+  async updateExpense(id: string, expense: ExpensePayload) {
+    return apiFetch(`/api/expenses/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(expense)
+    });
+  },
+
+  async deleteExpense(id: string) {
+    return apiFetch(`/api/expenses/${id}`, { method: 'DELETE' });
+  },
+
   async getFinanceSummary(): Promise<FinanceSummary> {
     return apiFetch('/api/finance/summary');
   },
@@ -570,6 +582,14 @@ export const api = {
   async createInventoryItem(item: InventoryItemPayload) {
     return apiFetch('/api/inventory', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    });
+  },
+
+  async updateInventoryItem(id: string, item: InventoryItemPayload) {
+    return apiFetch(`/api/inventory/${id}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item)
     });

@@ -1,14 +1,20 @@
 import crypto from 'crypto';
 
-// Generar secrets seguros si no existen
+// Generar secrets seguros si no existen. El fallback de dev se memoiza --
+// antes generaba un secret random en CADA llamada, así que un token firmado
+// en el login se verificaba contra un secret distinto en el siguiente
+// request y siempre daba "token inválido" cuando no había .env completo.
+const devSecretCache = {};
 function getSecret(name, length = 32) {
   const exist = process.env[name];
   if (exist && exist.length >= length) {
     return exist;
   }
-  // Warning en desarrollo
   if (process.env.NODE_ENV === 'development') {
-    return crypto.randomBytes(length).toString('hex');
+    if (!devSecretCache[name]) {
+      devSecretCache[name] = crypto.randomBytes(length).toString('hex');
+    }
+    return devSecretCache[name];
   }
   throw new Error(`Falta ${name} en producción`);
 }
@@ -57,8 +63,10 @@ function verifyToken(token) {
       .createHmac('sha256', secret)
       .update(`${header}.${payload}`)
       .digest('base64url');
-    
-    if (signature !== expectedSignature) {
+
+    const sigBuf = Buffer.from(signature || '', 'base64url');
+    const expectedBuf = Buffer.from(expectedSignature, 'base64url');
+    if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
       return null;
     }
     
@@ -108,22 +116,34 @@ export function authenticate(username, pin) {
     return null;
   }
   
+  const now = Math.floor(Date.now() / 1000);
   return generateToken({
     sub: username,
     role: user.role,
-    type: 'access'
+    type: 'access',
+    origIat: now // marca el inicio de la sesión -- ver refreshToken()
   }, '15m');
 }
 
-// Refresh token
+// Un token robado podía refrescarse indefinidamente (cada refresh emitía
+// un token de 7 días nuevo, sin límite de veces). MAX_SESSION_SECONDS
+// limita el total desde el login original, sin importar cuántas veces se
+// refresque -- fuerza un re-login real más allá de esa ventana.
+const MAX_SESSION_SECONDS = 30 * 24 * 60 * 60; // 30 días
+
 export function refreshToken(oldToken) {
   const payload = verifyToken(oldToken);
   if (!payload) return null;
-  
+
+  const origIat = payload.origIat || payload.iat;
+  const now = Math.floor(Date.now() / 1000);
+  if (now - origIat > MAX_SESSION_SECONDS) return null;
+
   return generateToken({
     sub: payload.sub,
     role: payload.role,
-    type: 'access'
+    type: 'access',
+    origIat
   }, '7d');
 }
 
@@ -148,8 +168,10 @@ export function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // En desarrollo, permitir sin token (pero luego remover esto)
-    if (process.env.NODE_ENV === 'development') {
+    // Bypass de dev: requiere las DOS variables a propósito, no solo
+    // NODE_ENV=development -- un deploy que por error deje NODE_ENV sin
+    // setear a 'production' no debe abrir esto solo.
+    if (process.env.NODE_ENV === 'development' && process.env.ALLOW_DEV_AUTH_BYPASS === 'true') {
       req.auth = { role: 'DEVELOPMENT' };
       return next();
     }

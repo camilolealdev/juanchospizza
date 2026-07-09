@@ -19,6 +19,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
+// Detrás de un proxy (nginx/docker-compose en el deploy documentado), sin
+// esto req.ip colapsa a la IP del proxy para todo el tráfico y el rate
+// limiter se vuelve un solo balde compartido entre todos los visitantes.
+// '1' = confiar el primer hop (el proxy inmediato), no toda la cadena.
+app.set('trust proxy', 1);
+
 // Config de seguridad: nunca loggear credenciales
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || ''
@@ -364,8 +370,31 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Rate limit propio para login -- el genérico (100 req/min) deja un PIN de
+// 4 dígitos (10,000 combinaciones) agotable en ~100 minutos por fuerza
+// bruta. 10 intentos / 15 min por IP es suficiente para un usuario real que
+// se equivoca de PIN, no para probarlos todos.
+const loginAttempts = new Map();
+function loginRateLimit(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000;
+  const maxAttempts = 10;
+
+  const record = loginAttempts.get(ip);
+  if (!record || now > record.reset) {
+    loginAttempts.set(ip, { count: 1, reset: now + windowMs });
+    return next();
+  }
+  if (record.count >= maxAttempts) {
+    return res.status(429).json({ error: 'Demasiados intentos de login, esperá unos minutos' });
+  }
+  record.count++;
+  next();
+}
+
 // AUTH — rutas públicas, sin authMiddleware
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginRateLimit, async (req, res) => {
   try {
     const { username, pin } = req.body;
 
@@ -1313,8 +1342,11 @@ app.post('/api/payments/bold/webhook', async (req, res) => {
       console.error('Bold webhook: BOLD_WEBHOOK_SECRET no configurado -- rechazado (fail-closed)');
       return res.sendStatus(503);
     }
-    const providedSecret = req.headers['x-bold-signature'] || req.headers['x-webhook-secret'];
-    if (providedSecret !== process.env.BOLD_WEBHOOK_SECRET) {
+    const providedSecret = String(req.headers['x-bold-signature'] || req.headers['x-webhook-secret'] || '');
+    const expectedSecret = process.env.BOLD_WEBHOOK_SECRET;
+    const providedBuf = Buffer.from(providedSecret);
+    const expectedBuf = Buffer.from(expectedSecret);
+    if (providedBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(providedBuf, expectedBuf)) {
       console.error('Bold webhook: secreto inválido, ignorado');
       return res.sendStatus(200);
     }
@@ -1537,6 +1569,20 @@ app.post('/api/inventory', authMiddleware, requireRole('ADMIN', 'OPERATOR'), asy
   } catch (e) { res.status(500).json({ error: 'Error creating inventory item' }); }
 });
 
+app.put('/api/inventory/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
+  try {
+    const { nombre, categoria, stockMinimo, stockMaximo, unidad, costoUnitario, proveedor, lote, fechaVencimiento, ubicacion, activo } = req.body;
+    // Stock actual NO se toca acá a propósito -- eso solo cambia vía
+    // /api/inventory/movement, que deja rastro en inventory_movements.
+    const result = await pool.query(
+      `UPDATE inventory_items SET nombre=$1, categoria=$2, "stockMinimo"=$3, "stockMaximo"=$4, unidad=$5, "costoUnitario"=$6, proveedor=$7, lote=$8, "fechaVencimiento"=$9, ubicacion=$10, activo=$11 WHERE id=$12`,
+      [nombre, categoria, stockMinimo, stockMaximo, unidad, costoUnitario, proveedor, lote, fechaVencimiento, ubicacion, activo !== undefined ? !!activo : true, req.params.id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Ítem no encontrado' });
+    res.json({ id: req.params.id });
+  } catch (e) { res.status(500).json({ error: 'Error updating inventory item' }); }
+});
+
 app.post('/api/inventory/movement', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const { itemId, tipo, cantidad, motivo, referencia, usuario } = req.body;
@@ -1717,6 +1763,26 @@ app.post('/api/expenses', authMiddleware, requireRole('ADMIN'), async (req, res)
     );
     res.status(201).json({ id });
   } catch (e) { res.status(500).json({ error: 'Error creating expense' }); }
+});
+
+app.put('/api/expenses/:id', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+  try {
+    const { categoria, descripcion, monto, fecha, metodo, proveedor, factura, notas, recurrente } = req.body;
+    const result = await pool.query(
+      `UPDATE expenses SET categoria=$1, descripcion=$2, monto=$3, fecha=$4, metodo=$5, proveedor=$6, factura=$7, notas=$8, recurrente=$9 WHERE id=$10`,
+      [categoria, descripcion?.slice(0, 200), monto, fecha, metodo, proveedor, factura, notas, !!recurrente, req.params.id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Gasto no encontrado' });
+    res.json({ id: req.params.id });
+  } catch (e) { res.status(500).json({ error: 'Error updating expense' }); }
+});
+
+app.delete('/api/expenses/:id', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+  try {
+    const result = await pool.query('DELETE FROM expenses WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Gasto no encontrado' });
+    res.status(204).send();
+  } catch (e) { res.status(500).json({ error: 'Error deleting expense' }); }
 });
 
 // --- LOYALTY ---
