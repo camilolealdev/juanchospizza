@@ -8,7 +8,9 @@ El proyecto utiliza una arquitectura híbrida única:
 
 1.  **Frontend Cliente (Landing Page):** Una interfaz estática de carga ultra-rápida integrada directamente en `index.html`.
 2.  **GastroPro CRM (Overlay React):** Una aplicación React 18 que se monta como una capa administrativa (Overlay) y portaliza componentes dinámicos (Menú Digital, Carrito) en la Landing Page.
-3.  **Backend API:** Servidor Express.js que gestiona la persistencia con PostgreSQL.
+3.  **Backend API:** Servidor Express.js que gestiona la persistencia con PostgreSQL. Corre aparte, no en Vercel -- ver `ARCHITECTURE.md`.
+
+> Para el *por qué* detrás de estas decisiones (patrón de portales, por qué no hay router, cómo está organizado el backend, deuda conocida) ver **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
 
 ## 🚀 Módulos de GastroPro CRM
 
