@@ -1,3 +1,9 @@
+> **Snapshot histórico (junio 2026), no documentación vigente.** Movido acá el
+> 2026-07-09. Las mejoras que describe (touch targets 48px, `clamp()`,
+> container máximo ultra-wide) se re-verificaron contra el código actual en
+> una auditoría posterior y siguen presentes, pero tratar el resto como
+> punto de partida a confirmar, no como estado garantizado.
+
 # Informe de Auditoría de Responsividad — Juancho's Pizza
 
 Este informe detalla los hallazgos de la auditoría de responsividad basada en los criterios solicitados.

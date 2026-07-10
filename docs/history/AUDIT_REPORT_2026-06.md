@@ -1,3 +1,11 @@
+> **Snapshot histórico (junio 2026), no documentación vigente.** Movido acá el
+> 2026-07-09 para que no se confunda con el estado actual del proyecto. Al
+> menos un claim de este informe (FEAT-001, "AI Concierge integrado al 100%")
+> ya se confirmó falso en una auditoría posterior — no hay ningún widget de
+> chat con IA en el código, solo un link de WhatsApp. Tratar todo lo demás acá
+> con el mismo escepticismo: verificar contra el código actual antes de asumir
+> que sigue siendo cierto.
+
 # 🔍 INFORME DE AUDITORÍA — Juancho's Pizza v10.0
 
 **Fecha:** 2026-06-09  
