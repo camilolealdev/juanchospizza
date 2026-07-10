@@ -157,7 +157,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
     return items;
   }, [activeCategory, searchQuery, activeFilter]);
 
-  const addToCart = useCallback((product: MenuProduct, size?: string, sabores?: string[], details?: string) => {
+  const addToCart = useCallback((product: MenuProduct, size?: string, details?: string) => {
     let price = product.price;
     if (size && product.sizes) {
       const sz = product.sizes.find(s => s.label === size);
@@ -181,7 +181,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
     const product = PRODUCTS.find(p => p.id === showPizzaBuilder);
     if (!product || selectedSabores.length === 0) return;
     const details = `${selectedSize.label} · ${selectedSabores.join(', ')}`;
-    addToCart(product, selectedSize.label, selectedSabores, details);
+    addToCart(product, selectedSize.label, details);
     setShowPizzaBuilder(null);
   }, [showPizzaBuilder, selectedSize, selectedSabores, addToCart]);
 

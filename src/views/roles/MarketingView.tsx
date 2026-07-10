@@ -82,7 +82,7 @@ const MarketingView: React.FC = () => {
                  <YAxis stroke="#444" fontSize={9} axisLine={false} tickLine={false} />
                  <Tooltip cursor={{fill: '#ffffff05'}} contentStyle={{backgroundColor: '#1c1917', border: '1px solid #333', borderRadius: '16px'}} />
                  <Bar dataKey="conv" radius={[10,10,0,0]} barSize={50}>
-                    {campaignStats.map((entry, index) => (
+                    {campaignStats.map((_entry, index) => (
                       <Cell key={`cell-${index}`} fill={index === 1 ? '#ea580c' : '#444'} />
                     ))}
                  </Bar>
