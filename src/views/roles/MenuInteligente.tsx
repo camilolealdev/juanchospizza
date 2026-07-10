@@ -164,6 +164,9 @@ const MenuInteligente: React.FC = () => {
     }
   };
 
+  // loadAll is redefined every render (not memoized) -- including it would
+  // refire this on every render instead of once on mount.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadAll(); }, []);
 
   const reloadProductos = () => api.getProducts().then(setProductos).catch(e => showError('Error recargando productos', e));

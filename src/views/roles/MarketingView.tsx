@@ -24,6 +24,9 @@ const MarketingView: React.FC = () => {
       .finally(() => setLoading(false));
   };
 
+  // loadCampaigns is redefined every render (not memoized) -- including it
+  // would refire this on every render instead of once on mount.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadCampaigns(); }, []);
 
   const campaignStats = campaigns.map(c => ({ name: c.name.substring(0, 15), conv: c.conversions }));

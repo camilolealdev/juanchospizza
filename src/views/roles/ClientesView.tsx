@@ -134,6 +134,10 @@ const ClientesView: React.FC = () => {
       .catch(() => { if (!cancelled) setClientOrdersError('No se pudo cargar el historial de compras.'); })
       .finally(() => { if (!cancelled) setClientOrdersLoading(false); });
     return () => { cancelled = true; };
+    // Depends on the id specifically, not the whole selectedClient object --
+    // refetching on every reference change (not just an actual selection
+    // change) would refire this on unrelated re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClient?.id]);
 
   const kpis = useMemo(() => [

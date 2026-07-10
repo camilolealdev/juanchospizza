@@ -30,6 +30,10 @@ const RepartidorView: React.FC = () => {
     loadOrders();
     const interval = setInterval(loadOrders, 10000);
     return () => clearInterval(interval);
+    // loadOrders is redefined every render (not memoized) -- including it
+    // would tear down and recreate the polling interval on every render
+    // instead of once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const assigned = orders.filter(o => o.status === OrderStatus.ASSIGNED || o.status === OrderStatus.DELIVERING);
