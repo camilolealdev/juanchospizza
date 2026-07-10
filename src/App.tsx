@@ -102,18 +102,17 @@ const App: React.FC = () => {
   const login = async (selectedRole: UserRole, pin?: string): Promise<boolean> => {
     const username = ROLE_TO_USERNAME[selectedRole];
     if (!username || !pin) return false;
-    try {
-      const result = await api.login(username, pin);
-      if (!result?.token) return false;
-      setAuthSession({ token: result.token, role: result.role, username: result.username });
-      const resolvedRole = isKnownRole(result.role) ? result.role : selectedRole;
-      setRole(resolvedRole);
-      setIsAuthenticated(true);
-      setShowLogin(false);
-      return true;
-    } catch {
-      return false;
-    }
+    // No try/catch swallowing here on purpose -- a network failure (backend
+    // unreachable) needs to reach LoginModal's own catch with its real
+    // message, not collapse into the same "PIN incorrecto" a wrong PIN gets.
+    const result = await api.login(username, pin);
+    if (!result?.token) return false;
+    setAuthSession({ token: result.token, role: result.role, username: result.username });
+    const resolvedRole = isKnownRole(result.role) ? result.role : selectedRole;
+    setRole(resolvedRole);
+    setIsAuthenticated(true);
+    setShowLogin(false);
+    return true;
   };
 
   const renderGastroModule = () => {
@@ -195,8 +194,8 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => Promise<b
     try {
       const success = await onLogin(selectedRole as UserRole, pin);
       if (!success) setError('PIN incorrecto');
-    } catch {
-      setError('No se pudo conectar con el servidor');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo conectar con el servidor');
     } finally {
       setIsSubmitting(false);
     }

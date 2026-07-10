@@ -211,7 +211,14 @@ const apiFetch = (path: string, options: RequestInit = {}) => {
     ...authHeaders(),
     ...(options.headers as Record<string, string> | undefined)
   };
-  return fetch(`${API_BASE}${path}`, { ...options, headers }).then(handleResponse);
+  return fetch(`${API_BASE}${path}`, { ...options, headers })
+    // fetch() itself rejects (not a non-ok response, an actual network/DNS/CORS
+    // failure) with a raw browser error like "Failed to fetch" -- surfaced as-is
+    // it read as a broken app rather than "backend not deployed yet".
+    .catch(() => {
+      throw new Error('No pudimos conectar con el servidor. Probá de nuevo en un momento o pedí por WhatsApp mientras tanto.');
+    })
+    .then(handleResponse);
 };
 
 export const api = {
