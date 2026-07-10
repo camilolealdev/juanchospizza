@@ -1,0 +1,14 @@
+# Normaliza line endings a LF en el repo, sin importar el core.autocrlf
+# local de cada máquina/CI -- fix a nivel raíz del ruido de ~170 archivos
+# marcados como modificados solo por CRLF vs LF (ver memoria del proyecto).
+* text=auto eol=lf
+
+# Binarios: nunca tocar line endings.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
