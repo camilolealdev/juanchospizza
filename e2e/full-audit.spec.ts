@@ -94,6 +94,7 @@ function step(name: string) {
 
 // ─── PUBLIC WEBSITE TESTS ──────────────────────────────────────────────────
 
+test.describe.configure({ mode: 'serial' });
 test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -274,6 +275,7 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
 
 // ─── ADMIN CRM TESTS ───────────────────────────────────────────────────────
 
+test.describe.configure({ mode: 'serial' });
 test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => {
   test('19 - Login modal elements', async ({ page }) => {
     await page.locator('button[title*="Panel Administrativo"]').click();
@@ -411,6 +413,7 @@ test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => 
 
 // ─── CONSOLE AUDIT SUMMARY ─────────────────────────────────────────────────
 
+test.describe.configure({ mode: 'serial' });
 test.describe('CONSOLE AUDIT', () => {
   test('Summary - Aggregate console errors across all pages', async ({ page }) => {
     for (const url of ['/', '/menu', '/crea-tu-pizza', '/domicilios', '/carrito']) {
