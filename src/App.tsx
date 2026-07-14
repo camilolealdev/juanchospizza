@@ -32,6 +32,9 @@ const EmpleadosView = lazy(() => import('./views/roles/EmpleadosView'));
 const TurnosView = lazy(() => import('./views/roles/TurnosView'));
 const MesasView = lazy(() => import('./views/roles/MesasView'));
 const CajaView = lazy(() => import('./views/roles/CajaView'));
+const ComandasView = lazy(() => import('./views/roles/ComandasView'));
+const ComprasView = lazy(() => import('./views/roles/ComprasView'));
+const InvoicesView = lazy(() => import('./views/roles/InvoicesView'));
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -85,6 +88,9 @@ const GASTRO_MODULES: GastroModule[] = [
   'turnos',
   'mesas',
   'caja',
+  'comandas',
+  'compras',
+  'facturacion',
 ];
 const isGastroModule = (value: string): value is GastroModule => (GASTRO_MODULES as string[]).includes(value);
 
@@ -225,6 +231,12 @@ const App: React.FC = () => {
         return <MesasView locationId={selectedLocation} />;
       case 'caja':
         return <CajaView locationId={selectedLocation} />;
+      case 'comandas':
+        return <ComandasView locationId={selectedLocation} />;
+      case 'compras':
+        return <ComprasView locationId={selectedLocation} />;
+      case 'facturacion':
+        return <InvoicesView locationId={selectedLocation} />;
       default:
         return <GastroProDashboard locationId={selectedLocation} />;
     }

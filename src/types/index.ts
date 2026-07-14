@@ -135,7 +135,10 @@ export type GastroModule =
   | 'empleados'
   | 'turnos'
   | 'mesas'
-  | 'caja';
+  | 'caja'
+  | 'comandas'
+  | 'compras'
+  | 'facturacion';
 
 export interface Client {
   id: string;
@@ -226,6 +229,96 @@ export interface Tip {
   waiterName: string | null;
   locationId: LocationId;
   createdAt: string;
+}
+
+export interface Comanda {
+  id: string;
+  tableId: string;
+  waiterName: string | null;
+  guestCount: number;
+  notes: string | null;
+  total: number;
+  status: 'open' | 'closed' | 'cancelled';
+  openedAt: string;
+  closedAt: string | null;
+  locationId: LocationId;
+  items?: ComandaItem[];
+}
+
+export interface ComandaItem {
+  id: string;
+  comandaId: string;
+  productId: string | null;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  notes: string | null;
+  status: 'pending' | 'preparing' | 'ready' | 'served' | 'cancelled';
+  createdAt: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  orderNumber: string;
+  proveedor: string;
+  fechaSolicitud: string;
+  fechaEntrega: string | null;
+  items: PurchaseOrderItem[];
+  total: number;
+  status: 'pendiente' | 'aprobada' | 'enviada' | 'recibida' | 'cancelada';
+  notas: string | null;
+  createdBy: string | null;
+  locationId: LocationId;
+}
+
+export interface PurchaseOrderItem {
+  itemId?: string;
+  nombre: string;
+  cantidad: number;
+  unidad: string;
+  precioUnitario: number;
+}
+
+export interface Invoice {
+  id: string;
+  orderId: string | null;
+  invoiceNumber: string | null;
+  tipoDocumento: 'factura' | 'pos' | 'pos_electronica' | 'documento_soporte';
+  cufe: string | null;
+  xml: string | null;
+  pdf_url: string | null;
+  status: 'pending' | 'sent' | 'accepted' | 'rejected';
+  dianResponse: Record<string, unknown> | null;
+  createdAt: string;
+  locationId: LocationId;
+}
+
+export interface CreditNote {
+  id: string;
+  invoiceId: string;
+  tipoNota: 'credito' | 'debito';
+  motivo: string;
+  monto: number;
+  items: unknown[];
+  status: string;
+  xml: string | null;
+  cude: string | null;
+  createdAt: string;
+  createdBy: string | null;
+}
+
+export interface QrMenuConfig {
+  id: string;
+  locationId: LocationId;
+  title: string;
+  showPrices: boolean;
+  showImages: boolean;
+  showCombos: boolean;
+  showPromotions: boolean;
+  categories: string[];
+  active: boolean;
+  updatedAt: string;
 }
 
 export interface Shift {

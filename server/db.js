@@ -311,6 +311,113 @@ export async function initDB() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_locationId ON orders("locationId")');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_shifts_locationId_status ON shifts("locationId", status)');
 
+    // === COMANDAS (mesa-based orders for dine-in) ===
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS comandas (
+        id TEXT PRIMARY KEY,
+        "tableId" TEXT REFERENCES dining_tables(id),
+        "waiterName" TEXT,
+        status TEXT DEFAULT 'open',
+        "guestCount" INTEGER DEFAULT 1,
+        notes TEXT,
+        total INTEGER DEFAULT 0,
+        "openedAt" TIMESTAMPTZ DEFAULT NOW(),
+        "closedAt" TIMESTAMPTZ,
+        "locationId" TEXT DEFAULT 'nemocon'
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS comanda_items (
+        id TEXT PRIMARY KEY,
+        "comandaId" TEXT REFERENCES comandas(id),
+        "productId" TEXT,
+        "productName" TEXT NOT NULL,
+        quantity INTEGER DEFAULT 1,
+        "unitPrice" INTEGER DEFAULT 0,
+        subtotal INTEGER DEFAULT 0,
+        notes TEXT,
+        status TEXT DEFAULT 'pending',
+        "createdAt" TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_comandas_tableId ON comandas("tableId")');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_comandas_status ON comandas(status)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_comanda_items_comandaId ON comanda_items("comandaId")');
+
+    // === PROCUREMENT / PURCHASE ORDERS ===
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS purchase_orders (
+        id TEXT PRIMARY KEY,
+        "orderNumber" TEXT,
+        proveedor TEXT,
+        "fechaSolicitud" TIMESTAMPTZ DEFAULT NOW(),
+        "fechaEntrega" TIMESTAMPTZ,
+        items JSON DEFAULT '[]'::json,
+        total INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'pendiente',
+        notas TEXT,
+        "createdBy" TEXT,
+        "locationId" TEXT DEFAULT 'nemocon'
+      )
+    `);
+
+    // === INVOICES (DIAN base structure) ===
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS invoices (
+        id TEXT PRIMARY KEY,
+        "orderId" TEXT REFERENCES orders(id),
+        "invoiceNumber" TEXT,
+        "tipoDocumento" TEXT DEFAULT 'factura',
+        cufe TEXT,
+        xml TEXT,
+        pdf_url TEXT,
+        status TEXT DEFAULT 'pending',
+        "dianResponse" JSON,
+        "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+        "locationId" TEXT DEFAULT 'nemocon'
+      )
+    `);
+
+    // === CREDIT / DEBIT NOTES ===
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS credit_notes (
+        id TEXT PRIMARY KEY,
+        "invoiceId" TEXT REFERENCES invoices(id),
+        "tipoNota" TEXT DEFAULT 'credito',
+        motivo TEXT,
+        monto INTEGER DEFAULT 0,
+        items JSON DEFAULT '[]'::json,
+        status TEXT DEFAULT 'pending',
+        xml TEXT,
+        cude TEXT,
+        "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+        "createdBy" TEXT
+      )
+    `);
+
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_invoices_orderId ON invoices("orderId")');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_credit_notes_invoiceId ON credit_notes("invoiceId")');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_purchase_orders_status ON purchase_orders(status)');
+
+    // === QR MENU config ===
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS qr_menu_config (
+        id TEXT PRIMARY KEY,
+        "locationId" TEXT DEFAULT 'nemocon',
+        title TEXT DEFAULT 'Menú',
+        "showPrices" BOOLEAN DEFAULT TRUE,
+        "showImages" BOOLEAN DEFAULT TRUE,
+        "showCombos" BOOLEAN DEFAULT TRUE,
+        "showPromotions" BOOLEAN DEFAULT TRUE,
+        categories JSON DEFAULT '[]'::json,
+        active BOOLEAN DEFAULT TRUE,
+        "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
     // === DINING TABLES ===
     await pool.query(`
       CREATE TABLE IF NOT EXISTS dining_tables (

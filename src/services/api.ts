@@ -853,6 +853,226 @@ export const api = {
     const qs = query.toString();
     return apiFetch(`/api/tips/summary${qs ? `?${qs}` : ''}`);
   },
+
+  // ---- COMANDAS ----
+  async getComandas(params?: { status?: string; locationId?: string; tableId?: string }) {
+    const query = new URLSearchParams();
+    if (params?.status) query.set('status', params.status);
+    if (params?.locationId) query.set('locationId', params.locationId);
+    if (params?.tableId) query.set('tableId', params.tableId);
+    const qs = query.toString();
+    return apiFetch(`/api/comandas${qs ? `?${qs}` : ''}`);
+  },
+
+  async getComanda(id: string) {
+    return apiFetch(`/api/comandas/${id}`);
+  },
+
+  async createComanda(data: {
+    tableId: string;
+    waiterName?: string;
+    guestCount?: number;
+    notes?: string;
+    locationId?: string;
+  }) {
+    return apiFetch('/api/comandas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async closeComanda(id: string, data: { total: number; notes?: string; paymentMethod?: string }) {
+    return apiFetch(`/api/comandas/${id}/close`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async addComandaItem(data: {
+    comandaId: string;
+    productId?: string;
+    productName: string;
+    quantity?: number;
+    unitPrice?: number;
+    notes?: string;
+  }) {
+    return apiFetch('/api/comandas/items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async bulkAddComandaItems(
+    comandaId: string,
+    items: { productId?: string; productName: string; quantity?: number; unitPrice?: number; notes?: string }[]
+  ) {
+    return apiFetch('/api/comandas/items/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comandaId, items }),
+    });
+  },
+
+  async updateComandaItem(id: string, data: { quantity?: number; status?: string; notes?: string }) {
+    return apiFetch(`/api/comandas/items/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteComandaItem(id: string) {
+    return apiFetch(`/api/comandas/items/${id}`, { method: 'DELETE' });
+  },
+
+  async splitComanda(id: string, splits: { productIds: string[]; guestName?: string }[], guestCount?: number) {
+    return apiFetch(`/api/comandas/${id}/split`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: splits, guestCount }),
+    });
+  },
+
+  async getKitchenTicket(comandaId: string) {
+    return apiFetch(`/api/comandas/${comandaId}/kitchen-ticket`);
+  },
+
+  // ---- PRINT ----
+  getPrintReceiptUrl(orderId: string) {
+    const token = getAuthToken();
+    const params = token ? `?token=${token}` : '';
+    return `${API_BASE}/api/print/receipt/${orderId}${params}`;
+  },
+
+  getPrintKitchenTicketUrl(comandaId: string) {
+    const token = getAuthToken();
+    const params = token ? `?token=${token}` : '';
+    return `${API_BASE}/api/print/kitchen-ticket/${comandaId}${params}`;
+  },
+
+  getPrintComandaReceiptUrl(comandaId: string) {
+    const token = getAuthToken();
+    const params = token ? `?token=${token}` : '';
+    return `${API_BASE}/api/print/comanda-receipt/${comandaId}${params}`;
+  },
+
+  // ---- PROCUREMENT / PURCHASE ORDERS ----
+  async getPurchaseOrders(params?: { status?: string; locationId?: string }) {
+    const query = new URLSearchParams();
+    if (params?.status) query.set('status', params.status);
+    if (params?.locationId) query.set('locationId', params.locationId);
+    const qs = query.toString();
+    return apiFetch(`/api/procurement${qs ? `?${qs}` : ''}`);
+  },
+
+  async getPurchaseOrder(id: string) {
+    return apiFetch(`/api/procurement/${id}`);
+  },
+
+  async createPurchaseOrder(data: {
+    proveedor: string;
+    items: { itemId?: string; nombre: string; cantidad: number; unidad?: string; precioUnitario: number }[];
+    fechaEntrega?: string;
+    notas?: string;
+    locationId?: string;
+    createdBy?: string;
+  }) {
+    return apiFetch('/api/procurement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async receivePurchaseOrder(id: string) {
+    return apiFetch(`/api/procurement/${id}/receive`, { method: 'PATCH' });
+  },
+
+  async deletePurchaseOrder(id: string) {
+    return apiFetch(`/api/procurement/${id}`, { method: 'DELETE' });
+  },
+
+  // ---- INVOICES & CREDIT NOTES ----
+  async getInvoices(params?: { status?: string; locationId?: string }) {
+    const query = new URLSearchParams();
+    if (params?.status) query.set('status', params.status);
+    if (params?.locationId) query.set('locationId', params.locationId);
+    const qs = query.toString();
+    return apiFetch(`/api/invoices${qs ? `?${qs}` : ''}`);
+  },
+
+  async createInvoice(data: { orderId: string; tipoDocumento?: string; locationId?: string }) {
+    return apiFetch('/api/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getCreditNotes(invoiceId?: string) {
+    const qs = invoiceId ? `?invoiceId=${invoiceId}` : '';
+    return apiFetch(`/api/credit-notes${qs}`);
+  },
+
+  async createCreditNote(data: {
+    invoiceId: string;
+    tipoNota?: string;
+    motivo: string;
+    monto: number;
+    items?: unknown[];
+    createdBy?: string;
+  }) {
+    return apiFetch('/api/credit-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  // ---- QR MENU ----
+  async getQrMenuConfig(locationId?: string) {
+    const qs = locationId ? `?locationId=${locationId}` : '';
+    return apiFetch(`/api/qr-menu/config${qs}`);
+  },
+
+  async saveQrMenuConfig(data: {
+    locationId: string;
+    title?: string;
+    showPrices?: boolean;
+    showImages?: boolean;
+    showCombos?: boolean;
+    showPromotions?: boolean;
+    categories?: string[];
+  }) {
+    return apiFetch('/api/qr-menu/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getQrCodes(locationId?: string) {
+    const qs = locationId ? `?locationId=${locationId}` : '';
+    return apiFetch(`/api/qr-menu/qr-codes${qs}`);
+  },
+
+  async regenerateQrCodes(locationId?: string) {
+    return apiFetch('/api/qr-menu/regenerate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locationId }),
+    });
+  },
+
+  // ---- PRINT URL HELPERS (for window.open) ----
+  getPrintInvoiceUrl(invoiceId: string) {
+    const token = getAuthToken();
+    const params = token ? `?token=${token}` : '';
+    return `${API_BASE}/api/print/invoice/${invoiceId}${params}`;
+  },
 };
 
 export default api;

@@ -7,6 +7,7 @@ import { initDB } from './db.js';
 import { initPush } from './push.js';
 import { generalRateLimit } from './middleware/rateLimit.js';
 import { initServiceKeys, serviceKeyMiddleware } from './middleware/serviceKey.js';
+import { initWebSocket } from './websocket.js';
 
 import miscRoutes from './routes/misc.js';
 import authRoutes from './routes/auth.js';
@@ -31,10 +32,14 @@ import cashRegisterRoutes from './routes/cashRegister.js';
 
 import employeesRoutes from './routes/employees.js';
 import shiftsRoutes from './routes/shifts.js';
+import comandasRoutes from './routes/comandas.js';
+import printRoutes from './routes/print.js';
+import procurementRoutes from './routes/procurement.js';
+import invoicesRoutes from './routes/invoices.js';
+import qrMenuRoutes from './routes/qrMenu.js';
 
 dotenv.config();
 initPush();
-initServiceKeys();
 initServiceKeys();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -85,6 +90,11 @@ app.use('/', cashRegisterRoutes);
 
 app.use('/', employeesRoutes);
 app.use('/', shiftsRoutes);
+app.use('/', comandasRoutes);
+app.use('/', printRoutes);
+app.use('/', procurementRoutes);
+app.use('/', invoicesRoutes);
+app.use('/', qrMenuRoutes);
 
 // Serve static files from dist in production
 app.use(
@@ -115,8 +125,9 @@ if (!process.env.DATABASE_URL) {
 }
 
 initDB().then(() => {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`🍕 Guido Pizza API Server running on port ${PORT}`);
     console.log(`📊 Health: http://localhost:${PORT}/api/health`);
   });
+  initWebSocket(server);
 });
