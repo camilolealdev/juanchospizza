@@ -1554,7 +1554,20 @@ document.getElementById('confirmBtn').addEventListener('click', function() {
 });
 
 // Page navigation
-function showPage(pageId) {
+// pageId -> URL path (deep-linkable: /menu, /crea-tu-pizza, /domicilios,
+// /carrito; 'inicio' is the root). Kept separate from the /admin/* and
+// /confirmacion paths that App.tsx owns -- this only ever touches paths
+// outside those two, see the guard in the popstate/init handler below.
+var PAGE_PATHS = {
+    'inicio': '/',
+    'crea-tu-pizza': '/crea-tu-pizza',
+    'menu': '/menu',
+    'domicilios': '/domicilios',
+    'carrito': '/carrito',
+};
+var PATH_TO_PAGE = { '/': 'inicio', '/crea-tu-pizza': 'crea-tu-pizza', '/menu': 'menu', '/domicilios': 'domicilios', '/carrito': 'carrito' };
+
+function showPage(pageId, skipPushState) {
     document.querySelectorAll('.page-container').forEach(function(el) {
         el.classList.remove('active');
     });
@@ -1570,7 +1583,15 @@ function showPage(pageId) {
         activeLink.style.color = 'var(--amarillo-calido)';
         activeLink.style.fontWeight = '700';
     }
+    if (!skipPushState && PAGE_PATHS[pageId] && window.location.pathname !== PAGE_PATHS[pageId]) {
+        history.pushState({ page: pageId }, '', PAGE_PATHS[pageId]);
+    }
 }
+
+window.addEventListener('popstate', function() {
+    var target = PATH_TO_PAGE[window.location.pathname];
+    if (target) showPage(target, true);
+});
 
 // Cart nav
 document.getElementById('navCartBtn').addEventListener('click', function(e) {
@@ -1602,8 +1623,13 @@ window.addEventListener('cart-updated', function(e) {
     cartCounter.textContent = e.detail.toString();
 });
 
-// Init
-showPage('inicio');
+// Init -- respeta la ruta actual (recarga en /menu, /carrito, etc. cae en
+// la misma sección) en vez de forzar siempre 'inicio'. /admin/* y
+// /confirmacion son rutas de React (ver App.tsx), no tocarlas acá.
+(function initialPage() {
+    var initial = PATH_TO_PAGE[window.location.pathname];
+    showPage(initial || 'inicio', true);
+})();
 cartCounter.textContent = itemsInCart;
 render();
 </script>

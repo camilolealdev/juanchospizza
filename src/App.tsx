@@ -7,7 +7,13 @@ import CartSection from './components/CartSection';
 import { CartProvider } from './context/CartContext';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import ApprovedReviews from './components/ApprovedReviews';
-import api, { AUTH_UNAUTHORIZED_EVENT, clearAuthSession, getAuthToken, getStoredRole, setAuthSession } from './services/api';
+import api, {
+  AUTH_UNAUTHORIZED_EVENT,
+  clearAuthSession,
+  getAuthToken,
+  getStoredRole,
+  setAuthSession,
+} from './services/api';
 
 // CRM modules only ever render behind a staff login -- lazy-loaded so an
 // anonymous landing-page visitor's bundle isn't paying for admin code they
@@ -34,7 +40,7 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   userRole: UserRole.CLIENT,
   login: async () => false,
-  logout: () => {}
+  logout: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -45,7 +51,7 @@ const ROLE_TO_USERNAME: Partial<Record<UserRole, string>> = {
   [UserRole.ADMIN]: 'admin',
   [UserRole.OPERATOR]: 'cocina',
   [UserRole.REPARTIDOR]: 'repartidor',
-  [UserRole.MARKETING]: 'marketing'
+  [UserRole.MARKETING]: 'marketing',
 };
 
 // Cosmetic display names only, kept separate from auth now that credentials
@@ -54,11 +60,34 @@ const ROLE_DISPLAY_NAMES: Partial<Record<UserRole, string>> = {
   [UserRole.ADMIN]: 'Administrador',
   [UserRole.OPERATOR]: 'Chef Principal',
   [UserRole.REPARTIDOR]: 'Repartidor',
-  [UserRole.MARKETING]: 'Marketing'
+  [UserRole.MARKETING]: 'Marketing',
 };
 
 const isKnownRole = (value: string | null): value is UserRole =>
   !!value && (Object.values(UserRole) as string[]).includes(value);
+
+const GASTRO_MODULES: GastroModule[] = [
+  'dashboard',
+  'menu',
+  'inventario',
+  'clientes',
+  'fidelizacion',
+  'campanas',
+  'finanzas',
+  'reportes',
+  'reviews',
+  'pagos',
+];
+const isGastroModule = (value: string): value is GastroModule => (GASTRO_MODULES as string[]).includes(value);
+
+// /admin/<module> is deep-linkable (bookmark, refresh, back/forward) --
+// separate namespace from the landing page's own paths (index.html's
+// showPage) and from /confirmacion (handled above, short-circuits the tree).
+const moduleFromPath = (): GastroModule | null => {
+  if (typeof window === 'undefined') return null;
+  const match = window.location.pathname.match(/^\/admin\/([a-z]+)/);
+  return match && isGastroModule(match[1]) ? match[1] : null;
+};
 
 const App: React.FC = () => {
   // Initialize from whatever session was already persisted in local storage,
@@ -69,15 +98,48 @@ const App: React.FC = () => {
   });
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getAuthToken());
   const [showLogin, setShowLogin] = useState(false);
-  const [gastroModule, setGastroModule] = useState<GastroModule>('dashboard');
+  const [gastroModule, setGastroModuleState] = useState<GastroModule>(() => moduleFromPath() || 'dashboard');
   const menuMount = typeof document !== 'undefined' ? document.getElementById('menu-mount') : null;
   const cartMount = typeof document !== 'undefined' ? document.getElementById('cart-mount') : null;
   const reviewsMount = typeof document !== 'undefined' ? document.getElementById('reviews-mount') : null;
+
+  // Keeps gastroModule and the URL in sync both ways: calling this pushes
+  // /admin/<module>, and browser back/forward (popstate below) calls
+  // setGastroModuleState directly to avoid re-pushing on every pop.
+  const navigateToModule = (m: GastroModule) => {
+    setGastroModuleState(m);
+    if (window.location.pathname !== `/admin/${m}`) {
+      history.pushState({ gastroModule: m }, '', `/admin/${m}`);
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const m = moduleFromPath();
+      if (m) setGastroModuleState(m);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Deep link landed on directly (bookmark, shared link) while logged out --
+  // prompt for the PIN instead of silently falling back to the public
+  // landing page underneath with no explanation.
+  useEffect(() => {
+    if (!isAuthenticated && moduleFromPath()) setShowLogin(true);
+    // Intentionally only on mount: this is a one-time "did we land deep
+    // while logged out" check, not something that should re-fire on every
+    // isAuthenticated flip (login/logout already handle their own state).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const logout = () => {
     clearAuthSession();
     setRole(UserRole.CLIENT);
     setIsAuthenticated(false);
+    if (window.location.pathname.startsWith('/admin/')) {
+      history.pushState(null, '', '/');
+    }
   };
 
   // If any request comes back 401 (missing/expired token), api.ts clears the
@@ -112,21 +174,38 @@ const App: React.FC = () => {
     setRole(resolvedRole);
     setIsAuthenticated(true);
     setShowLogin(false);
+    // Landed here from the public site (crown button) -- move the URL into
+    // the /admin/* namespace so refresh/back-forward/bookmarks work from
+    // the module the user lands on (whatever gastroModule already is,
+    // e.g. still 'dashboard' on a fresh login).
+    if (!window.location.pathname.startsWith('/admin/')) {
+      history.pushState({ gastroModule }, '', `/admin/${gastroModule}`);
+    }
     return true;
   };
 
   const renderGastroModule = () => {
     switch (gastroModule) {
-      case 'menu': return <MenuInteligente />;
-      case 'inventario': return <InventarioView />;
-      case 'clientes': return <ClientesView />;
-      case 'fidelizacion': return <FidelizacionView />;
-      case 'campanas': return <MarketingView />;
-      case 'finanzas': return <FinanzasView />;
-      case 'reportes': return <ReportesView />;
-      case 'reviews': return <ReviewsView />;
-      case 'pagos': return <PaymentSettingsView />;
-      default: return <GastroProDashboard />;
+      case 'menu':
+        return <MenuInteligente />;
+      case 'inventario':
+        return <InventarioView />;
+      case 'clientes':
+        return <ClientesView />;
+      case 'fidelizacion':
+        return <FidelizacionView />;
+      case 'campanas':
+        return <MarketingView />;
+      case 'finanzas':
+        return <FinanzasView />;
+      case 'reportes':
+        return <ReportesView />;
+      case 'reviews':
+        return <ReviewsView />;
+      case 'pagos':
+        return <PaymentSettingsView />;
+      default:
+        return <GastroProDashboard />;
     }
   };
 
@@ -135,32 +214,42 @@ const App: React.FC = () => {
       <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
         {/* Floating admin button - always visible */}
         <button
-          onClick={() => isAuthenticated ? logout() : setShowLogin(true)}
+          onClick={() => (isAuthenticated ? logout() : setShowLogin(true))}
           className="fixed bottom-6 left-6 z-[9999] w-14 h-14 rounded-2xl bg-stone-950/90 backdrop-blur-xl border border-white/10 text-stone-400 hover:text-white hover:border-orange-500/50 flex items-center justify-center shadow-2xl transition-all group"
           title={isAuthenticated ? 'Cerrar sesión' : 'Panel Administrativo'}
         >
-          <i className={`fas ${isAuthenticated ? 'fa-right-from-bracket' : 'fa-crown'} text-xl transition-transform group-hover:scale-110`}></i>
+          <i
+            className={`fas ${isAuthenticated ? 'fa-right-from-bracket' : 'fa-crown'} text-xl transition-transform group-hover:scale-110`}
+          ></i>
         </button>
 
         {/* Login Modal */}
         {showLogin && !isAuthenticated && <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />}
 
         {/* Admin CRM Overlay */}
-        {isAuthenticated && (role === UserRole.ADMIN || role === UserRole.OPERATOR || role === UserRole.REPARTIDOR || role === UserRole.MARKETING) && (
-          <div className="fixed inset-0 z-[9998] animate-fade-in">
-            <AdminLayout
-              module={gastroModule}
-              onModuleChange={setGastroModule}
-              userName={ROLE_DISPLAY_NAMES[role] || role}
-              userRole={role}
-              onLogout={logout}
-            >
-              <Suspense fallback={<div className="p-10 text-stone-500 text-sm font-bold uppercase tracking-widest">Cargando...</div>}>
-                {renderGastroModule()}
-              </Suspense>
-            </AdminLayout>
-          </div>
-        )}
+        {isAuthenticated &&
+          (role === UserRole.ADMIN ||
+            role === UserRole.OPERATOR ||
+            role === UserRole.REPARTIDOR ||
+            role === UserRole.MARKETING) && (
+            <div className="fixed inset-0 z-[9998] animate-fade-in">
+              <AdminLayout
+                module={gastroModule}
+                onModuleChange={navigateToModule}
+                userName={ROLE_DISPLAY_NAMES[role] || role}
+                userRole={role}
+                onLogout={logout}
+              >
+                <Suspense
+                  fallback={
+                    <div className="p-10 text-stone-500 text-sm font-bold uppercase tracking-widest">Cargando...</div>
+                  }
+                >
+                  {renderGastroModule()}
+                </Suspense>
+              </AdminLayout>
+            </div>
+          )}
 
         {/* MenuDigital — rendered as inline section via portal into #menu-mount */}
         {menuMount && createPortal(<MenuDigital variant="section" />, menuMount)}
@@ -177,7 +266,10 @@ const App: React.FC = () => {
   );
 };
 
-const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => Promise<boolean>; onClose: () => void }> = ({ onLogin, onClose }) => {
+const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => Promise<boolean>; onClose: () => void }> = ({
+  onLogin,
+  onClose,
+}) => {
   const [selectedRole, setSelectedRole] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -217,7 +309,10 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => Promise<b
             <label className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block">Rol</label>
             <select
               value={selectedRole}
-              onChange={(e) => { setSelectedRole(e.target.value); setError(''); }}
+              onChange={(e) => {
+                setSelectedRole(e.target.value);
+                setError('');
+              }}
               className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold focus:border-orange-600/50 outline-none transition-colors"
             >
               <option value="">Seleccionar rol</option>
@@ -233,7 +328,10 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => Promise<b
             <input
               type="password"
               value={pin}
-              onChange={(e) => { setPin(e.target.value); setError(''); }}
+              onChange={(e) => {
+                setPin(e.target.value);
+                setError('');
+              }}
               maxLength={4}
               placeholder="••••"
               className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-center text-2xl tracking-[0.5em] font-bold focus:border-orange-600/50 outline-none transition-colors"
@@ -260,10 +358,18 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => Promise<b
           </button>
           {showHint && (
             <div className="mt-3 p-3 bg-stone-900 rounded-xl border border-white/5 text-[10px] text-stone-500 space-y-1">
-              <p>Admin: <span className="text-orange-500 font-bold">1234</span></p>
-              <p>Cocina: <span className="text-orange-500 font-bold">5678</span></p>
-              <p>Repartidor: <span className="text-orange-500 font-bold">0000</span></p>
-              <p>Marketing: <span className="text-orange-500 font-bold">9999</span></p>
+              <p>
+                Admin: <span className="text-orange-500 font-bold">1234</span>
+              </p>
+              <p>
+                Cocina: <span className="text-orange-500 font-bold">5678</span>
+              </p>
+              <p>
+                Repartidor: <span className="text-orange-500 font-bold">0000</span>
+              </p>
+              <p>
+                Marketing: <span className="text-orange-500 font-bold">9999</span>
+              </p>
             </div>
           )}
         </div>

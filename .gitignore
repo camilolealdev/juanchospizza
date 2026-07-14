@@ -63,4 +63,4 @@ server/dist/
 *.db-wal
 
 # Imágenes generadas por IA
-guido_ai_images.json
+guido_ai_images.jsongraphify-out/cache/

@@ -283,6 +283,16 @@ export const api = {
     return apiFetch(`/api/products/${id}`, { method: 'DELETE' });
   },
 
+  async bulkImportProducts(
+    products: ProductPayload[]
+  ): Promise<{ inserted: number; errors: { row: number; nombre?: string; error: string }[] }> {
+    return apiFetch('/api/products/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ products }),
+    });
+  },
+
   // Categories
   async getCategories(): Promise<Category[]> {
     return apiFetch('/api/categories');
