@@ -13,7 +13,7 @@ router.post('/api/auth/login', loginRateLimit, async (req, res) => {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    const result = login(String(username), String(pin));
+    const result = await login(String(username), String(pin));
 
     if (result.error) {
       return res.status(401).json({ error: result.error });
@@ -23,7 +23,7 @@ router.post('/api/auth/login', loginRateLimit, async (req, res) => {
       token: result.token,
       role: result.role,
       username: result.username,
-      expiresIn: result.expiresIn
+      expiresIn: result.expiresIn,
     });
   } catch (e) {
     res.status(401).json({ error: 'Credenciales inválidas' });

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { pool } from './db.js';
 
 // Generar secrets seguros si no existen. El fallback de dev se memoiza --
 // antes generaba un secret random en CADA llamada, así que un token firmado
@@ -125,28 +126,60 @@ export function hashUserPin(username, pin) {
   return hashPin(pin, salt);
 }
 
-// Authenticate con PIN
-export function authenticate(username, pin) {
-  const user = USERS.find((u) => u.username === username);
-  if (!user) return null;
-
-  const inputHash = hashPin(pin, user.salt);
+function verifyHash(pin, salt, storedHex) {
+  const inputHash = hashPin(pin, salt);
   const inputBuf = Buffer.from(inputHash, 'hex');
-  const storedBuf = Buffer.from(user.pinHash, 'hex');
-  if (inputBuf.length !== storedBuf.length || !crypto.timingSafeEqual(inputBuf, storedBuf)) {
-    return null;
-  }
+  const storedBuf = Buffer.from(storedHex, 'hex');
+  return inputBuf.length === storedBuf.length && crypto.timingSafeEqual(inputBuf, storedBuf);
+}
+
+// El frontend siempre manda uno de estos 4 usernames fijos (mapeados 1:1
+// desde el rol elegido en LoginModal, ver ROLE_TO_USERNAME en src/App.tsx).
+// No hay campo de usuario en la UI -- así que para dar de alta más de una
+// persona por rol (varios cocineros, varios repartidores) sin tocar código,
+// el username fijo solo decide QUÉ ROL escanear en `employees` cuando
+// ninguno de los 4 logins fijos hace match.
+const USERNAME_TO_ROLE = { admin: 'ADMIN', cocina: 'OPERATOR', repartidor: 'REPARTIDOR', marketing: 'MARKETING' };
+
+async function authenticateEmployee(username, pin) {
+  const role = USERNAME_TO_ROLE[username];
+  if (!role) return null;
+  const result = await pool.query('SELECT id, role, "pinHash", salt FROM employees WHERE role = $1 AND activo = true', [
+    role,
+  ]);
+  const employee = result.rows.find((e) => verifyHash(pin, e.salt, e.pinHash));
+  if (!employee) return null;
 
   const now = Math.floor(Date.now() / 1000);
   return generateToken(
     {
-      sub: username,
-      role: user.role,
+      sub: employee.id,
+      role: employee.role,
       type: 'access',
-      origIat: now, // marca el inicio de la sesión -- ver refreshToken()
+      origIat: now,
     },
     '15m'
   );
+}
+
+// Authenticate con PIN -- primero los 4 logins fijos (rápido, sin DB), luego
+// el roster de employees para ese rol (ver authenticateEmployee arriba).
+export async function authenticate(username, pin) {
+  const user = USERS.find((u) => u.username === username);
+  if (user && verifyHash(pin, user.salt, user.pinHash)) {
+    const now = Math.floor(Date.now() / 1000);
+    return generateToken(
+      {
+        sub: username,
+        role: user.role,
+        type: 'access',
+        origIat: now, // marca el inicio de la sesión -- ver refreshToken()
+      },
+      '15m'
+    );
+  }
+
+  return authenticateEmployee(username, pin);
 }
 
 // Un token robado podía refrescarse indefinidamente (cada refresh emitía
@@ -175,8 +208,8 @@ export function refreshToken(oldToken) {
 }
 
 // Login endpoint
-export function login(username, pin) {
-  const token = authenticate(username, pin);
+export async function login(username, pin) {
+  const token = await authenticate(username, pin);
   if (!token) {
     return { error: 'Credenciales inválidas' };
   }
