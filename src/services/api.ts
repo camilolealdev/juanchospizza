@@ -1,4 +1,3 @@
-
 import type { Order, Campaign, OrderStatus, Client, LoyaltyReward, Product, Category } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -82,6 +81,7 @@ export interface InventoryItem {
   lote?: string;
   fechaVencimiento?: string;
   ubicacion?: string;
+  activo?: boolean;
 }
 type InventoryItemPayload = Partial<InventoryItem>;
 
@@ -209,16 +209,20 @@ const handleResponse = async (response: Response) => {
 const apiFetch = (path: string, options: RequestInit = {}) => {
   const headers: Record<string, string> = {
     ...authHeaders(),
-    ...(options.headers as Record<string, string> | undefined)
+    ...(options.headers as Record<string, string> | undefined),
   };
-  return fetch(`${API_BASE}${path}`, { ...options, headers })
-    // fetch() itself rejects (not a non-ok response, an actual network/DNS/CORS
-    // failure) with a raw browser error like "Failed to fetch" -- surfaced as-is
-    // it read as a broken app rather than "backend not deployed yet".
-    .catch(() => {
-      throw new Error('No pudimos conectar con el servidor. Probá de nuevo en un momento o pedí por WhatsApp mientras tanto.');
-    })
-    .then(handleResponse);
+  return (
+    fetch(`${API_BASE}${path}`, { ...options, headers })
+      // fetch() itself rejects (not a non-ok response, an actual network/DNS/CORS
+      // failure) with a raw browser error like "Failed to fetch" -- surfaced as-is
+      // it read as a broken app rather than "backend not deployed yet".
+      .catch(() => {
+        throw new Error(
+          'No pudimos conectar con el servidor. Probá de nuevo en un momento o pedí por WhatsApp mientras tanto.'
+        );
+      })
+      .then(handleResponse)
+  );
 };
 
 export const api = {
@@ -227,7 +231,7 @@ export const api = {
     return apiFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, pin })
+      body: JSON.stringify({ username, pin }),
     });
   },
 
@@ -235,7 +239,7 @@ export const api = {
     return apiFetch('/api/auth/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
+      body: JSON.stringify({ token }),
     });
   },
 
@@ -263,7 +267,7 @@ export const api = {
     return apiFetch('/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(product)
+      body: JSON.stringify(product),
     });
   },
 
@@ -271,7 +275,7 @@ export const api = {
     return apiFetch(`/api/products/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
@@ -291,7 +295,18 @@ export const api = {
   },
 
   // Order tracking (guest, público, requiere teléfono)
-  async trackOrder(orderNumber: string, phone: string): Promise<{ id: string; orderNumber: string; status: string; createdAt: string; estimatedTime: number; paymentStatus: string | null; paymentMethod: string }> {
+  async trackOrder(
+    orderNumber: string,
+    phone: string
+  ): Promise<{
+    id: string;
+    orderNumber: string;
+    status: string;
+    createdAt: string;
+    estimatedTime: number;
+    paymentStatus: string | null;
+    paymentMethod: string;
+  }> {
     return apiFetch(`/api/orders/track/${encodeURIComponent(orderNumber)}?phone=${encodeURIComponent(phone)}`);
   },
 
@@ -312,7 +327,7 @@ export const api = {
     return apiFetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(order)
+      body: JSON.stringify(order),
     });
   },
 
@@ -320,7 +335,7 @@ export const api = {
     return apiFetch(`/api/orders/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
@@ -328,7 +343,7 @@ export const api = {
     return apiFetch(`/api/orders/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
+      body: JSON.stringify({ status }),
     });
   },
 
@@ -341,7 +356,7 @@ export const api = {
     return apiFetch('/api/campaigns', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(campaign)
+      body: JSON.stringify(campaign),
     });
   },
 
@@ -349,8 +364,12 @@ export const api = {
     return apiFetch(`/api/campaigns/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
+  },
+
+  async deleteCampaign(id: string) {
+    return apiFetch(`/api/campaigns/${id}`, { method: 'DELETE' });
   },
 
   // Stats
@@ -375,7 +394,7 @@ export const api = {
     return apiFetch('/api/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(client)
+      body: JSON.stringify(client),
     });
   },
 
@@ -384,7 +403,7 @@ export const api = {
     return apiFetch(`/api/clients/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
@@ -393,12 +412,18 @@ export const api = {
     return apiFetch(`/api/clients/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
   async getClientOrders(id: string) {
     return apiFetch(`/api/clients/${id}/orders`);
+  },
+
+  // Fails with a 409 if the client has real order history (FK-protected
+  // server-side) -- callers should catch that and suggest estado:'perdido' instead.
+  async deleteClient(id: string) {
+    return apiFetch(`/api/clients/${id}`, { method: 'DELETE' });
   },
 
   // Loyalty
@@ -410,7 +435,7 @@ export const api = {
     return apiFetch('/api/loyalty/rewards', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(reward)
+      body: JSON.stringify(reward),
     });
   },
 
@@ -418,7 +443,7 @@ export const api = {
     return apiFetch(`/api/loyalty/rewards/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
@@ -434,7 +459,7 @@ export const api = {
     return apiFetch('/api/loyalty/points', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
@@ -447,7 +472,7 @@ export const api = {
     return apiFetch('/api/menu/variants', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(variant)
+      body: JSON.stringify(variant),
     });
   },
 
@@ -455,7 +480,7 @@ export const api = {
     return apiFetch(`/api/menu/variants/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
@@ -472,7 +497,7 @@ export const api = {
     return apiFetch('/api/menu/combos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(combo)
+      body: JSON.stringify(combo),
     });
   },
 
@@ -480,7 +505,7 @@ export const api = {
     return apiFetch(`/api/menu/combos/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
@@ -497,7 +522,7 @@ export const api = {
     return apiFetch('/api/menu/promotions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(promotion)
+      body: JSON.stringify(promotion),
     });
   },
 
@@ -505,7 +530,7 @@ export const api = {
     return apiFetch(`/api/menu/promotions/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
@@ -526,7 +551,7 @@ export const api = {
     return apiFetch('/api/expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(expense)
+      body: JSON.stringify(expense),
     });
   },
 
@@ -534,7 +559,7 @@ export const api = {
     return apiFetch(`/api/expenses/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(expense)
+      body: JSON.stringify(expense),
     });
   },
 
@@ -551,7 +576,7 @@ export const api = {
     return apiFetch('/api/reviews', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(review)
+      body: JSON.stringify(review),
     });
   },
 
@@ -568,8 +593,12 @@ export const api = {
     return apiFetch(`/api/reviews/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
+      body: JSON.stringify({ status }),
     });
+  },
+
+  async deleteReview(id: string) {
+    return apiFetch(`/api/reviews/${id}`, { method: 'DELETE' });
   },
 
   // Push notifications
@@ -577,7 +606,7 @@ export const api = {
     return apiFetch('/api/push/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
@@ -590,7 +619,7 @@ export const api = {
     return apiFetch('/api/inventory', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(item)
+      body: JSON.stringify(item),
     });
   },
 
@@ -598,15 +627,22 @@ export const api = {
     return apiFetch(`/api/inventory/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(item)
+      body: JSON.stringify(item),
     });
   },
 
-  async createInventoryMovement(data: { itemId: string; tipo: 'entrada' | 'salida'; cantidad: number; motivo: string; referencia?: string; usuario?: string }) {
+  async createInventoryMovement(data: {
+    itemId: string;
+    tipo: 'entrada' | 'salida';
+    cantidad: number;
+    motivo: string;
+    referencia?: string;
+    usuario?: string;
+  }) {
     return apiFetch('/api/inventory/movement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
@@ -617,7 +653,7 @@ export const api = {
   // Recipes
   async getRecipes(): Promise<Recipe[]> {
     return apiFetch('/api/recipes');
-  }
+  },
 };
 
 export default api;

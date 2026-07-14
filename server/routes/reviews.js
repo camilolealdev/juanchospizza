@@ -51,7 +51,9 @@ router.get('/api/reviews/approved', async (req, res) => {
       `SELECT id, rating, comment, "clientName", "createdAt" FROM reviews WHERE status = 'approved' ORDER BY "createdAt" DESC LIMIT 50`
     );
     res.json(result.rows);
-  } catch (e) { res.status(500).json({ error: 'Error fetching reviews' }); }
+  } catch (e) {
+    res.status(500).json({ error: 'Error fetching reviews' });
+  }
 });
 
 router.get('/api/reviews', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
@@ -61,24 +63,44 @@ router.get('/api/reviews', authMiddleware, requireRole('ADMIN', 'MARKETING'), as
       ? await pool.query('SELECT * FROM reviews WHERE status = $1 ORDER BY "createdAt" DESC', [status])
       : await pool.query('SELECT * FROM reviews ORDER BY "createdAt" DESC');
     res.json(result.rows);
-  } catch (e) { res.status(500).json({ error: 'Error fetching reviews' }); }
+  } catch (e) {
+    res.status(500).json({ error: 'Error fetching reviews' });
+  }
 });
 
-router.patch('/api/reviews/:id/status', authMiddleware, requireRole('ADMIN', 'MARKETING'), validate(reviewStatusSchema), async (req, res) => {
-  try {
-    const { status } = req.body;
+router.patch(
+  '/api/reviews/:id/status',
+  authMiddleware,
+  requireRole('ADMIN', 'MARKETING'),
+  validate(reviewStatusSchema),
+  async (req, res) => {
+    try {
+      const { status } = req.body;
 
-    const result = await pool.query(
-      'UPDATE reviews SET status = $1 WHERE id = $2 RETURNING *',
-      [status, req.params.id]
-    );
+      const result = await pool.query('UPDATE reviews SET status = $1 WHERE id = $2 RETURNING *', [
+        status,
+        req.params.id,
+      ]);
 
-    if (!result.rows.length) {
-      return res.status(404).json({ error: 'Review not found' });
+      if (!result.rows.length) {
+        return res.status(404).json({ error: 'Review not found' });
+      }
+
+      res.json(result.rows[0]);
+    } catch (e) {
+      res.status(500).json({ error: 'Error updating review status' });
     }
+  }
+);
 
-    res.json(result.rows[0]);
-  } catch (e) { res.status(500).json({ error: 'Error updating review status' }); }
+router.delete('/api/reviews/:id', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+  try {
+    const result = await pool.query('DELETE FROM reviews WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Review not found' });
+    res.status(204).end();
+  } catch (e) {
+    res.status(500).json({ error: 'Error deleting review' });
+  }
 });
 
 export default router;
