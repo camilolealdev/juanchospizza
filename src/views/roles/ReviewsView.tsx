@@ -27,7 +27,7 @@ const ReviewsView: React.FC = () => {
 
   // load is redefined every render (not memoized) -- including it would
   // refire this on every render instead of just when `tab` changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     load(tab);
   }, [tab]);

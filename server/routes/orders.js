@@ -10,13 +10,18 @@ const router = express.Router();
 // ORDERS
 router.get('/api/orders', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'), async (req, res) => {
   try {
-    const { status, paidOnly } = req.query;
+    const { status, paidOnly, locationId } = req.query;
     const conditions = [];
     const params = [];
 
     if (status && status !== 'all') {
       params.push(status);
       conditions.push(`status = $${params.length}`);
+    }
+
+    if (locationId) {
+      params.push(locationId);
+      conditions.push(`"locationId" = $${params.length}`);
     }
 
     // Cocina/Operador/Repartidor deben usar esto para no ver pedidos con
@@ -80,7 +85,17 @@ router.get('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR', '
 
 router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
   try {
-    const { orderNumber, customerName, customerPhone, address, items, total, estimatedTime, paymentMethod } = req.body;
+    const {
+      orderNumber,
+      customerName,
+      customerPhone,
+      address,
+      items,
+      total,
+      estimatedTime,
+      paymentMethod,
+      locationId,
+    } = req.body;
 
     // items es una columna JSON nativa: el pg driver serializa/parsea objetos
     // planos automáticamente, pero los arrays de nivel superior (como este)
@@ -97,7 +112,8 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
       address,
       total,
       estimatedTime,
-      paymentMethod
+      paymentMethod,
+      locationId,
     };
 
     // clientId nunca se confía del body: cualquiera podía mandar el id de otro
@@ -106,7 +122,9 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
     // valor que ya usamos como verificador para tracking/reviews.
     let resolvedClientId = null;
     if (sanitized.customerPhone) {
-      const clientMatch = await pool.query('SELECT id FROM clients WHERE telefono = $1 LIMIT 1', [sanitized.customerPhone]);
+      const clientMatch = await pool.query('SELECT id FROM clients WHERE telefono = $1 LIMIT 1', [
+        sanitized.customerPhone,
+      ]);
       resolvedClientId = clientMatch.rows[0]?.id || null;
     }
     sanitized.clientId = resolvedClientId;
@@ -121,11 +139,43 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
     const paymentStatus = ['cash', 'card'].includes(sanitized.paymentMethod) ? 'paid' : 'pending';
 
     await pool.query(
-      `INSERT INTO orders (id, "orderNumber", "customerName", "customerPhone", address, items, total, status, "createdAt", "estimatedTime", "paymentMethod", "clientId", "paymentStatus") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-      [id, sanitized.orderNumber, sanitized.customerName, sanitized.customerPhone, sanitized.address, itemsForDb, sanitized.total, status, createdAt, sanitized.estimatedTime, sanitized.paymentMethod, sanitized.clientId, paymentStatus]
+      `INSERT INTO orders (id, "orderNumber", "customerName", "customerPhone", address, items, total, status, "createdAt", "estimatedTime", "paymentMethod", "clientId", "paymentStatus", "locationId") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [
+        id,
+        sanitized.orderNumber,
+        sanitized.customerName,
+        sanitized.customerPhone,
+        sanitized.address,
+        itemsForDb,
+        sanitized.total,
+        status,
+        createdAt,
+        sanitized.estimatedTime,
+        sanitized.paymentMethod,
+        sanitized.clientId,
+        paymentStatus,
+        sanitized.locationId,
+      ]
     );
 
-    res.status(201).json({ id, orderNumber: sanitized.orderNumber, customerName: sanitized.customerName, customerPhone: sanitized.customerPhone, address: sanitized.address, items, total: sanitized.total, status, createdAt, estimatedTime: sanitized.estimatedTime, paymentMethod: sanitized.paymentMethod, clientId: sanitized.clientId, paymentStatus });
+    res
+      .status(201)
+      .json({
+        id,
+        orderNumber: sanitized.orderNumber,
+        customerName: sanitized.customerName,
+        customerPhone: sanitized.customerPhone,
+        address: sanitized.address,
+        items,
+        total: sanitized.total,
+        status,
+        createdAt,
+        estimatedTime: sanitized.estimatedTime,
+        paymentMethod: sanitized.paymentMethod,
+        clientId: sanitized.clientId,
+        paymentStatus,
+        locationId: sanitized.locationId,
+      });
   } catch (e) {
     res.status(500).json({ error: 'Error creating order' });
   }
@@ -172,82 +222,107 @@ async function updateClientSpendAggregate(clientId, orderTotal) {
   );
 }
 
-router.patch('/api/orders/:id/status', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'), validate(updateOrderStatusSchema), async (req, res) => {
-  try {
-    const { status } = req.body;
+router.patch(
+  '/api/orders/:id/status',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'),
+  validate(updateOrderStatusSchema),
+  async (req, res) => {
+    try {
+      const { status } = req.body;
 
-    await pool.query('UPDATE orders SET status = $1 WHERE id = $2', [status, req.params.id]);
+      await pool.query('UPDATE orders SET status = $1 WHERE id = $2', [status, req.params.id]);
 
-    const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
+      const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
 
-    if (!result.rows.length) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
-    const order = result.rows[0];
-
-    if (status === 'COMPLETED' && order.clientId) {
-      try {
-        await updateClientSpendAggregate(order.clientId, order.total);
-      } catch (aggError) {
-        // No se debe fallar la actualización del pedido por un problema
-        // al agregar las métricas del cliente.
-        console.error('Error updating client spend aggregate:', aggError.message);
+      if (!result.rows.length) {
+        return res.status(404).json({ error: 'Order not found' });
       }
-    }
 
-    const pushMessages = {
-      READY: 'Tu pedido está listo',
-      ASSIGNED: 'Tu pedido fue asignado a un repartidor',
-      DELIVERING: 'Tu pedido va en camino',
-      COMPLETED: '¡Tu pedido fue entregado! Gracias por tu compra'
-    };
-    if (pushMessages[status] && order.customerPhone) {
-      // El envío nunca debe fallar la actualización del pedido: sendPushToPhone
-      // ya atrapa sus propios errores internamente, pero se envuelve igual
-      // por si acaso (no bloqueante, no se espera con await bloqueante del response).
-      sendPushToPhone(pool, order.customerPhone, {
-        title: `Pedido ${order.orderNumber}`,
-        body: pushMessages[status],
-        url: '/'
-      }).catch(err => console.error('Error sending push notification:', err.message));
-    }
+      const order = result.rows[0];
 
-    res.json(order);
-  } catch (e) {
-    res.status(500).json({ error: 'Error updating order' });
+      if (status === 'COMPLETED' && order.clientId) {
+        try {
+          await updateClientSpendAggregate(order.clientId, order.total);
+        } catch (aggError) {
+          // No se debe fallar la actualización del pedido por un problema
+          // al agregar las métricas del cliente.
+          console.error('Error updating client spend aggregate:', aggError.message);
+        }
+      }
+
+      const pushMessages = {
+        READY: 'Tu pedido está listo',
+        ASSIGNED: 'Tu pedido fue asignado a un repartidor',
+        DELIVERING: 'Tu pedido va en camino',
+        COMPLETED: '¡Tu pedido fue entregado! Gracias por tu compra',
+      };
+      if (pushMessages[status] && order.customerPhone) {
+        // El envío nunca debe fallar la actualización del pedido: sendPushToPhone
+        // ya atrapa sus propios errores internamente, pero se envuelve igual
+        // por si acaso (no bloqueante, no se espera con await bloqueante del response).
+        sendPushToPhone(pool, order.customerPhone, {
+          title: `Pedido ${order.orderNumber}`,
+          body: pushMessages[status],
+          url: '/',
+        }).catch((err) => console.error('Error sending push notification:', err.message));
+      }
+
+      res.json(order);
+    } catch (e) {
+      res.status(500).json({ error: 'Error updating order' });
+    }
   }
-});
+);
 
-router.put('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR'), validate(updateOrderSchema), async (req, res) => {
-  try {
-    const { address, items, total, estimatedTime, paymentMethod } = req.body;
+router.put(
+  '/api/orders/:id',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR'),
+  validate(updateOrderSchema),
+  async (req, res) => {
+    try {
+      const { address, items, total, estimatedTime, paymentMethod } = req.body;
 
-    const updates = [];
-    const params = [];
-    if (address !== undefined) { params.push(address); updates.push(`address = $${params.length}`); }
-    if (items !== undefined) {
-      params.push(JSON.stringify(items)); updates.push(`items = $${params.length}`);
+      const updates = [];
+      const params = [];
+      if (address !== undefined) {
+        params.push(address);
+        updates.push(`address = $${params.length}`);
+      }
+      if (items !== undefined) {
+        params.push(JSON.stringify(items));
+        updates.push(`items = $${params.length}`);
+      }
+      if (total !== undefined) {
+        params.push(total);
+        updates.push(`total = $${params.length}`);
+      }
+      if (estimatedTime !== undefined) {
+        params.push(estimatedTime);
+        updates.push(`"estimatedTime" = $${params.length}`);
+      }
+      if (paymentMethod !== undefined) {
+        params.push(paymentMethod);
+        updates.push(`"paymentMethod" = $${params.length}`);
+      }
+
+      if (updates.length) {
+        params.push(req.params.id);
+        await pool.query(`UPDATE orders SET ${updates.join(', ')} WHERE id = $${params.length}`, params);
+      }
+
+      const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
+
+      if (result.rows.length > 0) {
+        res.json(result.rows[0]);
+      } else {
+        res.status(404).json({ error: 'Order not found' });
+      }
+    } catch (e) {
+      res.status(500).json({ error: 'Error updating order' });
     }
-    if (total !== undefined) { params.push(total); updates.push(`total = $${params.length}`); }
-    if (estimatedTime !== undefined) { params.push(estimatedTime); updates.push(`"estimatedTime" = $${params.length}`); }
-    if (paymentMethod !== undefined) { params.push(paymentMethod); updates.push(`"paymentMethod" = $${params.length}`); }
-
-    if (updates.length) {
-      params.push(req.params.id);
-      await pool.query(`UPDATE orders SET ${updates.join(', ')} WHERE id = $${params.length}`, params);
-    }
-
-    const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
-
-    if (result.rows.length > 0) {
-      res.json(result.rows[0]);
-    } else {
-      res.status(404).json({ error: 'Order not found' });
-    }
-  } catch (e) {
-    res.status(500).json({ error: 'Error updating order' });
   }
-});
+);
 
 export default router;

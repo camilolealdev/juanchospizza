@@ -3,11 +3,10 @@ import pg from 'pg';
 const { Pool } = pg;
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || ''
+  connectionString: process.env.DATABASE_URL || '',
 });
 
-export 
-async function initDB() {
+export async function initDB() {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS categories (
@@ -117,6 +116,10 @@ async function initDB() {
     // 'paid'/'failed', nunca el cliente.
     await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS "paymentStatus" TEXT DEFAULT 'pending'`);
     await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS "paymentProviderRef" TEXT`);
+
+    // Fundación multi-sede: 'nemocon' | 'zipaquira'. Default a 'nemocon' para
+    // no romper pedidos/filas existentes que nunca conocieron el concepto de sede.
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS "locationId" TEXT DEFAULT 'nemocon'`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inventory_items (
@@ -278,6 +281,24 @@ async function initDB() {
       )
     `);
 
+    // Roster de staff (múltiples logins por rol, ej. varios cocineros por
+    // turno en cada sede). Todavía NO está conectada al login real -- ver
+    // server/routes/auth.js, que sigue usando el USERS hardcodeado. Esta
+    // tabla es solo el sistema de registro (CRUD) para gestionar quién está
+    // en planta; integrarla al login es trabajo futuro.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS employees (
+        id TEXT PRIMARY KEY,
+        nombre TEXT NOT NULL,
+        role TEXT NOT NULL,
+        "pinHash" TEXT NOT NULL,
+        salt TEXT NOT NULL,
+        "locationId" TEXT,
+        activo BOOLEAN DEFAULT TRUE,
+        creado TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders("createdAt")');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_clientId ON orders("clientId")');
@@ -287,10 +308,64 @@ async function initDB() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_expenses_fecha ON expenses(fecha)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_menu_promotions_activo ON menu_promotions(activo)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_locationId ON orders("locationId")');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_shifts_locationId_status ON shifts("locationId", status)');
+
+    // === DINING TABLES ===
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS dining_tables (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        capacity INTEGER DEFAULT 4,
+        area TEXT DEFAULT 'salon',
+        "locationId" TEXT DEFAULT 'nemocon',
+        status TEXT DEFAULT 'available',
+        notes TEXT,
+        qr_code TEXT,
+        active BOOLEAN DEFAULT TRUE,
+        "createdAt" TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_tables_name_location ON dining_tables (name, "locationId")
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_tables_location ON dining_tables("locationId")');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_tables_status ON dining_tables(status)');
+
+    // === CASH REGISTER ===
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cash_register (
+        id TEXT PRIMARY KEY,
+        "locationId" TEXT DEFAULT 'nemocon',
+        "openedAt" TIMESTAMPTZ DEFAULT NOW(),
+        "closedAt" TIMESTAMPTZ,
+        "openedBy" TEXT,
+        "closedBy" TEXT,
+        "initialAmount" INTEGER DEFAULT 0,
+        "expectedAmount" INTEGER DEFAULT 0,
+        "finalAmount" INTEGER,
+        difference INTEGER,
+        status TEXT DEFAULT 'open',
+        notes TEXT
+      )
+    `);
+
+    // === TIPS ===
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tips (
+        id TEXT PRIMARY KEY,
+        "orderId" TEXT REFERENCES orders(id),
+        amount INTEGER NOT NULL,
+        method TEXT DEFAULT 'cash',
+        "waiterName" TEXT,
+        "locationId" TEXT DEFAULT 'nemocon',
+        "createdAt" TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
 
     console.log('✅ Database initialized with GastroPro CRM tables');
   } catch (error) {
     console.error('❌ DB init error:', error.message);
   }
 }
-

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { GastroModule, UserRole } from '../types';
+import { GastroModule, LocationId, UserRole } from '../types';
 
 interface AdminLayoutProps {
   module: GastroModule;
@@ -8,10 +8,22 @@ interface AdminLayoutProps {
   userName?: string;
   userRole?: UserRole;
   onLogout?: () => void;
+  locationId?: LocationId;
+  onLocationChange?: (l: LocationId) => void;
 }
 
+const LOCATION_LABELS: Record<LocationId, string> = {
+  nemocon: 'Nemocón',
+  zipaquira: 'Zipaquirá',
+};
+
 const ALL_NAV: { module: GastroModule; label: string; icon: string; roles: UserRole[] }[] = [
-  { module: 'dashboard', label: 'Dashboard', icon: 'chart-simple', roles: [UserRole.ADMIN, UserRole.OPERATOR, UserRole.REPARTIDOR, UserRole.MARKETING] },
+  {
+    module: 'dashboard',
+    label: 'Dashboard',
+    icon: 'chart-simple',
+    roles: [UserRole.ADMIN, UserRole.OPERATOR, UserRole.REPARTIDOR, UserRole.MARKETING],
+  },
   { module: 'menu', label: 'Menú Inteligente', icon: 'book', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
   { module: 'inventario', label: 'Inventario', icon: 'warehouse', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
   { module: 'clientes', label: 'Clientes', icon: 'users', roles: [UserRole.ADMIN] },
@@ -21,6 +33,10 @@ const ALL_NAV: { module: GastroModule; label: string; icon: string; roles: UserR
   { module: 'reportes', label: 'Reportes', icon: 'chart-line', roles: [UserRole.ADMIN] },
   { module: 'reviews', label: 'Reseñas', icon: 'star', roles: [UserRole.ADMIN] },
   { module: 'pagos', label: 'Pagos', icon: 'credit-card', roles: [UserRole.ADMIN] },
+  { module: 'empleados', label: 'Empleados', icon: 'id-badge', roles: [UserRole.ADMIN] },
+  { module: 'turnos', label: 'Turnos', icon: 'clock', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
+  { module: 'mesas', label: 'Mesas', icon: 'table', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
+  { module: 'caja', label: 'Caja', icon: 'cash-register', roles: [UserRole.ADMIN] },
 ];
 
 const MODULE_TITLES: Record<GastroModule, string> = {
@@ -34,6 +50,10 @@ const MODULE_TITLES: Record<GastroModule, string> = {
   reportes: 'Reportes',
   reviews: 'Reseñas',
   pagos: 'Pagos',
+  empleados: 'Empleados',
+  turnos: 'Turnos',
+  mesas: 'Mesas',
+  caja: 'Caja',
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -51,11 +71,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   userName = 'Admin',
   userRole = UserRole.ADMIN,
   onLogout,
+  locationId,
+  onLocationChange,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
-  const navItems = useMemo(() => ALL_NAV.filter(item => item.roles.includes(userRole)), [userRole]);
+  const navItems = useMemo(() => ALL_NAV.filter((item) => item.roles.includes(userRole)), [userRole]);
 
   const handleModuleChange = (m: GastroModule) => {
     onModuleChange(m);
@@ -95,7 +117,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             </div>
             <div>
               <h1 className="text-lg font-black text-white tracking-tight">
-                Juancho<span className="text-gold-400">&rsquo;</span><span className="text-gold-400">s</span>
+                Juancho<span className="text-gold-400">&rsquo;</span>
+                <span className="text-gold-400">s</span>
               </h1>
               <p className="text-[9px] font-bold text-brand-200/50 uppercase tracking-[0.25em]">Panel de Gestión</p>
             </div>
@@ -185,8 +208,22 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             </h2>
           </div>
 
-          {/* Right: bell only */}
-          <div className="flex items-center">
+          {/* Right: sede selector (ADMIN/OPERATOR) + bell */}
+          <div className="flex items-center gap-4">
+            {onLocationChange && (userRole === UserRole.ADMIN || userRole === UserRole.OPERATOR) && (
+              <select
+                value={locationId || 'nemocon'}
+                onChange={(e) => onLocationChange(e.target.value as LocationId)}
+                title="Sede"
+                className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-1.5 text-[11px] font-bold text-white/80 uppercase tracking-wider focus:outline-none focus:border-brand-500/50 transition-colors"
+              >
+                {(Object.keys(LOCATION_LABELS) as LocationId[]).map((l) => (
+                  <option key={l} value={l} className="bg-brand-950 text-white">
+                    {LOCATION_LABELS[l]}
+                  </option>
+                ))}
+              </select>
+            )}
             <button className="relative w-8 h-8 flex items-center justify-center text-white/70 hover:text-white transition-all">
               <i className="fas fa-bell text-sm"></i>
               <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-brand-600 rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-lg shadow-brand-900/40">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
-import { UserRole, GastroModule } from './types';
+import { UserRole, GastroModule, LocationId } from './types';
 import AdminLayout from './components/AdminLayout';
 import MenuDigital from './components/MenuDigital';
 import CartSection from './components/CartSection';
@@ -28,6 +28,10 @@ const FinanzasView = lazy(() => import('./views/roles/FinanzasView'));
 const ReportesView = lazy(() => import('./views/roles/ReportesView'));
 const ReviewsView = lazy(() => import('./views/roles/ReviewsView'));
 const PaymentSettingsView = lazy(() => import('./views/roles/PaymentSettingsView'));
+const EmpleadosView = lazy(() => import('./views/roles/EmpleadosView'));
+const TurnosView = lazy(() => import('./views/roles/TurnosView'));
+const MesasView = lazy(() => import('./views/roles/MesasView'));
+const CajaView = lazy(() => import('./views/roles/CajaView'));
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -77,6 +81,10 @@ const GASTRO_MODULES: GastroModule[] = [
   'reportes',
   'reviews',
   'pagos',
+  'empleados',
+  'turnos',
+  'mesas',
+  'caja',
 ];
 const isGastroModule = (value: string): value is GastroModule => (GASTRO_MODULES as string[]).includes(value);
 
@@ -99,6 +107,11 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getAuthToken());
   const [showLogin, setShowLogin] = useState(false);
   const [gastroModule, setGastroModuleState] = useState<GastroModule>(() => moduleFromPath() || 'dashboard');
+  // Sede seleccionada en el dropdown de AdminLayout -- filtra el dashboard y
+  // es la sede activa para abrir/cerrar turno. Vive acá (no en cada vista)
+  // porque tanto el selector (en AdminLayout) como las vistas que lo
+  // consumen (dashboard, turnos) son hermanos en el árbol.
+  const [selectedLocation, setSelectedLocation] = useState<LocationId>('nemocon');
   const menuMount = typeof document !== 'undefined' ? document.getElementById('menu-mount') : null;
   const cartMount = typeof document !== 'undefined' ? document.getElementById('cart-mount') : null;
   const reviewsMount = typeof document !== 'undefined' ? document.getElementById('reviews-mount') : null;
@@ -204,8 +217,16 @@ const App: React.FC = () => {
         return <ReviewsView />;
       case 'pagos':
         return <PaymentSettingsView />;
+      case 'empleados':
+        return <EmpleadosView />;
+      case 'turnos':
+        return <TurnosView locationId={selectedLocation} />;
+      case 'mesas':
+        return <MesasView locationId={selectedLocation} />;
+      case 'caja':
+        return <CajaView locationId={selectedLocation} />;
       default:
-        return <GastroProDashboard />;
+        return <GastroProDashboard locationId={selectedLocation} />;
     }
   };
 
@@ -239,6 +260,8 @@ const App: React.FC = () => {
                 userName={ROLE_DISPLAY_NAMES[role] || role}
                 userRole={role}
                 onLogout={logout}
+                locationId={selectedLocation}
+                onLocationChange={setSelectedLocation}
               >
                 <Suspense
                   fallback={

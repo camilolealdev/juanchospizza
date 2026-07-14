@@ -1,16 +1,15 @@
-
 export enum UserRole {
   CLIENT = 'CLIENT',
   ADMIN = 'ADMIN',
   OPERATOR = 'OPERATOR',
   REPARTIDOR = 'REPARTIDOR',
-  MARKETING = 'MARKETING'
+  MARKETING = 'MARKETING',
 }
 
 export enum PizzaSize {
   PERSONAL = 'Personal',
   MEDIANA = 'Mediana',
-  GRANDE = 'Grande'
+  GRANDE = 'Grande',
 }
 
 export interface Category {
@@ -67,7 +66,7 @@ export enum OrderStatus {
   ASSIGNED = 'ASSIGNED',
   DELIVERING = 'DELIVERING',
   COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED'
+  CANCELLED = 'CANCELLED',
 }
 
 export interface OrderItem {
@@ -90,6 +89,9 @@ export interface CartItem {
   details?: string;
 }
 
+// Las 2 sedes físicas del negocio -- ver server/schemas/orders.js LOCATION_IDS.
+export type LocationId = 'nemocon' | 'zipaquira';
+
 export interface Order {
   id: string;
   orderNumber: string;
@@ -103,6 +105,7 @@ export interface Order {
   createdAt: string;
   estimatedTime: number;
   paymentMethod: 'cash' | 'card' | 'nequi' | 'daviplata' | 'pse' | 'mercadopago' | 'paypal' | 'wompi' | 'bold';
+  locationId?: LocationId;
 }
 
 export interface Campaign {
@@ -128,7 +131,11 @@ export type GastroModule =
   | 'finanzas'
   | 'reportes'
   | 'reviews'
-  | 'pagos';
+  | 'pagos'
+  | 'empleados'
+  | 'turnos'
+  | 'mesas'
+  | 'caja';
 
 export interface Client {
   id: string;
@@ -148,6 +155,92 @@ export interface Client {
   tags: string[];
   estado: 'activo' | 'inactivo' | 'perdido';
   cumpleanos?: string;
+}
+
+// Staff roster (system of record only -- see server/routes/employees.js;
+// not wired into the actual login flow yet, which still only checks the
+// 4-entry USERS array in server/auth.js).
+export interface Employee {
+  id: string;
+  nombre: string;
+  role: 'ADMIN' | 'OPERATOR' | 'REPARTIDOR' | 'MARKETING';
+  locationId: 'nemocon' | 'zipaquira' | null;
+  activo: boolean;
+  creado: string;
+}
+
+// Turno de caja -- ver server/routes/shifts.js. expectedCash/difference son
+// null mientras el turno sigue 'open'; se calculan recién al cerrarlo.
+// Dining table in the restaurant floor
+// Ver server/schemas/tables.js para valores válidos de area/status.
+export interface DiningTable {
+  id: string;
+  name: string;
+  capacity: number;
+  area: 'salon' | 'terraza' | 'privado' | 'barra';
+  locationId: LocationId;
+  status: 'available' | 'occupied' | 'reserved' | 'cleaning' | 'maintenance';
+  notes: string | null;
+  qrCode: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+// Floor plan grouped by area
+export interface FloorPlan {
+  locationId: string;
+  total: number;
+  available: number;
+  occupied: number;
+  floorPlan: {
+    salon: DiningTable[];
+    terraza: DiningTable[];
+    privado: DiningTable[];
+    barra: DiningTable[];
+  };
+}
+
+// VER server/db.js: cash_register table. openedBy/closedBy son nombres de
+// empleado (admin/cocina/etc.), no IDs internos -- el login es vía PIN, no
+// hay sesión de usuario real que inyecte un userId.
+export interface CashRegisterEntry {
+  id: string;
+  locationId: LocationId;
+  openedBy: string;
+  openedAt: string;
+  closedBy: string | null;
+  closedAt: string | null;
+  initialAmount: number;
+  expectedAmount: number;
+  finalAmount: number | null;
+  difference: number | null;
+  status: 'open' | 'closed';
+  notes: string | null;
+}
+
+export interface Tip {
+  id: string;
+  orderId: string;
+  amount: number;
+  method: string;
+  waiterName: string | null;
+  locationId: LocationId;
+  createdAt: string;
+}
+
+export interface Shift {
+  id: string;
+  locationId: LocationId;
+  openedBy: string;
+  openedAt: string;
+  closedBy: string | null;
+  closedAt: string | null;
+  openingCash: number;
+  closingCash: number | null;
+  expectedCash: number | null;
+  difference: number | null;
+  notas: string | null;
+  status: 'open' | 'closed';
 }
 
 export interface LoyaltyLevel {

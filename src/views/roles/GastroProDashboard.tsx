@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { api, FinanceSummary } from '../../services/api';
-import { Client, Order, OrderStatus } from '../../types';
+import { Client, LocationId, Order, OrderStatus } from '../../types';
 
 interface WeeklyPoint {
   name: string;
@@ -13,27 +12,35 @@ interface WeeklyPoint {
 type ApiOrder = Omit<Order, 'items'> & { items: string | Order['items'] };
 const normalizeOrder = (order: ApiOrder): Order => ({
   ...order,
-  items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items
+  items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
 });
 
 const DIA_LABELS = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
 
-const CustomTooltip: React.FC<{ active?: boolean; payload?: { value: number }[]; label?: string }> = ({ active, payload, label }) => {
+const CustomTooltip: React.FC<{ active?: boolean; payload?: { value: number }[]; label?: string }> = ({
+  active,
+  payload,
+  label,
+}) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-stone-900/95 border border-stone-700/50 rounded-2xl p-4 shadow-2xl backdrop-blur-md">
         <p className="text-stone-400 text-[10px] font-black uppercase tracking-[0.3em] mb-1">{label}</p>
         <p className="text-white font-black text-xl">${payload[0].value.toLocaleString('es-CO')}</p>
-        {payload[1] && (
-          <p className="text-orange-400 font-bold text-sm mt-1">{payload[1].value} pedidos</p>
-        )}
+        {payload[1] && <p className="text-orange-400 font-bold text-sm mt-1">{payload[1].value} pedidos</p>}
       </div>
     );
   }
   return null;
 };
 
-const GastroProDashboard: React.FC = () => {
+interface GastroProDashboardProps {
+  // Sede seleccionada en el dropdown de AdminLayout -- sin ella (o con
+  // undefined) se ve el consolidado de ambas sedes, igual que antes.
+  locationId?: LocationId;
+}
+
+const GastroProDashboard: React.FC<GastroProDashboardProps> = ({ locationId }) => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -55,7 +62,9 @@ const GastroProDashboard: React.FC = () => {
     }
   };
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    loadAll();
+  }, []);
 
   if (loading) {
     return (
@@ -66,7 +75,9 @@ const GastroProDashboard: React.FC = () => {
     );
   }
 
-  const validOrders = orders.filter(o => o.status !== OrderStatus.CANCELLED);
+  const validOrders = orders.filter(
+    (o) => o.status !== OrderStatus.CANCELLED && (!locationId || o.locationId === locationId)
+  );
 
   // Last 7 calendar days, oldest to newest
   const today = new Date();
@@ -75,8 +86,8 @@ const GastroProDashboard: React.FC = () => {
     d.setDate(d.getDate() - (6 - i));
     return d;
   });
-  const weeklyData: WeeklyPoint[] = last7Days.map(d => {
-    const dayOrders = validOrders.filter(o => new Date(o.createdAt).toDateString() === d.toDateString());
+  const weeklyData: WeeklyPoint[] = last7Days.map((d) => {
+    const dayOrders = validOrders.filter((o) => new Date(o.createdAt).toDateString() === d.toDateString());
     return {
       name: DIA_LABELS[d.getDay()],
       ventas: dayOrders.reduce((a, o) => a + o.total, 0),
@@ -84,16 +95,18 @@ const GastroProDashboard: React.FC = () => {
     };
   });
 
-  const todayOrders = validOrders.filter(o => new Date(o.createdAt).toDateString() === today.toDateString());
+  const todayOrders = validOrders.filter((o) => new Date(o.createdAt).toDateString() === today.toDateString());
   const ventasHoy = todayOrders.reduce((a, o) => a + o.total, 0);
   const pedidosHoy = todayOrders.length;
   const ticketPromedio = pedidosHoy > 0 ? Math.round(ventasHoy / pedidosHoy) : 0;
   const totalVentas = weeklyData.reduce((acc, d) => acc + d.ventas, 0);
 
-  const productCounts = validOrders.flatMap(o => o.items).reduce<Record<string, number>>((acc, item) => {
-    acc[item.name] = (acc[item.name] || 0) + item.quantity;
-    return acc;
-  }, {});
+  const productCounts = validOrders
+    .flatMap((o) => o.items)
+    .reduce<Record<string, number>>((acc, item) => {
+      acc[item.name] = (acc[item.name] || 0) + item.quantity;
+      return acc;
+    }, {});
   const topProductos = Object.entries(productCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
@@ -101,12 +114,13 @@ const GastroProDashboard: React.FC = () => {
   const maxProducto = topProductos[0]?.amount || 1;
 
   const clientesRecientes = [...clients]
-    .filter(c => c.ultimaCompra)
+    .filter((c) => c.ultimaCompra)
     .sort((a, b) => new Date(b.ultimaCompra).getTime() - new Date(a.ultimaCompra).getTime())
     .slice(0, 5);
 
   const promedioVentaDiaria = weeklyData.length > 0 ? totalVentas / weeklyData.length : 0;
-  const variacionHoy = promedioVentaDiaria > 0 ? Math.round(((ventasHoy - promedioVentaDiaria) / promedioVentaDiaria) * 100) : 0;
+  const variacionHoy =
+    promedioVentaDiaria > 0 ? Math.round(((ventasHoy - promedioVentaDiaria) / promedioVentaDiaria) * 100) : 0;
 
   return (
     <div className="p-8 md:p-12 space-y-12 pb-40">
@@ -137,8 +151,15 @@ const GastroProDashboard: React.FC = () => {
           </div>
           <p className="text-4xl font-black text-white mb-2">${ventasHoy.toLocaleString('es-CO')}</p>
           <div className="flex items-center gap-2">
-            <i className={`fas ${variacionHoy >= 0 ? 'fa-arrow-up text-green-500' : 'fa-arrow-down text-red-500'} text-xs`}></i>
-            <span className={`text-[10px] font-black uppercase tracking-widest ${variacionHoy >= 0 ? 'text-green-500' : 'text-red-500'}`}>{variacionHoy >= 0 ? '+' : ''}{variacionHoy}% vs promedio semanal</span>
+            <i
+              className={`fas ${variacionHoy >= 0 ? 'fa-arrow-up text-green-500' : 'fa-arrow-down text-red-500'} text-xs`}
+            ></i>
+            <span
+              className={`text-[10px] font-black uppercase tracking-widest ${variacionHoy >= 0 ? 'text-green-500' : 'text-red-500'}`}
+            >
+              {variacionHoy >= 0 ? '+' : ''}
+              {variacionHoy}% vs promedio semanal
+            </span>
           </div>
         </div>
 
@@ -219,10 +240,14 @@ const GastroProDashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-stone-900/40 p-8 rounded-[2.5rem] border border-stone-800/50">
-          <h3 className="text-[10px] font-black text-stone-500 uppercase tracking-[0.3em] mb-6">Productos Más Vendidos</h3>
+          <h3 className="text-[10px] font-black text-stone-500 uppercase tracking-[0.3em] mb-6">
+            Productos Más Vendidos
+          </h3>
           <div className="space-y-5">
             {topProductos.length === 0 && (
-              <p className="text-stone-600 font-bold text-xs uppercase tracking-widest py-6 text-center">Sin ventas registradas todavía</p>
+              <p className="text-stone-600 font-bold text-xs uppercase tracking-widest py-6 text-center">
+                Sin ventas registradas todavía
+              </p>
             )}
             {topProductos.map((p) => (
               <div key={p.rank} className="flex items-center gap-4">
@@ -248,7 +273,9 @@ const GastroProDashboard: React.FC = () => {
           <h3 className="text-[10px] font-black text-stone-500 uppercase tracking-[0.3em] mb-6">Clientes Recientes</h3>
           <div className="space-y-4">
             {clientesRecientes.length === 0 && (
-              <p className="text-stone-600 font-bold text-xs uppercase tracking-widest py-6 text-center">Sin clientes registrados todavía</p>
+              <p className="text-stone-600 font-bold text-xs uppercase tracking-widest py-6 text-center">
+                Sin clientes registrados todavía
+              </p>
             )}
             {clientesRecientes.map((c) => (
               <div key={c.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
@@ -258,7 +285,14 @@ const GastroProDashboard: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-white">{c.nombre}</p>
-                    <p className="text-[10px] text-stone-500 font-bold uppercase tracking-widest">{new Date(c.ultimaCompra).toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="text-[10px] text-stone-500 font-bold uppercase tracking-widest">
+                      {new Date(c.ultimaCompra).toLocaleString('es-CO', {
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
                   </div>
                 </div>
                 <span className="text-sm font-black text-orange-500">${c.totalGastado.toLocaleString('es-CO')}</span>
@@ -274,16 +308,20 @@ const GastroProDashboard: React.FC = () => {
               <div className="w-10 h-10 rounded-2xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30">
                 <i className="fas fa-chart-simple text-purple-400 text-sm"></i>
               </div>
-              <span className="text-[10px] font-black text-purple-400 uppercase tracking-[0.3em]">Análisis de Tendencia</span>
+              <span className="text-[10px] font-black text-purple-400 uppercase tracking-[0.3em]">
+                Análisis de Tendencia
+              </span>
             </div>
             <p className="text-sm text-white/80 leading-relaxed mb-6 flex-1">
               {ventasHoy === 0
                 ? 'Todavía no hay ventas registradas hoy. Esta sección se calcula sobre pedidos reales, no proyecciones.'
                 : variacionHoy >= 0
-                ? `Las ventas de hoy (${ventasHoy.toLocaleString('es-CO')}) están un ${variacionHoy}% por encima del promedio de los últimos 7 días. El producto más vendido es ${topProductos[0]?.name || '—'}.`
-                : `Las ventas de hoy (${ventasHoy.toLocaleString('es-CO')}) están un ${Math.abs(variacionHoy)}% por debajo del promedio de los últimos 7 días.`}
+                  ? `Las ventas de hoy (${ventasHoy.toLocaleString('es-CO')}) están un ${variacionHoy}% por encima del promedio de los últimos 7 días. El producto más vendido es ${topProductos[0]?.name || '—'}.`
+                  : `Las ventas de hoy (${ventasHoy.toLocaleString('es-CO')}) están un ${Math.abs(variacionHoy)}% por debajo del promedio de los últimos 7 días.`}
             </p>
-            <p className="text-[9px] text-purple-300/60 uppercase tracking-widest font-bold">Cálculo directo sobre pedidos reales — no es una predicción de IA</p>
+            <p className="text-[9px] text-purple-300/60 uppercase tracking-widest font-bold">
+              Cálculo directo sobre pedidos reales — no es una predicción de IA
+            </p>
           </div>
         </div>
       </div>

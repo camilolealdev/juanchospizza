@@ -19,7 +19,7 @@ describe('createOrderSchema', () => {
   });
 
   it('rejects a missing total -- an order with no amount is not valid', () => {
-    const { total, ...rest } = validOrder;
+    const { total: _total, ...rest } = validOrder;
     expect(createOrderSchema.safeParse(rest).success).toBe(false);
   });
 
@@ -34,7 +34,11 @@ describe('createOrderSchema', () => {
 
   it('rejects an oversized items payload (mirrors the original 5000-char JSON cap)', () => {
     const hugeItems = Array.from({ length: 500 }, (_, i) => ({
-      id: `item-${i}`, productId: `p${i}`, name: 'x'.repeat(50), quantity: 1, price: 1000,
+      id: `item-${i}`,
+      productId: `p${i}`,
+      name: 'x'.repeat(50),
+      quantity: 1,
+      price: 1000,
     }));
     expect(createOrderSchema.safeParse({ ...validOrder, items: hugeItems }).success).toBe(false);
   });
@@ -46,6 +50,20 @@ describe('createOrderSchema', () => {
   it('accepts an explicit non-default paymentMethod', () => {
     const result = createOrderSchema.safeParse({ ...validOrder, paymentMethod: 'bold' });
     expect(result.data.paymentMethod).toBe('bold');
+  });
+
+  it('defaults locationId to nemocon when omitted', () => {
+    const result = createOrderSchema.safeParse(validOrder);
+    expect(result.data.locationId).toBe('nemocon');
+  });
+
+  it('accepts zipaquira as an explicit locationId', () => {
+    const result = createOrderSchema.safeParse({ ...validOrder, locationId: 'zipaquira' });
+    expect(result.data.locationId).toBe('zipaquira');
+  });
+
+  it('rejects an unknown locationId', () => {
+    expect(createOrderSchema.safeParse({ ...validOrder, locationId: 'bogota' }).success).toBe(false);
   });
 });
 
@@ -65,7 +83,16 @@ describe('updateOrderSchema (partial)', () => {
 
 describe('updateOrderStatusSchema', () => {
   it('accepts every real order status', () => {
-    for (const status of ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'ASSIGNED', 'DELIVERING', 'COMPLETED', 'CANCELLED']) {
+    for (const status of [
+      'PENDING',
+      'CONFIRMED',
+      'PREPARING',
+      'READY',
+      'ASSIGNED',
+      'DELIVERING',
+      'COMPLETED',
+      'CANCELLED',
+    ]) {
       expect(updateOrderStatusSchema.safeParse({ status }).success).toBe(true);
     }
   });

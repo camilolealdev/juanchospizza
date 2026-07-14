@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { initDB } from './db.js';
 import { initPush } from './push.js';
 import { generalRateLimit } from './middleware/rateLimit.js';
+import { initServiceKeys, serviceKeyMiddleware } from './middleware/serviceKey.js';
 
 import miscRoutes from './routes/misc.js';
 import authRoutes from './routes/auth.js';
@@ -24,9 +25,17 @@ import loyaltyRoutes from './routes/loyalty.js';
 import menuExtrasRoutes from './routes/menuExtras.js';
 import pushRoutes from './routes/push.js';
 import reviewsRoutes from './routes/reviews.js';
+import menuRoutes from './routes/menu.js';
+import tablesRoutes from './routes/tables.js';
+import cashRegisterRoutes from './routes/cashRegister.js';
+
+import employeesRoutes from './routes/employees.js';
+import shiftsRoutes from './routes/shifts.js';
 
 dotenv.config();
 initPush();
+initServiceKeys();
+initServiceKeys();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,12 +50,15 @@ const PORT = parseInt(process.env.PORT || '3001', 10);
 app.set('trust proxy', 1);
 
 // Middleware de seguridad
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001'],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001'],
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 app.use(generalRateLimit);
+app.use(serviceKeyMiddleware);
 
 // Rutas por recurso -- ver server/routes/. Cada router mantiene sus propios
 // paths completos (p.ej. '/api/orders'), así que se montan en '/'.
@@ -67,19 +79,27 @@ app.use('/', loyaltyRoutes);
 app.use('/', menuExtrasRoutes);
 app.use('/', pushRoutes);
 app.use('/', reviewsRoutes);
+app.use('/', menuRoutes);
+app.use('/', tablesRoutes);
+app.use('/', cashRegisterRoutes);
+
+app.use('/', employeesRoutes);
+app.use('/', shiftsRoutes);
 
 // Serve static files from dist in production
-app.use(express.static(path.join(__dirname, '../dist'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.js')) {
-      res.set('Content-Type', 'application/javascript');
-    } else if (filePath.endsWith('.css')) {
-      res.set('Content-Type', 'text/css');
-    } else if (filePath.endsWith('.svg')) {
-      res.set('Content-Type', 'image/svg+xml');
-    }
-  }
-}));
+app.use(
+  express.static(path.join(__dirname, '../dist'), {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.js')) {
+        res.set('Content-Type', 'application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        res.set('Content-Type', 'text/css');
+      } else if (filePath.endsWith('.svg')) {
+        res.set('Content-Type', 'image/svg+xml');
+      }
+    },
+  })
+);
 
 // Fallback to frontend for non-API routes
 app.get('*', (req, res) => {

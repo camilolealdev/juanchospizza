@@ -1,9 +1,27 @@
-import type { Order, Campaign, OrderStatus, Client, LoyaltyReward, Product, Category } from '../types';
+import type {
+  Order,
+  Campaign,
+  OrderStatus,
+  Client,
+  LoyaltyReward,
+  Product,
+  Category,
+  Employee,
+  Shift,
+  LocationId,
+} from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 type OrderPayload = Partial<Order>;
 type ClientPayload = Partial<Client>;
+export interface NewEmployeePayload {
+  nombre: string;
+  role: Employee['role'];
+  pin: string;
+  locationId?: Employee['locationId'];
+}
+export type EmployeeUpdatePayload = Partial<Pick<Employee, 'nombre' | 'role' | 'locationId' | 'activo'>>;
 type LoyaltyRewardPayload = Partial<LoyaltyReward>;
 type ProductPayload = Partial<Product>;
 
@@ -383,8 +401,8 @@ export const api = {
   },
 
   // Stats
-  async getStats() {
-    return apiFetch('/api/stats');
+  async getStats(locationId?: string) {
+    return apiFetch(`/api/stats${locationId ? `?locationId=${locationId}` : ''}`);
   },
 
   // Clients
@@ -663,6 +681,177 @@ export const api = {
   // Recipes
   async getRecipes(): Promise<Recipe[]> {
     return apiFetch('/api/recipes');
+  },
+
+  // Employees (staff roster -- CRUD only, not wired into the login flow yet)
+  async getEmployees(): Promise<Employee[]> {
+    return apiFetch('/api/employees');
+  },
+
+  async createEmployee(employee: NewEmployeePayload) {
+    return apiFetch('/api/employees', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(employee),
+    });
+  },
+
+  async updateEmployee(id: string, data: EmployeeUpdatePayload) {
+    return apiFetch(`/api/employees/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteEmployee(id: string) {
+    return apiFetch(`/api/employees/${id}`, { method: 'DELETE' });
+  },
+
+  // Shifts (turnos y control de caja)
+  async getShifts(params?: { locationId?: LocationId; status?: 'open' | 'closed' }): Promise<Shift[]> {
+    const query = new URLSearchParams();
+    if (params?.locationId) query.set('locationId', params.locationId);
+    if (params?.status) query.set('status', params.status);
+    const qs = query.toString();
+    return apiFetch(`/api/shifts${qs ? `?${qs}` : ''}`);
+  },
+
+  async getCurrentShift(locationId: LocationId): Promise<Shift | null> {
+    return apiFetch(`/api/shifts/current?locationId=${locationId}`);
+  },
+
+  async openShift(data: { locationId: LocationId; openingCash: number }): Promise<Shift> {
+    return apiFetch('/api/shifts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async closeShift(id: string, data: { closingCash: number; notas?: string }): Promise<Shift> {
+    return apiFetch(`/api/shifts/${id}/close`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  // ---- UNIFIED MENU ----
+  async getFullMenu(): Promise<{
+    categories: Category[];
+    products: Product[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    variants: any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    combos: any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    promotions: any[];
+    updatedAt: string;
+  }> {
+    return apiFetch('/api/menu');
+  },
+
+  // ---- DINING TABLES ----
+  async getTables(params?: { locationId?: string; area?: string; status?: string; includeInactive?: string }) {
+    const query = new URLSearchParams();
+    if (params?.locationId) query.set('locationId', params.locationId);
+    if (params?.area) query.set('area', params.area);
+    if (params?.status) query.set('status', params.status);
+    if (params?.includeInactive) query.set('includeInactive', params.includeInactive);
+    const qs = query.toString();
+    return apiFetch(`/api/tables${qs ? `?${qs}` : ''}`);
+  },
+
+  async getTable(id: string) {
+    return apiFetch(`/api/tables/${id}`);
+  },
+
+  async createTable(data: { name: string; capacity?: number; area?: string; locationId?: string; notes?: string }) {
+    return apiFetch('/api/tables', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateTable(id: string, data: Record<string, unknown>) {
+    return apiFetch(`/api/tables/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async batchUpdateTableStatus(ids: string[], status: string) {
+    return apiFetch('/api/tables/batch-status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, status }),
+    });
+  },
+
+  async getFloorPlan(locationId?: string) {
+    const qs = locationId ? `?locationId=${locationId}` : '';
+    return apiFetch(`/api/tables/floor-plan${qs}`);
+  },
+
+  // ---- CASH REGISTER ----
+  async getCashRegisterEntries(params?: { locationId?: string; status?: string }) {
+    const query = new URLSearchParams();
+    if (params?.locationId) query.set('locationId', params.locationId);
+    if (params?.status) query.set('status', params.status);
+    const qs = query.toString();
+    return apiFetch(`/api/cash-register${qs ? `?${qs}` : ''}`);
+  },
+
+  async openCashRegister(data: { locationId: string; openedBy: string; initialAmount?: number; notes?: string }) {
+    return apiFetch('/api/cash-register/open', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async closeCashRegister(id: string, data: { finalAmount: number; closedBy: string; notes?: string }) {
+    return apiFetch(`/api/cash-register/${id}/close`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  // ---- TIPS ----
+  async getTips(params?: { locationId?: string; desde?: string; hasta?: string }) {
+    const query = new URLSearchParams();
+    if (params?.locationId) query.set('locationId', params.locationId);
+    if (params?.desde) query.set('desde', params.desde);
+    if (params?.hasta) query.set('hasta', params.hasta);
+    const qs = query.toString();
+    return apiFetch(`/api/tips${qs ? `?${qs}` : ''}`);
+  },
+
+  async createTip(data: {
+    orderId: string;
+    amount: number;
+    method?: string;
+    waiterName?: string;
+    locationId?: string;
+  }) {
+    return apiFetch('/api/tips', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getTipsSummary(params?: { locationId?: string; desde?: string; hasta?: string }) {
+    const query = new URLSearchParams();
+    if (params?.locationId) query.set('locationId', params.locationId);
+    if (params?.desde) query.set('desde', params.desde);
+    if (params?.hasta) query.set('hasta', params.hasta);
+    const qs = query.toString();
+    return apiFetch(`/api/tips/summary${qs ? `?${qs}` : ''}`);
   },
 };
 
