@@ -376,11 +376,14 @@ const apiFetch = async (path: string, options: RequestInit = {}) => {
 
 export const api = {
   // Auth
-  async login(username: string, pin: string) {
+  // password es opcional -- solo lo exige el backend para la cuenta
+  // isSuperAdmin (ver server/auth.js authenticate()). El resto de roles
+  // sigue funcionando con PIN solo.
+  async login(username: string, pin?: string, password?: string) {
     return apiFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, pin }),
+      body: JSON.stringify({ username, pin, password }),
     });
   },
 

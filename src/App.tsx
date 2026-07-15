@@ -39,7 +39,7 @@ const InvoicesView = lazy(() => import('./views/roles/InvoicesView'));
 interface AuthContextType {
   isAuthenticated: boolean;
   userRole: UserRole;
-  login: (role: UserRole, pin?: string) => Promise<boolean>;
+  login: (role: UserRole, pin?: string, password?: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -205,13 +205,15 @@ const App: React.FC = () => {
     return <OrderConfirmationPage />;
   }
 
-  const login = async (selectedRole: UserRole, pin?: string): Promise<boolean> => {
+  const login = async (selectedRole: UserRole, pin?: string, password?: string): Promise<boolean> => {
     const username = ROLE_TO_USERNAME[selectedRole];
-    if (!username || !pin) return false;
+    // password solo lo pide LoginModal para ADMIN -- el resto de roles sigue
+    // mandando solo PIN, backend decide qué exige según la cuenta.
+    if (!username || (!pin && !password)) return false;
     // No try/catch swallowing here on purpose -- a network failure (backend
     // unreachable) needs to reach LoginModal's own catch with its real
     // message, not collapse into the same "PIN incorrecto" a wrong PIN gets.
-    const result = await api.login(username, pin);
+    const result = await api.login(username, pin, password);
     if (!result?.token) return false;
     setAuthSession({ token: result.token, role: result.role, username: result.username });
     const resolvedRole = isKnownRole(result.role) ? result.role : selectedRole;
@@ -326,15 +328,22 @@ const App: React.FC = () => {
   );
 };
 
-const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => Promise<boolean>; onClose: () => void }> = ({
-  onLogin,
-  onClose,
-}) => {
+const LoginModal: React.FC<{
+  onLogin: (role: UserRole, pin?: string, password?: string) => Promise<boolean>;
+  onClose: () => void;
+}> = ({ onLogin, onClose }) => {
   const [selectedRole, setSelectedRole] = useState('');
   const [pin, setPin] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showHint, setShowHint] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Solo ADMIN puede ser la cuenta isSuperAdmin, que el backend exige con
+  // password + PIN (ver server/auth.js). El resto de roles sigue siendo
+  // PIN-solo -- no tiene sentido pedirle contraseña a la terminal
+  // compartida de cocina/repartidor.
+  const showPasswordField = selectedRole === UserRole.ADMIN;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -344,8 +353,8 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => Promise<b
     }
     setIsSubmitting(true);
     try {
-      const success = await onLogin(selectedRole as UserRole, pin);
-      if (!success) setError('PIN incorrecto');
+      const success = await onLogin(selectedRole as UserRole, pin, showPasswordField ? password : undefined);
+      if (!success) setError('Credenciales incorrectas');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo conectar con el servidor');
     } finally {
@@ -382,6 +391,24 @@ const LoginModal: React.FC<{ onLogin: (role: UserRole, pin: string) => Promise<b
               <option value={UserRole.MARKETING}>Marketing</option>
             </select>
           </div>
+
+          {showPasswordField && (
+            <div>
+              <label className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block">
+                Contraseña
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
+                placeholder="Contraseña de administrador"
+                className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold focus:border-orange-600/50 outline-none transition-colors"
+              />
+            </div>
+          )}
 
           <div>
             <label className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block">PIN</label>
