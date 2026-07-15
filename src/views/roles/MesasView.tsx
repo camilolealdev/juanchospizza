@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import type { DiningTable, FloorPlan, LocationId } from '../../types';
 
 interface Props {
@@ -60,6 +61,11 @@ const MesasView: React.FC<Props> = ({ locationId }) => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Recargar mesas cuando llegan eventos WebSocket
+  useWebSocket('table:update', () => {
+    loadData();
+  }, { locationId });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

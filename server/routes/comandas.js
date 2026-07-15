@@ -12,6 +12,7 @@ import {
   updateComandaItemSchema,
   bulkAddItemsSchema,
 } from '../schemas/comandas.js';
+import { notifyComandaUpdate } from '../websocket.js';
 
 const router = express.Router();
 
@@ -88,6 +89,13 @@ router.post(
 
       const created = await pool.query('SELECT * FROM comandas WHERE id = $1', [id]);
       res.status(201).json({ ...created.rows[0], items: [] });
+
+      // Notificar WebSocket
+      setImmediate(() => {
+        notifyComandaUpdate(id, 'created').catch((err) =>
+          console.error('[WS] Error notificando comanda creada:', err.message)
+        );
+      });
     } catch (e) {
       res.status(500).json({ error: 'Error al crear comanda' });
     }
@@ -129,6 +137,13 @@ router.put(
         req.params.id,
       ]);
       res.json({ ...result.rows[0], items: items.rows });
+
+      // Notificar WebSocket
+      setImmediate(() => {
+        notifyComandaUpdate(req.params.id, 'updated').catch((err) =>
+          console.error('[WS] Error notificando comanda actualizada:', err.message)
+        );
+      });
     } catch (e) {
       res.status(500).json({ error: 'Error al actualizar comanda' });
     }
@@ -161,6 +176,13 @@ router.patch(
 
       const result = await pool.query('SELECT * FROM comandas WHERE id = $1', [req.params.id]);
       res.json(result.rows[0]);
+
+      // Notificar WebSocket
+      setImmediate(() => {
+        notifyComandaUpdate(req.params.id, 'closed').catch((err) =>
+          console.error('[WS] Error notificando comanda cerrada:', err.message)
+        );
+      });
     } catch (e) {
       res.status(500).json({ error: 'Error al cerrar comanda' });
     }
@@ -195,6 +217,13 @@ router.post(
 
       const created = await pool.query('SELECT * FROM comanda_items WHERE id = $1', [id]);
       res.status(201).json(created.rows[0]);
+
+      // Notificar WebSocket
+      setImmediate(() => {
+        notifyComandaUpdate(comandaId, 'items_updated').catch((err) =>
+          console.error('[WS] Error notificando item agregado:', err.message)
+        );
+      });
     } catch (e) {
       res.status(500).json({ error: 'Error al agregar producto' });
     }
@@ -239,6 +268,13 @@ router.post(
       );
 
       res.status(201).json({ inserted: inserted.length, ids: inserted });
+
+      // Notificar WebSocket
+      setImmediate(() => {
+        notifyComandaUpdate(comandaId, 'items_updated').catch((err) =>
+          console.error('[WS] Error notificando items en bulk:', err.message)
+        );
+      });
     } catch (e) {
       res.status(500).json({ error: 'Error al agregar productos' });
     }
@@ -275,23 +311,30 @@ router.patch(
       params.push(req.params.id);
       await pool.query(`UPDATE comanda_items SET ${updates.join(', ')} WHERE id = $${params.length}`, params);
 
+      // Obtener el item actualizado
+      const updatedItem = await pool.query('SELECT * FROM comanda_items WHERE id = $1', [req.params.id]);
+      if (!updatedItem.rows.length) return res.status(404).json({ error: 'Item no encontrado' });
+
       // Recalcular subtotal si cambió quantity
       if (quantity !== undefined) {
-        const item = await pool.query('SELECT * FROM comanda_items WHERE id = $1', [req.params.id]);
-        if (item.rows.length) {
-          const newSubtotal = item.rows[0].quantity * item.rows[0].unitPrice;
-          await pool.query('UPDATE comanda_items SET subtotal = $1 WHERE id = $2', [newSubtotal, req.params.id]);
+        const newSubtotal = updatedItem.rows[0].quantity * updatedItem.rows[0].unitPrice;
+        await pool.query('UPDATE comanda_items SET subtotal = $1 WHERE id = $2', [newSubtotal, req.params.id]);
 
-          // Actualizar total de comanda
-          await pool.query(
-            'UPDATE comandas SET total = (SELECT COALESCE(SUM(subtotal), 0) FROM comanda_items WHERE "comandaId" = $1) WHERE id = $1',
-            [item.rows[0].comandaId]
-          );
-        }
+        // Actualizar total de comanda
+        await pool.query(
+          'UPDATE comandas SET total = (SELECT COALESCE(SUM(subtotal), 0) FROM comanda_items WHERE "comandaId" = $1) WHERE id = $1',
+          [updatedItem.rows[0].comandaId]
+        );
       }
 
-      const updated = await pool.query('SELECT * FROM comanda_items WHERE id = $1', [req.params.id]);
-      res.json(updated.rows[0]);
+      res.json(updatedItem.rows[0]);
+
+      // Notificar WebSocket
+      setImmediate(() => {
+        notifyComandaUpdate(updatedItem.rows[0].comandaId, 'items_updated').catch((err) =>
+          console.error('[WS] Error notificando item actualizado:', err.message)
+        );
+      });
     } catch (e) {
       res.status(500).json({ error: 'Error al actualizar item' });
     }
@@ -314,6 +357,13 @@ router.delete('/api/comandas/items/:id', authMiddleware, requireRole('ADMIN', 'O
     );
 
     res.json({ deleted: true, comandaId });
+
+    // Notificar WebSocket
+    setImmediate(() => {
+      notifyComandaUpdate(comandaId, 'items_updated').catch((err) =>
+        console.error('[WS] Error notificando item eliminado:', err.message)
+      );
+    });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar item' });
   }
@@ -400,6 +450,13 @@ router.post('/api/comandas/:id/split', authMiddleware, requireRole('ADMIN', 'OPE
     );
 
     res.status(201).json({ splitted: results.length, comandaIds: results });
+
+    // Notificar WebSocket
+    setImmediate(() => {
+      notifyComandaUpdate(req.params.id, 'split').catch((err) =>
+        console.error('[WS] Error notificando split de comanda:', err.message)
+      );
+    });
   } catch (e) {
     res.status(500).json({ error: 'Error al dividir comanda' });
   }

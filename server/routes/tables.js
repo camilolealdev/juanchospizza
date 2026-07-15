@@ -3,6 +3,7 @@ import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import { createTableSchema, updateTableSchema, batchUpdateStatusSchema } from '../schemas/tables.js';
+import { notifyTableUpdate } from '../websocket.js';
 
 const router = express.Router();
 
@@ -91,6 +92,15 @@ router.patch(
         [status, ids]
       );
       res.json({ updated: result.rows.length, tables: result.rows });
+
+      // Notificar WebSocket para cada mesa actualizada
+      setImmediate(() => {
+        result.rows.forEach((table) => {
+          notifyTableUpdate(table.id, table.status).catch((err) =>
+            console.error('[WS] Error notificando mesa actualizada:', err.message)
+          );
+        });
+      });
     } catch (e) {
       res.status(500).json({ error: 'Error updating table statuses' });
     }
@@ -123,6 +133,13 @@ router.post('/api/tables', authMiddleware, requireRole('ADMIN'), validate(create
     );
 
     res.status(201).json({ id, name, capacity, area, locationId, status: 'available', active: true });
+
+    // Notificar WebSocket
+    setImmediate(() => {
+      notifyTableUpdate(id, 'available').catch((err) =>
+        console.error('[WS] Error notificando mesa creada:', err.message)
+      );
+    });
   } catch (e) {
     if (e.code === '23505') {
       return res.status(409).json({ error: 'Ya existe una mesa con ese nombre en esta sede' });
@@ -178,6 +195,13 @@ router.put('/api/tables/:id', authMiddleware, requireRole('ADMIN'), validate(upd
 
     const updated = await pool.query('SELECT * FROM dining_tables WHERE id = $1', [req.params.id]);
     res.json(updated.rows[0]);
+
+    // Notificar WebSocket
+    setImmediate(() => {
+      notifyTableUpdate(req.params.id, status || updated.rows[0]?.status).catch((err) =>
+        console.error('[WS] Error notificando mesa actualizada:', err.message)
+      );
+    });
   } catch (e) {
     res.status(500).json({ error: 'Error updating table' });
   }

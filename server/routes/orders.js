@@ -5,6 +5,7 @@ import { sendPushToPhone } from '../push.js';
 import { sendTemplatedEmail, templates } from '../services/email.js';
 import { deliverWebhook } from '../services/webhooks.js';
 import { validate } from '../middleware/validate.js';
+import { notifyNewOrder, notifyOrderUpdate } from '../websocket.js';
 import { createOrderSchema, updateOrderSchema, updateOrderStatusSchema } from '../schemas/orders.js';
 
 const router = express.Router();
@@ -180,6 +181,16 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
       });
 
     // ── Notificaciones post-creación (no bloqueantes) ────────────
+    setImmediate(() => {
+      notifyNewOrder({
+        id,
+        orderNumber: sanitized.orderNumber,
+        customerName: sanitized.customerName,
+        total: sanitized.total,
+        status,
+        paymentMethod: sanitized.paymentMethod,
+      }).catch((err) => console.error('[WS] Error notificando nuevo pedido:', err.message));
+    });
     notifyOrderConfirmation(sanitized.clientId, sanitized.customerName, sanitized.orderNumber, sanitized.total, sanitized.estimatedTime);
     notifyWebhook('order.created', { id, orderNumber: sanitized.orderNumber, total: sanitized.total, status, paymentMethod: sanitized.paymentMethod });
   } catch (e) {
@@ -260,6 +271,9 @@ router.patch(
       // ── Notificaciones post-status (no bloqueantes) ────────────
       if (['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'ASSIGNED', 'DELIVERING', 'COMPLETED', 'CANCELLED'].includes(status)) {
         setImmediate(() => {
+          notifyOrderUpdate(order.id, status).catch((err) =>
+            console.error('[WS] Error notificando cambio de estado:', err.message)
+          );
           notifyOrderStatusChange(order, status).catch((err) =>
             console.error('[Order] Error en notificación de cambio de estado:', err.message)
           );

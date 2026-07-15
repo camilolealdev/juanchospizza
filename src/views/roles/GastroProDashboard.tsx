@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { api, FinanceSummary } from '../../services/api';
 import { Client, LocationId, Order, OrderStatus } from '../../types';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 interface WeeklyPoint {
   name: string;
@@ -47,7 +48,7 @@ const GastroProDashboard: React.FC<GastroProDashboardProps> = ({ locationId }) =
   const [clients, setClients] = useState<Client[]>([]);
   const [finance, setFinance] = useState<FinanceSummary | null>(null);
 
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
       const [ord, cli, fin] = await Promise.all([api.getOrders(), api.getClients(), api.getFinanceSummary()]);
@@ -60,11 +61,20 @@ const GastroProDashboard: React.FC<GastroProDashboardProps> = ({ locationId }) =
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadAll();
-  }, []);
+  }, [loadAll]);
+
+  // Recargar datos cuando llegan eventos en tiempo real vía WebSocket
+  useWebSocket('order:new', () => {
+    loadAll();
+  });
+
+  useWebSocket('order:update', () => {
+    loadAll();
+  });
 
   if (loading) {
     return (

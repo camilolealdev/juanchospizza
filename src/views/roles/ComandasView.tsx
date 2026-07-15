@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { LocationId, DiningTable, Comanda, ComandaItem } from '../../types';
 import api from '../../services/api';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 interface Props {
   locationId: LocationId;
@@ -28,7 +29,7 @@ const ComandasView: React.FC<Props> = ({ locationId }) => {
     { productName: '', quantity: 1, unitPrice: 0 },
   ]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [comandasData, tablesData] = await Promise.all([
@@ -47,11 +48,16 @@ const ComandasView: React.FC<Props> = ({ locationId }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [locationId, tab]);
 
   useEffect(() => {
     loadData();
-  }, [locationId, tab]);
+  }, [loadData]);
+
+  // Recargar comandas cuando llegan eventos WebSocket
+  useWebSocket('comanda:update', () => {
+    loadData();
+  }, { locationId });
 
   const openComanda = async () => {
     if (!newComanda.tableId) return;
