@@ -74,3 +74,4 @@ _legacy/
 deploy.sh
 docker-compose.ci.yml
 nginx.conf
+docker-compose.override.yml

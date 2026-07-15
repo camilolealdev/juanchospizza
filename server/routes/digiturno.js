@@ -97,6 +97,54 @@ router.get('/api/digiturno/queue', async (req, res) => {
   }
 });
 
+// GET /api/digiturno/queue/live — SSE endpoint para pantalla de clientes en tiempo real
+// Emite eventos `data` con la cola actual cada 3 segundos.
+// El cliente se conecta vía EventSource y recibe actualizaciones automáticas.
+router.get('/api/digiturno/queue/live', async (req, res) => {
+  const { locationId } = req.query;
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  // Enviar keepalive cada 30s para evitar timeouts de proxy
+  const keepAlive = setInterval(() => {
+    res.write(':keepalive\n\n');
+  }, 30000);
+
+  // Enviar datos cada 3s
+  const sendQueue = async () => {
+    try {
+      let query = `SELECT id, "ticketNumber", status, "guestCount", "customerName", source, "tableName", "createdAt"
+                   FROM digiturno_tickets WHERE status IN ('waiting', 'preparing', 'ready')`;
+      const params = [];
+      if (locationId) {
+        params.push(locationId);
+        query += ` AND "locationId" = $1`;
+      }
+      query += ' ORDER BY "ticketNumber" ASC';
+
+      const result = await pool.query(query, params);
+      res.write(`data: ${JSON.stringify(result.rows)}\n\n`);
+    } catch {
+      res.write(`event: error\ndata: {"error":"Error al obtener cola"}\n\n`);
+    }
+  };
+
+  // Enviar datos inicial inmediatamente
+  await sendQueue();
+
+  const interval = setInterval(sendQueue, 3000);
+
+  req.on('close', () => {
+    clearInterval(interval);
+    clearInterval(keepAlive);
+  });
+});
+
 // POST /api/digiturno — crear nuevo ticket
 // Incluye retry loop para race condition en números secuenciales.
 // Si dos peticiones simultáneas calculan el mismo MAX+1, el INSERT

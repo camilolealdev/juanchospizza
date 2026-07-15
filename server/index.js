@@ -133,7 +133,9 @@ app.use('/', invoicesRoutes);
 app.use('/', qrMenuRoutes);
 app.use('/', digiturnoRoutes);
 
-// Serve static files from dist in production
+// Serve static files: public/ (para pantallas públicas como digiturno) y dist/
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.use(
   express.static(path.join(__dirname, '../dist'), {
     setHeaders: (res, filePath) => {

@@ -1,6 +1,6 @@
 // Zod schemas for digiturno (digital ticket/turn system).
 import { z } from 'zod';
-import { str, strOpt, num, numOpt, boolOpt } from './helpers.js';
+import { str, strOpt, boolOpt, clampedNumberOpt } from './helpers.js';
 
 const LOCATION_IDS = ['nemocon', 'zipaquira'];
 const ORDER_TYPES = ['dine-in', 'pickup'];
@@ -13,10 +13,10 @@ export const createDigiturnoSchema = z.object({
   tableId: strOpt(36),
   tableName: strOpt(100),
   customerName: strOpt(100),
-  guestCount: numOpt().default(1),
+  guestCount: clampedNumberOpt(1, 50).default(1),
   source: z.enum(SOURCES).default('local'),
   items: z.array(z.any()).default([]),
-  total: numOpt().default(0),
+  total: clampedNumberOpt(0, 99999999).default(0),
   notes: strOpt(500),
 });
 
@@ -27,8 +27,8 @@ export const updateDigiturnoStatusSchema = z.object({
 export const updateDigiturnoSchema = z.object({
   orderType: z.enum(ORDER_TYPES).optional(),
   customerName: strOpt(100),
-  guestCount: numOpt(),
+  guestCount: clampedNumberOpt(1, 50),
   notes: strOpt(500),
   items: z.array(z.any()).optional(),
-  total: numOpt(),
+  total: clampedNumberOpt(0, 99999999),
 });
