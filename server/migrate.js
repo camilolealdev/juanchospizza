@@ -119,6 +119,48 @@ const MIGRATIONS = [
       await pool.query('CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at)');
     },
   },
+
+  // ── 004: username + password (2do factor para super admin) ──────
+  {
+    id: 4,
+    name: 'Add username/password columns to employees, promote admin_default to super admin',
+    up: async (pool) => {
+      // username es el identificador de login real (reemplaza el "escanear
+      // todos los del rol y probar el PIN de a uno" que auth.js usa hoy --
+      // ese approach es O(n) por intento Y no distingue dos empleados del
+      // mismo rol con el mismo PIN, dos problemas reales, no cosméticos).
+      await pool.query('ALTER TABLE employees ADD COLUMN IF NOT EXISTS username TEXT');
+      await pool.query('ALTER TABLE employees ADD COLUMN IF NOT EXISTS "passwordHash" TEXT');
+      await pool.query('ALTER TABLE employees ADD COLUMN IF NOT EXISTS "passwordSalt" TEXT');
+      // Cuenta con privilegios totales que exige password Y pin (dos
+      // secretos) para iniciar sesión, no solo uno u otro. No hay más de
+      // una hoy, pero es un flag, no un rol nuevo, por si eso cambia.
+      await pool.query('ALTER TABLE employees ADD COLUMN IF NOT EXISTS "isSuperAdmin" BOOLEAN DEFAULT FALSE');
+      await pool.query(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_employees_username ON employees(username) WHERE username IS NOT NULL'
+      );
+
+      // Backfill: los 4 sembrados por la migración #001 conservan su
+      // username fijo de siempre para no romper el login existente.
+      const seeded = {
+        admin_default: 'admin',
+        cocina_default: 'cocina',
+        repartidor_default: 'repartidor',
+        marketing_default: 'marketing',
+      };
+      for (const [id, username] of Object.entries(seeded)) {
+        await pool.query('UPDATE employees SET username = $1 WHERE id = $2 AND username IS NULL', [username, id]);
+      }
+
+      // admin_default pasa a super admin. passwordHash queda NULL a
+      // propósito -- no hay password "por defecto" segura para hardcodear
+      // en una migración (sería el mismo anti-patrón que el salt viejo).
+      // Con isSuperAdmin=true y passwordHash NULL, el login debe exigir
+      // que se configure un password real antes de aceptar esta cuenta
+      // (responsabilidad de auth.js, no de esta migración).
+      await pool.query(`UPDATE employees SET "isSuperAdmin" = true WHERE id = 'admin_default'`);
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────
