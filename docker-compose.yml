@@ -211,7 +211,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  nginx_cache:
 
 networks:
   app-network:

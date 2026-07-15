@@ -1,6 +1,7 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
+import { sendTemplatedEmail, templates } from '../services/email.js';
 import { validate } from '../middleware/validate.js';
 import { createClientSchema, patchClientSchema, updateClientSchema } from '../schemas/clients.js';
 
@@ -62,6 +63,18 @@ router.post(
         [id, nombre, telefono, email, direccion, notas, cumpleanos]
       );
       res.status(201).json({ id, nombre, telefono, email, direccion, notas, cumpleanos });
+
+      // ── Bienvenida por email (no bloqueante) ────────────────
+      if (email) {
+        sendTemplatedEmail({
+          to: email,
+          subject: '¡Bienvenido a Guido Pizza! 🍕',
+          template: templates.welcome,
+          data: {
+            customerName: nombre || 'Cliente',
+          },
+        }).catch((err) => console.error('[Email] Error enviando bienvenida:', err.message));
+      }
     } catch (e) {
       res.status(500).json({ error: 'Error creating client' });
     }

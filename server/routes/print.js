@@ -4,6 +4,7 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
+import { generateInvoicePDF, generateOrderPDF } from '../services/pdf.js';
 
 const router = express.Router();
 
@@ -107,6 +108,24 @@ router.get('/api/print/receipt/:orderId', authMiddleware, requireRole('ADMIN', '
     if (!result.rows.length) return res.status(404).json({ error: 'Pedido no encontrado' });
 
     const order = result.rows[0];
+
+    // Formato PDF si se solicita vía query param
+    if (req.query.format === 'pdf') {
+      const pdfBuffer = await generateOrderPDF({
+        orderNumber: order.orderNumber,
+        table: order.table || 'Para llevar',
+        items: (order.items || []).map((i) => ({
+          qty: i.quantity || i.qty || 1,
+          name: i.productName || i.name || '',
+          notes: i.notes,
+        })),
+        total: order.total,
+      });
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', `inline; filename="pedido_${order.orderNumber}.pdf"`);
+      return res.send(pdfBuffer);
+    }
+
     const html = receiptHTML({
       title: 'RECIBO DE PEDIDO',
       orderNumber: order.orderNumber,
@@ -212,9 +231,29 @@ router.get('/api/print/invoice/:invoiceId', authMiddleware, requireRole('ADMIN')
     // Si tiene PDF guardado, redirigir
     if (inv.pdf_url) return res.redirect(inv.pdf_url);
 
-    // Si tiene XML, mostrar datos básicos
     const orderResult = inv.orderId ? await pool.query('SELECT * FROM orders WHERE id = $1', [inv.orderId]) : null;
     const order = orderResult?.rows[0] || null;
+
+    // Formato PDF si se solicita vía query param
+    if (req.query.format === 'pdf' && order) {
+      const pdfBuffer = await generateInvoicePDF({
+        invoiceNumber: inv.invoiceNumber || inv.id?.slice(-8),
+        date: inv.createdAt,
+        customerName: order.customerName || 'Cliente',
+        customerPhone: order.customerPhone,
+        items: (order.items || []).map((i) => ({
+          name: i.productName || i.name || '',
+          qty: i.quantity || i.qty || 1,
+          price: i.subtotal || i.price || 0,
+        })),
+        subtotal: order.total || 0,
+        tax: 0,
+        total: order.total || 0,
+      });
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', `inline; filename="factura_${inv.invoiceNumber || 'invoice'}.pdf"`);
+      return res.send(pdfBuffer);
+    }
 
     const html = receiptHTML({
       title: `FACTURA ${inv.invoiceNumber || ''}`,

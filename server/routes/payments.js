@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
 import { sendPushToPhone } from '../push.js';
+import { deliverWebhook } from '../services/webhooks.js';
 import { validate } from '../middleware/validate.js';
 import { createPaymentSchema } from '../schemas/payments.js';
 
@@ -21,6 +22,34 @@ async function confirmOrderPayment(pool, orderRow, newPaymentStatus) {
       url: '/'
     }).catch(err => console.error('Error sending payment-confirmed push:', err.message));
   }
+
+  // ── Webhook de pago confirmado (no bloqueante) ──────────────
+  if (newPaymentStatus === 'paid' || newPaymentStatus === 'failed') {
+    notifyPaymentWebhook(orderRow, newPaymentStatus);
+  }
+}
+
+// Envía webhook cuando se confirma/rechaza un pago
+function notifyPaymentWebhook(order, status) {
+  const url = process.env.PAYMENT_WEBHOOK_URL || process.env.WEBHOOK_URL;
+  if (!url) return;
+
+  deliverWebhook({
+    url,
+    payload: {
+      event: 'payment.' + status,
+      data: {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: status,
+        total: order.total,
+      },
+      timestamp: new Date().toISOString(),
+    },
+    retries: 2,
+    timeout: 5000,
+  }).catch((err) => console.warn('[Webhook] Error en webhook de pago:', err.message));
 }
 
 // Patrón documentado por MercadoPago ("Verificar el origen de la

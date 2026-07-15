@@ -2,6 +2,8 @@ import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
 import { sendPushToPhone } from '../push.js';
+import { sendTemplatedEmail, templates } from '../services/email.js';
+import { deliverWebhook } from '../services/webhooks.js';
 import { validate } from '../middleware/validate.js';
 import { createOrderSchema, updateOrderSchema, updateOrderStatusSchema } from '../schemas/orders.js';
 
@@ -176,6 +178,10 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
         paymentStatus,
         locationId: sanitized.locationId,
       });
+
+    // ── Notificaciones post-creación (no bloqueantes) ────────────
+    notifyOrderConfirmation(sanitized.clientId, sanitized.customerName, sanitized.orderNumber, sanitized.total, sanitized.estimatedTime);
+    notifyWebhook('order.created', { id, orderNumber: sanitized.orderNumber, total: sanitized.total, status, paymentMethod: sanitized.paymentMethod });
   } catch (e) {
     res.status(500).json({ error: 'Error creating order' });
   }
@@ -251,6 +257,22 @@ router.patch(
         }
       }
 
+      // ── Notificaciones post-status (no bloqueantes) ────────────
+      if (['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'ASSIGNED', 'DELIVERING', 'COMPLETED', 'CANCELLED'].includes(status)) {
+        setImmediate(() => {
+          notifyOrderStatusChange(order, status).catch((err) =>
+            console.error('[Order] Error en notificación de cambio de estado:', err.message)
+          );
+        });
+        notifyWebhook('order.status_changed', {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status,
+          customerName: order.customerName,
+          total: order.total,
+        });
+      }
+
       const pushMessages = {
         READY: 'Tu pedido está listo',
         ASSIGNED: 'Tu pedido fue asignado a un repartidor',
@@ -324,5 +346,83 @@ router.put(
     }
   }
 );
+
+// ── Helpers de notificación (no bloqueantes) ─────────────────────
+
+// Busca el email del cliente y envía confirmación de pedido
+async function notifyOrderConfirmation(clientId, customerName, orderNumber, total, estimatedTime) {
+  if (!clientId) return;
+  try {
+    const client = await pool.query('SELECT email, nombre FROM clients WHERE id = $1', [clientId]);
+    if (!client.rows.length || !client.rows[0].email) return;
+
+    await sendTemplatedEmail({
+      to: client.rows[0].email,
+      subject: `Pedido #${orderNumber} confirmado 🍕`,
+      template: templates.orderConfirmation,
+      data: {
+        customerName: customerName || client.rows[0].nombre || 'Cliente',
+        orderNumber,
+        total: (total || 0).toLocaleString('es-CO'),
+        estimatedTime: String(estimatedTime || 'N/A'),
+      },
+    });
+  } catch (err) {
+    console.error('[Email] Error enviando confirmación de pedido:', err.message);
+  }
+}
+
+// Envía email y push cuando cambia el estado del pedido
+async function notifyOrderStatusChange(order, status) {
+  try {
+    // Email si el cliente tiene correo
+    let clientEmail = null;
+    if (order.clientId) {
+      const client = await pool.query('SELECT email FROM clients WHERE id = $1', [order.clientId]);
+      clientEmail = client.rows[0]?.email || null;
+    }
+
+    if (status === 'READY' && clientEmail) {
+      await sendTemplatedEmail({
+        to: clientEmail,
+        subject: `Pedido #${order.orderNumber} — ¡Listo para recoger! 🎉`,
+        template: templates.orderReady,
+        data: {
+          customerName: order.customerName || 'Cliente',
+          orderNumber: order.orderNumber,
+          deliveryType: order.address ? 'domicilio' : 'recoger en tienda',
+        },
+      });
+    }
+
+    if (status === 'COMPLETED' && clientEmail) {
+      await sendTemplatedEmail({
+        to: clientEmail,
+        subject: `Pedido #${order.orderNumber} entregado — ¡Gracias! 🍕`,
+        template: templates.orderReady,
+        data: {
+          customerName: order.customerName || 'Cliente',
+          orderNumber: order.orderNumber,
+          deliveryType: 'disfrutar',
+        },
+      });
+    }
+  } catch (err) {
+    console.error('[Email] Error en notificación de estado:', err.message);
+  }
+}
+
+// Envía webhook a URL externa si está configurada
+function notifyWebhook(event, data) {
+  const url = process.env.ORDER_WEBHOOK_URL || process.env.WEBHOOK_URL;
+  if (!url) return;
+
+  deliverWebhook({
+    url,
+    payload: { event, data, timestamp: new Date().toISOString() },
+    retries: 2,
+    timeout: 5000,
+  }).catch((err) => console.warn('[Webhook] Error enviando webhook:', err.message));
+}
 
 export default router;
