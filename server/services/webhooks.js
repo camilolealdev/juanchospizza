@@ -1,53 +1,44 @@
-import { Queue } from 'bullmq';
-import { redis } from '../redis.js';
+// Servicio directo de webhooks — sin BullMQ ni Redis.
+// Envía webhooks a URLs externas con fetch(), retry exponencial básico.
+// Usar desde rutas: import { deliverWebhook } from '../services/webhooks.js';
 
-const webhookQueue = new Queue('webhooks', { connection: redis });
+export async function deliverWebhook({ url, payload, headers = {}, retries = 3, timeout = 10000 }) {
+  if (!url) throw new Error('Webhook URL required');
 
-export async function enqueueWebhook(url, payload, options = {}) {
-  const { headers = {}, retries = 3, delay = 0 } = options;
+  let lastError;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-  await webhookQueue.add(
-    'deliver',
-    { url, payload, headers },
-    {
-      attempts: retries,
-      backoff: { type: 'exponential', delay: 5000 },
-      delay,
-      removeOnComplete: { age: 3600, count: 1000 },
-      removeOnFail: { age: 86400, count: 5000 },
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Guido-Pizza-Webhook/1.0',
+          ...headers,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return { delivered: true, status: response.status, attempt };
+    } catch (err) {
+      lastError = err;
+      console.warn(`[Webhook] Attempt ${attempt}/${retries} failed:`, err.message);
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 1000 * attempt));
+      }
     }
-  );
-}
-
-export async function deliverWebhook(job) {
-  const { url, payload, headers } = job.data;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Guido-Pizza-Webhook/1.0',
-        ...headers,
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
-    }
-
-    return { success: true, status: response.status };
-  } catch (error) {
-    clearTimeout(timeout);
-    throw error;
   }
+
+  throw lastError;
 }
 
-export default webhookQueue;
+export default { deliverWebhook };
