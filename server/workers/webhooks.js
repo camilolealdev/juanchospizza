@@ -1,16 +1,55 @@
-import { createWorker } from '../queues/index.js';
-import { deliverWebhook } from '../services/webhooks.js';
+import { Worker } from 'bullmq';
+import { redis } from '../redis.js';
 
-export const webhooksWorker = createWorker(
+export const webhooksWorker = new Worker(
   'webhooks',
   async (job) => {
-    const { url, payload, headers, retries } = job.data;
+    const { url, payload, headers = {}, retries = 3, timeout = 10000 } = job.data;
 
-    const result = await deliverWebhook(url, payload, headers, retries || 3);
+    if (!url) {
+      throw new Error('Webhook URL required');
+    }
 
-    return { delivered: result.success, status: result.status };
+    let lastError;
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Guido-Pizza-Webhook/1.0',
+            ...headers,
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json().catch(() => ({}));
+        return { delivered: true, status: response.status, attempt, result };
+      } catch (err) {
+        lastError = err;
+        console.warn(`[Webhook] Attempt ${attempt}/${retries} failed:`, err.message);
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 1000 * attempt));
+        }
+      }
+    }
+
+    throw lastError;
   },
-  { concurrency: 10 }
+  { connection: redis, concurrency: 10 }
 );
 
-console.log('[Worker:webhooks] Started');
+webhooksWorker.on('completed', (job) => console.log(`[Webhook] Job ${job.id} delivered`));
+webhooksWorker.on('failed', (job, err) => console.error(`[Webhook] Job ${job?.id} failed:`, err.message));
+
+console.log('[Worker] Webhooks worker started');

@@ -66,6 +66,9 @@ server/dist/
 guido_ai_images.json
 graphify-out/cache/
 nul
+# Legacy / archived code
+_legacy/
+
 # Archivos CI
 .github/
 deploy.sh

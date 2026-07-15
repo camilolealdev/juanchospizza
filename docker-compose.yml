@@ -19,6 +19,9 @@ services:
       PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      PG_POOL_MAX: ${PG_POOL_MAX:-20}
+      PG_IDLE_TIMEOUT: ${PG_IDLE_TIMEOUT:-30000}
+      PG_CONNECT_TIMEOUT: ${PG_CONNECT_TIMEOUT:-5000}
     env_file: .env.production
     depends_on:
       postgres:
@@ -49,8 +52,92 @@ services:
     networks:
       - app-network
 
+  worker:
+    build: .
+    command: node server/worker.js
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      BOLD_API_KEY: ${BOLD_API_KEY}
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
+      WOMPI_MERCHANT_ID: ${WOMPI_MERCHANT_ID}
+      WOMPI_EVENTS_SECRET: ${WOMPI_EVENTS_SECRET}
+      PG_POOL_MAX: ${PG_POOL_MAX:-10}
+    env_file: .env.production
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=50M,noexec,nosuid
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - app
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=100M,noexec,nosuid
+      - /var/run:size=10M,noexec,nosuid
+      - /tmp:size=50M,noexec,nosuid
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - app-network
+
   postgres:
     image: postgres:17-alpine
+    expose:
+      - 5432
     restart: unless-stopped
     environment:
       POSTGRES_DB: juanchos_pizza
@@ -125,6 +212,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  nginx_cache:
 
 networks:
   app-network:
