@@ -98,49 +98,68 @@ router.get('/api/digiturno/queue', async (req, res) => {
 });
 
 // POST /api/digiturno — crear nuevo ticket
+// Incluye retry loop para race condition en números secuenciales.
+// Si dos peticiones simultáneas calculan el mismo MAX+1, el INSERT
+// falla con unique_violation (código 23505) y se reintenta automáticamente.
+const MAX_RETRIES = 5;
+
 router.post(
   '/api/digiturno',
   authMiddleware,
   requireRole('ADMIN', 'OPERATOR'),
   validate(createDigiturnoSchema),
   async (req, res) => {
-    try {
-      const { orderType, locationId, tableId, tableName, customerName, guestCount, source, items, total, notes } =
-        req.body;
+    const { orderType, locationId, tableId, tableName, customerName, guestCount, source, items, total, notes } =
+      req.body;
 
-      const ticketNumber = await getNextTicketNumber(locationId);
-      const id = `dig_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const id = `dig_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-      await pool.query(
-        `INSERT INTO digiturno_tickets (id, "ticketNumber", "orderType", status, "locationId", "tableId", "tableName",
-         "customerName", "guestCount", source, items, total, notes)
-         VALUES ($1, $2, $3, 'waiting', $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [
-          id,
-          ticketNumber,
-          orderType,
-          locationId,
-          tableId || null,
-          tableName || null,
-          customerName || null,
-          guestCount,
-          source,
-          JSON.stringify(items || []),
-          total,
-          notes || null,
-        ]
-      );
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const ticketNumber = await getNextTicketNumber(locationId);
 
-      const created = await pool.query('SELECT * FROM digiturno_tickets WHERE id = $1', [id]);
-      res.status(201).json(created.rows[0]);
+        await pool.query(
+          `INSERT INTO digiturno_tickets (id, "ticketNumber", "orderType", status, "locationId", "tableId", "tableName",
+           "customerName", "guestCount", source, items, total, notes)
+           VALUES ($1, $2, $3, 'waiting', $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [
+            id,
+            ticketNumber,
+            orderType,
+            locationId,
+            tableId || null,
+            tableName || null,
+            customerName || null,
+            guestCount,
+            source,
+            JSON.stringify(items || []),
+            total,
+            notes || null,
+          ]
+        );
 
-      // Notificar WebSocket
-      setImmediate(() => {
-        try { notifyDigiturnoNew(created.rows[0]); }
-        catch (err) { console.error('[WS] Error notificando nuevo ticket:', err.message); }
-      });
-    } catch (e) {
-      res.status(500).json({ error: 'Error al crear ticket' });
+        const created = await pool.query('SELECT * FROM digiturno_tickets WHERE id = $1', [id]);
+        res.status(201).json(created.rows[0]);
+
+        // Notificar WebSocket
+        setImmediate(() => {
+          try { notifyDigiturnoNew(created.rows[0]); }
+          catch (err) { console.error('[WS] Error notificando nuevo ticket:', err.message); }
+        });
+        return; // Éxito — salir del handler
+      } catch (e) {
+        // Si es unique_violation (23505) y quedan intentos, reintentar
+        if (e.code === '23505' && attempt < MAX_RETRIES - 1) {
+          console.warn('[Digiturno] Race condition en ticket # para', locationId, '- retry', attempt + 1, '/', MAX_RETRIES);
+          continue;
+        }
+        // Si es el último intento o no es unique_violation, retornar error
+        return res.status(e.code === '23505' ? 409 : 500).json({
+          error: e.code === '23505'
+            ? 'Conflicto de concurrencia al asignar número de ticket. Intentá de nuevo.'
+            : 'Error al crear ticket',
+        });
+      }
     }
   }
 );

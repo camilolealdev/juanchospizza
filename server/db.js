@@ -534,6 +534,11 @@ export async function initDB() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_digiturno_status ON digiturno_tickets(status)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_digiturno_locationId_status ON digiturno_tickets("locationId", status)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_digiturno_createdAt ON digiturno_tickets("createdAt")');
+    // UNIQUE constraint para evitar race condition en números secuenciales.
+    // Si dos POSTs simultáneos calculan el mismo MAX+1, el segundo INSERT
+    // falla con unique_violation (código 23505) y el retry loop en la ruta
+    // lo reintenta automáticamente con el siguiente número disponible.
+    await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_digiturno_number_location ON digiturno_tickets("locationId", "ticketNumber")');
 
     // === TIPS ===
     await pool.query(`
