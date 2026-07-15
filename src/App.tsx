@@ -103,6 +103,22 @@ const moduleFromPath = (): GastroModule | null => {
   return match && isGastroModule(match[1]) ? match[1] : null;
 };
 
+// Map of which roles have access to which modules (URL guard)
+const ROLE_MODULE_ACCESS: Partial<Record<UserRole, GastroModule[]>> = {
+  [UserRole.ADMIN]: GASTRO_MODULES,
+  [UserRole.OPERATOR]: ['dashboard', 'menu', 'inventario', 'turnos', 'mesas', 'comandas'],
+  [UserRole.REPARTIDOR]: ['dashboard'],
+  [UserRole.MARKETING]: ['dashboard', 'reviews', 'campanas'],
+};
+
+const hasModuleAccess = (role: UserRole, module: GastroModule): boolean =>
+  ROLE_MODULE_ACCESS[role]?.includes(module) ?? false;
+
+// Guard: fall back to dashboard if the user tries to deep-link to a module
+// they don't have access to (test 18 in full-audit.spec.ts caught this gap).
+const guardModuleAccess = (desired: GastroModule, role: UserRole): GastroModule =>
+  hasModuleAccess(role, desired) ? desired : 'dashboard';
+
 const App: React.FC = () => {
   // Initialize from whatever session was already persisted in local storage,
   // so a page refresh doesn't silently drop a valid, still-live token.
@@ -112,7 +128,15 @@ const App: React.FC = () => {
   });
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getAuthToken());
   const [showLogin, setShowLogin] = useState(false);
-  const [gastroModule, setGastroModuleState] = useState<GastroModule>(() => moduleFromPath() || 'dashboard');
+  const [gastroModule, setGastroModuleState] = useState<GastroModule>(() => {
+    const storedRole = getStoredRole();
+    const initialRole = isKnownRole(storedRole) ? storedRole : UserRole.CLIENT;
+    const pathModule = moduleFromPath();
+    if (pathModule && initialRole !== UserRole.CLIENT) {
+      return guardModuleAccess(pathModule, initialRole);
+    }
+    return pathModule || 'dashboard';
+  });
   // Sede seleccionada en el dropdown de AdminLayout -- filtra el dashboard y
   // es la sede activa para abrir/cerrar turno. Vive acá (no en cada vista)
   // porque tanto el selector (en AdminLayout) como las vistas que lo
@@ -126,20 +150,21 @@ const App: React.FC = () => {
   // /admin/<module>, and browser back/forward (popstate below) calls
   // setGastroModuleState directly to avoid re-pushing on every pop.
   const navigateToModule = (m: GastroModule) => {
-    setGastroModuleState(m);
-    if (window.location.pathname !== `/admin/${m}`) {
-      history.pushState({ gastroModule: m }, '', `/admin/${m}`);
+    const guarded = guardModuleAccess(m, role);
+    setGastroModuleState(guarded);
+    if (window.location.pathname !== `/admin/${guarded}`) {
+      history.pushState({ gastroModule: guarded }, '', `/admin/${guarded}`);
     }
   };
 
   useEffect(() => {
     const handlePopState = () => {
       const m = moduleFromPath();
-      if (m) setGastroModuleState(m);
+      if (m) setGastroModuleState(guardModuleAccess(m, role));
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [role]);
 
   // Deep link landed on directly (bookmark, shared link) while logged out --
   // prompt for the PIN instead of silently falling back to the public

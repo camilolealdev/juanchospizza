@@ -1,13 +1,13 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Order, OrderStatus } from '../../types';
 import { api } from '../../services/api';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 type ApiOrder = Omit<Order, 'items'> & { items: string | Order['items'] };
 
 const normalize = (order: ApiOrder): Order => ({
   ...order,
-  items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items
+  items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
 });
 
 const RepartidorView: React.FC = () => {
@@ -15,29 +15,33 @@ const RepartidorView: React.FC = () => {
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [toast, setToast] = useState('');
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2500);
+  };
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       const apiOrders = await api.getOrders(undefined, { paidOnly: true });
       setOrders(apiOrders.map(normalize));
     } catch (e) {
       showToast(`Error cargando entregas: ${e instanceof Error ? e.message : 'error desconocido'}`);
     }
-  };
-
-  useEffect(() => {
-    loadOrders();
-    const interval = setInterval(loadOrders, 10000);
-    return () => clearInterval(interval);
-    // loadOrders is redefined every render (not memoized) -- including it
-    // would tear down and recreate the polling interval on every render
-    // instead of once on mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const assigned = orders.filter(o => o.status === OrderStatus.ASSIGNED || o.status === OrderStatus.DELIVERING);
-  const history = orders.filter(o => o.status === OrderStatus.COMPLETED);
+  // WebSocket: receive real-time order updates
+  useWebSocket('order:new', loadOrders);
+  useWebSocket('order:update', loadOrders);
+
+  // Fallback polling every 30s (slower, only if WebSocket drops)
+  useEffect(() => {
+    loadOrders();
+    const interval = setInterval(loadOrders, 30000);
+    return () => clearInterval(interval);
+  }, [loadOrders]);
+
+  const assigned = orders.filter((o) => o.status === OrderStatus.ASSIGNED || o.status === OrderStatus.DELIVERING);
+  const history = orders.filter((o) => o.status === OrderStatus.COMPLETED);
 
   const markDelivered = async (id: string) => {
     try {
@@ -53,7 +57,10 @@ const RepartidorView: React.FC = () => {
   if (activeOrder) {
     return (
       <div className="min-h-screen bg-stone-950 p-4 sm:p-6 flex flex-col gap-4 sm:gap-6">
-        <button onClick={() => setActiveOrder(null)} className="text-stone-400 flex items-center gap-2 text-sm sm:text-base">
+        <button
+          onClick={() => setActiveOrder(null)}
+          className="text-stone-400 flex items-center gap-2 text-sm sm:text-base"
+        >
           <i className="fas fa-arrow-left"></i> Volver
         </button>
         <div className="bg-stone-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-stone-800 space-y-4 sm:space-y-6">
@@ -62,7 +69,9 @@ const RepartidorView: React.FC = () => {
               <h2 className="text-xl sm:text-2xl font-brand break-all sm:break-normal">{activeOrder.orderNumber}</h2>
               <p className="text-orange-500 font-bold text-sm sm:text-base">Estado: {activeOrder.status}</p>
             </div>
-            <div className="bg-stone-800 px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-bold whitespace-nowrap">PAGO: {activeOrder.paymentMethod.toUpperCase()}</div>
+            <div className="bg-stone-800 px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-bold whitespace-nowrap">
+              PAGO: {activeOrder.paymentMethod.toUpperCase()}
+            </div>
           </div>
 
           <div className="p-3 sm:p-4 bg-stone-950 rounded-xl sm:rounded-2xl border border-stone-800 flex items-center gap-3 sm:gap-4">
@@ -76,18 +85,33 @@ const RepartidorView: React.FC = () => {
           </div>
 
           <div className="h-48 sm:h-56 md:h-64 bg-stone-800 rounded-2xl sm:rounded-3xl relative overflow-hidden flex items-center justify-center">
-            <p className="text-stone-500 text-[10px] sm:text-xs italic px-4 text-center">Simulación de Mapbox Directions API...</p>
+            <p className="text-stone-500 text-[10px] sm:text-xs italic px-4 text-center">
+              Simulación de Mapbox Directions API...
+            </p>
             <div className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-orange-600 text-white p-1.5 sm:p-2 rounded-lg shadow-xl">
               <i className="fas fa-location-arrow text-sm sm:text-base"></i>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <button onClick={() => showToast('Llamando al cliente...')} className="bg-stone-800 py-3 sm:py-4 rounded-2xl font-black text-[10px] sm:text-xs">LLAMAR CLIENTE</button>
-            <button onClick={() => window.open('https://waze.com/ul?ll=4.7115,-74.0720&navigate=yes', '_blank')} className="bg-blue-600 py-3 sm:py-4 rounded-2xl font-black text-[10px] sm:text-xs">ABRIR WAZE</button>
+            <button
+              onClick={() => showToast('Llamando al cliente...')}
+              className="bg-stone-800 py-3 sm:py-4 rounded-2xl font-black text-[10px] sm:text-xs"
+            >
+              LLAMAR CLIENTE
+            </button>
+            <button
+              onClick={() => window.open('https://waze.com/ul?ll=4.7115,-74.0720&navigate=yes', '_blank')}
+              className="bg-blue-600 py-3 sm:py-4 rounded-2xl font-black text-[10px] sm:text-xs"
+            >
+              ABRIR WAZE
+            </button>
           </div>
 
-          <button onClick={() => markDelivered(activeOrder.id)} className="w-full bg-green-600 hover:bg-green-500 py-4 sm:py-5 rounded-2xl font-black text-white shadow-2xl transition-all text-xs sm:text-sm">
+          <button
+            onClick={() => markDelivered(activeOrder.id)}
+            className="w-full bg-green-600 hover:bg-green-500 py-4 sm:py-5 rounded-2xl font-black text-white shadow-2xl transition-all text-xs sm:text-sm"
+          >
             ENTREGA EXITOSA (Firma Digital)
           </button>
         </div>
@@ -105,7 +129,7 @@ const RepartidorView: React.FC = () => {
   return (
     <div className="min-h-screen bg-stone-950 p-4 sm:p-6 flex flex-col gap-6 sm:gap-8">
       <div className="flex justify-between items-center gap-4">
-          <div className="min-w-0">
+        <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-brand truncate">Mis Entregas</h1>
           <p className="text-stone-500 text-xs sm:text-sm">Sede Nemocón — Vía Principal</p>
         </div>
@@ -135,14 +159,16 @@ const RepartidorView: React.FC = () => {
             {activeTab === 'assigned' ? 'No hay entregas asignadas' : 'Sin historial todavía'}
           </p>
         )}
-        {list.map(order => (
+        {list.map((order) => (
           <div
             key={order.id}
             onClick={() => activeTab === 'assigned' && setActiveOrder(order)}
             className="bg-stone-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-stone-800 flex justify-between items-center gap-3 group cursor-pointer active:scale-95 transition-all"
           >
             <div className="min-w-0 space-y-1">
-              <span className="text-[9px] sm:text-[10px] font-black text-stone-500 uppercase truncate block">{order.orderNumber}</span>
+              <span className="text-[9px] sm:text-[10px] font-black text-stone-500 uppercase truncate block">
+                {order.orderNumber}
+              </span>
               <h4 className="font-bold text-base sm:text-lg truncate">{order.customerName}</h4>
               <p className="text-[10px] sm:text-xs text-stone-500 flex items-center gap-1 truncate">
                 <i className="fas fa-map-marker-alt text-orange-600 flex-shrink-0"></i> {order.address.split(',')[0]}
@@ -150,7 +176,9 @@ const RepartidorView: React.FC = () => {
             </div>
             <div className="text-right flex-shrink-0">
               <p className="text-lg sm:text-xl font-black text-orange-500">${order.total.toLocaleString()}</p>
-              <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-bold ${activeTab === 'assigned' ? 'bg-green-900/30 text-green-500' : 'bg-stone-800 text-stone-400'}`}>
+              <span
+                className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-bold ${activeTab === 'assigned' ? 'bg-green-900/30 text-green-500' : 'bg-stone-800 text-stone-400'}`}
+              >
                 {activeTab === 'assigned' ? 'ASIGNADO' : 'ENTREGADO'}
               </span>
             </div>

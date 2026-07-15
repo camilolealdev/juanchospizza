@@ -7,12 +7,12 @@ import { createEmployeeSchema, updateEmployeeSchema } from '../schemas/employees
 const router = express.Router();
 
 // --- EMPLOYEES (staff roster) ---
-// CRUD system-of-record only -- NOT wired into the actual login flow, which
-// still authenticates against the 4-entry USERS array in server/auth.js.
-// Connecting this table to login is future work.
+// Sistema de autenticación principal. El login ahora consulta esta tabla
+// en server/auth.js — los usuarios por defecto (admin/cocina/repartidor/marketing)
+// fueron insertados por la migración #001 con ON CONFLICT DO NOTHING.
+// Para agregar más usuarios, usar este CRUD.
 
-// pinHash/salt nunca salen de la API -- son secretos de autenticación, no
-// datos de negocio, aunque hoy no se usen para loguear a nadie todavía.
+// pinHash/salt nunca salen de la API -- son secretos de autenticación.
 const EMPLOYEE_COLUMNS = 'id, nombre, role, "locationId", activo, creado';
 
 router.get('/api/employees', authMiddleware, requireRole('ADMIN'), async (req, res) => {

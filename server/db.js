@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { runMigrations } from './migrate.js';
 
 const { Pool } = pg;
 
@@ -504,6 +505,12 @@ export async function initDB() {
     `);
 
     console.log('✅ Database initialized with GastroPro CRM tables');
+
+    // ── Migraciones versionadas ────────────────────────────────
+    // Después de crear/actualizar el esquema base, ejecuta las
+    // migraciones numeradas que agregan datos semilla, columnas
+    // adicionales y tablas auxiliares (ver server/migrate.js).
+    await runMigrations(pool);
   } catch (error) {
     console.error('❌ DB init error:', error.message);
   }

@@ -65,3 +65,9 @@ server/dist/
 # Imágenes generadas por IA
 guido_ai_images.json
 graphify-out/cache/
+nul
+# Archivos CI
+.github/
+deploy.sh
+docker-compose.ci.yml
+nginx.conf

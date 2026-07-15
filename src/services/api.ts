@@ -203,14 +203,113 @@ export const clearAuthSession = (): void => {
   }
 };
 
-const authHeaders = (): Record<string, string> => {
+// ── Decodificar JWT sin verificar firma (frontend) ──────────────
+// Solo leemos el payload para saber cuándo expira. La verificación
+// la hace el backend. La función es segura: si el token está mal
+// formado, devuelve null y el código no refresca.
+function decodeTokenPayload(token: string): { exp?: number } | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return null;
+  }
+}
+
+// ── Cola de refresco ───────────────────────────────────────────
+// Múltiples llamadas API simultáneas cerca del vencimiento del token
+// NO deben disparar N refrescos paralelos. Con este patrón, la primera
+// llama inicia el refresco y las siguientes esperan la misma promesa.
+let refreshPromise: Promise<string | null> | null = null;
+
+async function tryRefreshToken(): Promise<string | null> {
+  const current = getAuthToken();
+  if (!current) return null;
+
+  // Si ya hay un refresco en curso, esperar esa promesa en vez de
+  // disparar otro (evita N refrescos paralelos cuando N llamadas API
+  // se disparan simultáneamente justo antes de expirar).
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: current }),
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      if (data?.token) {
+        setAuthSession({ token: data.token });
+        return data.token;
+      }
+      return null;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+// ── Token expiring? Refresh automático ─────────────────────────
+// Si el token expira en menos de REFRESH_MARGIN_SECONDS, dispara un
+// refresh contra /api/auth/refresh ANTES de ejecutar la llamada real.
+// Esto evita el escenario "token expiró entre el check y la request"
+// que produce un 401 inevitable que el código actual maneja como
+// "sesión cerrada" cuando en realidad se podía refrescar.
+const REFRESH_MARGIN_SECONDS = 120; // 2 minutos antes de expirar
+
+// Reemplaza el authHeaders simple por uno que refresca si es necesario.
+// Llamado en cada apiFetch antes de construir los headers finales.
+async function ensureFreshToken(): Promise<Record<string, string>> {
   const token = getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+  if (!token) return {};
+
+  const payload = decodeTokenPayload(token);
+  if (!payload?.exp) return { Authorization: `Bearer ${token}` };
+
+  const now = Math.floor(Date.now() / 1000);
+  const ttl = payload.exp - now;
+
+  // Si expira en menos de 2 minutos, refrescar
+  if (ttl > 0 && ttl < REFRESH_MARGIN_SECONDS) {
+    const newToken = await tryRefreshToken();
+    if (newToken) {
+      return { Authorization: `Bearer ${newToken}` };
+    }
+    // Refresh falló (red/backend caído) pero el token actual todavía
+    // no expiró -- usar el viejo y dejar que el backend rechace si
+    // corresponde en vez de forzar logout prematuramente.
+  }
+
+  return { Authorization: `Bearer ${token}` };
+}
 
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
+    // 401 con token expirado → intentar refresh antes de declarar
+    // sesión perdida. Si el refresh funciona, el error NO se propaga
+    // y el caller original retryea con el nuevo token.
     if (response.status === 401) {
+      const current = getAuthToken();
+      if (current) {
+        const newToken = await tryRefreshToken();
+        if (newToken) {
+          // Token refreshed exitosamente -- el caller DEBE reintentar
+          // la request original. Lanzamos un error especial que apiFetch
+          // atrapa y reintenta automáticamente.
+          const err = new Error('__TOKEN_REFRESHED__') as Error & { needsRetry: boolean; freshToken: string };
+          err.needsRetry = true;
+          err.freshToken = newToken;
+          throw err;
+        }
+      }
+      // No hay token o el refresh falló → forzar logout
       clearAuthSession();
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
@@ -222,25 +321,57 @@ const handleResponse = async (response: Response) => {
   return response.json();
 };
 
-// Central fetch wrapper: merges the bearer token (when present) and any
-// caller-supplied headers, then runs the response through handleResponse.
-const apiFetch = (path: string, options: RequestInit = {}) => {
+// Central fetch wrapper: refresca token si es necesario, mergea headers,
+// y reintenta automáticamente si un 401 se resolvió con refresh.
+const apiFetch = async (path: string, options: RequestInit = {}) => {
+  const tokenHeaders = await ensureFreshToken();
   const headers: Record<string, string> = {
-    ...authHeaders(),
+    ...tokenHeaders,
     ...(options.headers as Record<string, string> | undefined),
   };
-  return (
-    fetch(`${API_BASE}${path}`, { ...options, headers })
-      // fetch() itself rejects (not a non-ok response, an actual network/DNS/CORS
-      // failure) with a raw browser error like "Failed to fetch" -- surfaced as-is
-      // it read as a broken app rather than "backend not deployed yet".
-      .catch(() => {
-        throw new Error(
-          'No pudimos conectar con el servidor. Probá de nuevo en un momento o pedí por WhatsApp mientras tanto.'
-        );
-      })
-      .then(handleResponse)
-  );
+
+  const doFetch = (customHeaders: Record<string, string>): Promise<Response> =>
+    fetch(`${API_BASE}${path}`, { ...options, headers: customHeaders });
+
+  try {
+    const response = await doFetch(headers);
+    return handleResponse(response);
+  } catch (err) {
+    // Si handleResponse lanzó __TOKEN_REFRESHED__, reintentar una vez
+    // con el token nuevo antes de rendirnos.
+    if (err instanceof Error && (err as Error & { needsRetry?: boolean }).needsRetry) {
+      const freshToken = (err as Error & { freshToken: string }).freshToken;
+      const retryHeaders: Record<string, string> = {
+        Authorization: `Bearer ${freshToken}`,
+        ...(options.headers as Record<string, string> | undefined),
+      };
+      try {
+        const retryResponse = await doFetch(retryHeaders);
+        return handleResponse(retryResponse);
+      } catch (retryErr) {
+        // El reintento también falló -- propagar el error original
+        if (retryErr instanceof Error && (retryErr as Error & { needsRetry?: boolean }).needsRetry) {
+          clearAuthSession();
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+          }
+          throw new Error('Sesión expirada. Ingresá de nuevo con tu PIN.');
+        }
+        // Propagate the actual API error (400, 403, 422, etc.)
+        throw retryErr;
+      }
+    }
+
+    // Si es un TypeError (fetch rechazó = network/DNS/CORS failure),
+    // mostrar mensaje amigable. Los otros errores (API 400/403/422)
+    // ya fueron lanzados por handleResponse con su mensaje real.
+    if (err instanceof TypeError) {
+      throw new Error(
+        'No pudimos conectar con el servidor. Probá de nuevo en un momento o pedí por WhatsApp mientras tanto.'
+      );
+    }
+    throw err;
+  }
 };
 
 export const api = {

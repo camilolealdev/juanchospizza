@@ -86,45 +86,8 @@ function verifyToken(token) {
 // literalmente contenía el PIN en texto plano (ej. "admin_salt_1234"), lo
 // que volvía el hashing decorativo. Rotados 2026-07-09; PINs default sin
 // cambiar (mismos que en README) pero ya no derivables del código fuente.
-const USERS = [
-  {
-    username: 'admin',
-    role: 'ADMIN',
-    pinHash:
-      '8e5d8021909b49b5348d09be091a43d155648eb3476380a7e6dccaf6c2d2568eaeda23e1facb55e78332aab21df2dbe3547c04daab240f2ab55f9dbd29e082c4',
-    salt: '1f60d58e3fdaed5a2c891abdb6c97802',
-  },
-  {
-    username: 'cocina',
-    role: 'OPERATOR',
-    pinHash:
-      '367522e4972ee9963efe1f9f1e05b7f75962857cbeedcebad68413f02268e01649b62c6159222961c5a6b3bdfdabbb9be1da489548a1c5a209eb5b8904ecd2d4',
-    salt: 'c02d2416277251b5b166299d4460370d',
-  },
-  {
-    username: 'repartidor',
-    role: 'REPARTIDOR',
-    pinHash:
-      'dde694168749243d81e9eb22fd6e674d2546b1f7eda5c7bc764339b56fb464ee79d058c752e31af475bad714d1c23d05cbf02f1245260646953b36a651236b31',
-    salt: '449fb9c5f1d91593894092d51ef46eea',
-  },
-  {
-    username: 'marketing',
-    role: 'MARKETING',
-    pinHash:
-      'fc520073c3d1a43726422e9b10a0926d9027d9bed599664202ae48ebd04e358b762988ec6285f8ca5f8f7b35eeede4d4ba0a8722c15b9ff7268731be4327fce0',
-    salt: '755e3acdf526949c9a9dc434daeb50cf',
-  },
-];
-
-// Función para gerar hashes de PIN (para usar en setup)
-export function hashUserPin(username, pin) {
-  const user = USERS.find((u) => u.username === username);
-  if (!user) return null;
-
-  const salt = user.salt;
-  return hashPin(pin, salt);
-}
+// Mapa username → role para el lookup en DB
+const USERNAME_TO_ROLE = { admin: 'ADMIN', cocina: 'OPERATOR', repartidor: 'REPARTIDOR', marketing: 'MARKETING' };
 
 function verifyHash(pin, salt, storedHex) {
   const inputHash = hashPin(pin, salt);
@@ -133,17 +96,14 @@ function verifyHash(pin, salt, storedHex) {
   return inputBuf.length === storedBuf.length && crypto.timingSafeEqual(inputBuf, storedBuf);
 }
 
-// El frontend siempre manda uno de estos 4 usernames fijos (mapeados 1:1
-// desde el rol elegido en LoginModal, ver ROLE_TO_USERNAME en src/App.tsx).
-// No hay campo de usuario en la UI -- así que para dar de alta más de una
-// persona por rol (varios cocineros, varios repartidores) sin tocar código,
-// el username fijo solo decide QUÉ ROL escanear en `employees` cuando
-// ninguno de los 4 logins fijos hace match.
-const USERNAME_TO_ROLE = { admin: 'ADMIN', cocina: 'OPERATOR', repartidor: 'REPARTIDOR', marketing: 'MARKETING' };
-
-async function authenticateEmployee(username, pin) {
+// Authenticate exclusivamente contra la tabla employees en DB.
+// Los usuarios por defecto (admin/cocina/repartidor/marketing) fueron
+// insertados por la migración #001 y tienen los mismos PINs que antes.
+// Para agregar más usuarios, usar el CRUD de empleados del CRM.
+export async function authenticate(username, pin) {
   const role = USERNAME_TO_ROLE[username];
   if (!role) return null;
+
   const result = await pool.query('SELECT id, role, "pinHash", salt FROM employees WHERE role = $1 AND activo = true', [
     role,
   ]);
@@ -160,26 +120,6 @@ async function authenticateEmployee(username, pin) {
     },
     '15m'
   );
-}
-
-// Authenticate con PIN -- primero los 4 logins fijos (rápido, sin DB), luego
-// el roster de employees para ese rol (ver authenticateEmployee arriba).
-export async function authenticate(username, pin) {
-  const user = USERS.find((u) => u.username === username);
-  if (user && verifyHash(pin, user.salt, user.pinHash)) {
-    const now = Math.floor(Date.now() / 1000);
-    return generateToken(
-      {
-        sub: username,
-        role: user.role,
-        type: 'access',
-        origIat: now, // marca el inicio de la sesión -- ver refreshToken()
-      },
-      '15m'
-    );
-  }
-
-  return authenticateEmployee(username, pin);
 }
 
 // Un token robado podía refrescarse indefinidamente (cada refresh emitía

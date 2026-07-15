@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -54,7 +55,41 @@ const PORT = parseInt(process.env.PORT || '3001', 10);
 // '1' = confiar el primer hop (el proxy inmediato), no toda la cadena.
 app.set('trust proxy', 1);
 
-// Middleware de seguridad
+// ── Helmet: headers de seguridad HTTP ──────────────────────────
+// Configuración compatible con SPA (CSP relajado para archivos .js/.css
+// servidos por Vite/build, conexiones WebSocket, y APIs de terceros
+// como Google Fonts/Gemini/Bold/MercadoPago/Wompi).
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: [
+          "'self'",
+          'ws://localhost:*',
+          'wss://*.up.railway.app',
+          'https://api.groq.com',
+          'https://generativelanguage.googleapis.com',
+          'https://api.bold.co',
+          'https://api.mercadopago.com',
+          'https://sandbox.wompi.co',
+          'https://production.wompi.co',
+        ],
+        frameSrc: ["'self'", 'https://checkout.bold.co', 'https://www.mercadopago.com.co'],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+
+// CORS
 app.use(
   cors({
     origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001'],
