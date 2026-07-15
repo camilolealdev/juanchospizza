@@ -80,35 +80,63 @@ function verifyToken(token) {
   }
 }
 
-// Usuarios autorizados (en producción, estos datos deben estar en DB)
-// Los pines deben ser hasheados con salt único por usuario
-// Salts son random de 16 bytes, sin relación con el PIN -- antes el salt
-// literalmente contenía el PIN en texto plano (ej. "admin_salt_1234"), lo
-// que volvía el hashing decorativo. Rotados 2026-07-09; PINs default sin
-// cambiar (mismos que en README) pero ya no derivables del código fuente.
-// Mapa username → role para el lookup en DB
-const USERNAME_TO_ROLE = { admin: 'ADMIN', cocina: 'OPERATOR', repartidor: 'REPARTIDOR', marketing: 'MARKETING' };
+// Login contra la tabla employees en DB (usuarios por defecto insertados
+// por la migración #001, username/password/isSuperAdmin por la #004). Para
+// agregar más usuarios, usar el CRUD de empleados del CRM.
+//
+// username es único (índice de la migración #004) -- lookup directo, no un
+// scan-y-probar-cada-uno por rol. Esto importa por dos razones reales, no
+// solo velocidad: un scan por rol no distingue dos empleados con el mismo
+// PIN (login como el que matchee primero, atribución incorrecta en
+// turnos/auditoría), y hashea con PBKDF2-100k contra cada fila del rol en
+// cada intento -- con más de un puñado de empleados por rol eso se siente.
 
-function verifyHash(pin, salt, storedHex) {
-  const inputHash = hashPin(pin, salt);
+function verifyHash(secret, salt, storedHex) {
+  if (!storedHex || !salt) return false;
+  const inputHash = hashPin(secret, salt);
   const inputBuf = Buffer.from(inputHash, 'hex');
   const storedBuf = Buffer.from(storedHex, 'hex');
   return inputBuf.length === storedBuf.length && crypto.timingSafeEqual(inputBuf, storedBuf);
 }
 
-// Authenticate exclusivamente contra la tabla employees en DB.
-// Los usuarios por defecto (admin/cocina/repartidor/marketing) fueron
-// insertados por la migración #001 y tienen los mismos PINs que antes.
-// Para agregar más usuarios, usar el CRUD de empleados del CRM.
-export async function authenticate(username, pin) {
-  const role = USERNAME_TO_ROLE[username];
-  if (!role) return null;
+// credentials: { pin, password } -- password solo se evalúa si el empleado
+// tiene uno configurado (passwordHash no nulo) o es super admin (lo exige).
+export async function authenticate(username, credentials) {
+  if (!username) return null;
+  const { pin, password } = credentials || {};
 
-  const result = await pool.query('SELECT id, role, "pinHash", salt FROM employees WHERE role = $1 AND activo = true', [
-    role,
-  ]);
-  const employee = result.rows.find((e) => verifyHash(pin, e.salt, e.pinHash));
+  const result = await pool.query(
+    'SELECT id, role, "pinHash", salt, "passwordHash", "passwordSalt", "isSuperAdmin" FROM employees WHERE username = $1 AND activo = true',
+    [String(username).trim().toLowerCase()]
+  );
+  const employee = result.rows[0];
   if (!employee) return null;
+
+  if (employee.isSuperAdmin) {
+    if (!employee.passwordHash) {
+      // Bootstrap: la migración #004 deja passwordHash NULL a propósito
+      // (nada de password "por defecto" hardcodeado). Sin este período de
+      // gracia, la única cuenta super admin quedaría bloqueada para
+      // siempre apenas se despliega esto -- nadie podría entrar ni para
+      // asignarle un password vía PATCH /api/employees/:id/password. Solo
+      // PIN alcanza hasta que se configure uno; a partir de ahí, esta
+      // rama nunca se vuelve a tomar, exige los dos secretos.
+      if (!pin || !verifyHash(pin, employee.salt, employee.pinHash)) return null;
+    } else {
+      // Dos secretos, no uno u otro.
+      if (!password || !pin) return null;
+      if (!verifyHash(password, employee.passwordSalt, employee.passwordHash)) return null;
+      if (!verifyHash(pin, employee.salt, employee.pinHash)) return null;
+    }
+  } else if (employee.passwordHash) {
+    // Empleado con password real configurado: la contraseña es el
+    // credencial primario, ya no el PIN.
+    if (!password || !verifyHash(password, employee.passwordSalt, employee.passwordHash)) return null;
+  } else {
+    // Sin password -- PIN de 4 dígitos alcanza (roles de terminal
+    // compartida: cocina, repartidor).
+    if (!pin || !verifyHash(pin, employee.salt, employee.pinHash)) return null;
+  }
 
   const now = Math.floor(Date.now() / 1000);
   return generateToken(
@@ -148,8 +176,8 @@ export function refreshToken(oldToken) {
 }
 
 // Login endpoint
-export async function login(username, pin) {
-  const token = await authenticate(username, pin);
+export async function login(username, credentials) {
+  const token = await authenticate(username, credentials);
   if (!token) {
     return { error: 'Credenciales inválidas' };
   }

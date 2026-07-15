@@ -7,13 +7,19 @@ const router = express.Router();
 // AUTH — rutas públicas, sin authMiddleware
 router.post('/api/auth/login', loginRateLimit, async (req, res) => {
   try {
-    const { username, pin } = req.body;
+    const { username, pin, password } = req.body;
 
-    if (!username || !pin) {
+    // Qué credencial(es) hace falta lo decide auth.js (depende de si el
+    // empleado tiene password configurado y si es super admin) -- acá solo
+    // se valida que al menos venga username y algo de credencial.
+    if (!username || (!pin && !password)) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    const result = await login(String(username), String(pin));
+    const result = await login(String(username), {
+      pin: pin !== undefined ? String(pin) : undefined,
+      password: password !== undefined ? String(password) : undefined,
+    });
 
     if (result.error) {
       return res.status(401).json({ error: result.error });
