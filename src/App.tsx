@@ -35,6 +35,7 @@ const CajaView = lazy(() => import('./views/roles/CajaView'));
 const ComandasView = lazy(() => import('./views/roles/ComandasView'));
 const ComprasView = lazy(() => import('./views/roles/ComprasView'));
 const InvoicesView = lazy(() => import('./views/roles/InvoicesView'));
+const DigiturnoView = lazy(() => import('./views/roles/DigiturnoView'));
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -91,6 +92,7 @@ const GASTRO_MODULES: GastroModule[] = [
   'comandas',
   'compras',
   'facturacion',
+  'digiturno',
 ];
 const isGastroModule = (value: string): value is GastroModule => (GASTRO_MODULES as string[]).includes(value);
 
@@ -106,7 +108,7 @@ const moduleFromPath = (): GastroModule | null => {
 // Map of which roles have access to which modules (URL guard)
 const ROLE_MODULE_ACCESS: Partial<Record<UserRole, GastroModule[]>> = {
   [UserRole.ADMIN]: GASTRO_MODULES,
-  [UserRole.OPERATOR]: ['dashboard', 'menu', 'inventario', 'turnos', 'mesas', 'comandas'],
+  [UserRole.OPERATOR]: ['dashboard', 'menu', 'inventario', 'turnos', 'mesas', 'comandas', 'digiturno'],
   [UserRole.REPARTIDOR]: ['dashboard'],
   [UserRole.MARKETING]: ['dashboard', 'reviews', 'campanas'],
 };
@@ -264,6 +266,8 @@ const App: React.FC = () => {
         return <ComprasView locationId={selectedLocation} />;
       case 'facturacion':
         return <InvoicesView locationId={selectedLocation} />;
+      case 'digiturno':
+        return <DigiturnoView locationId={selectedLocation} />;
       default:
         return <GastroProDashboard locationId={selectedLocation} />;
     }

@@ -38,6 +38,7 @@ import printRoutes from './routes/print.js';
 import procurementRoutes from './routes/procurement.js';
 import invoicesRoutes from './routes/invoices.js';
 import qrMenuRoutes from './routes/qrMenu.js';
+import digiturnoRoutes from './routes/digiturno.js';
 
 dotenv.config();
 initPush();
@@ -130,6 +131,7 @@ app.use('/', printRoutes);
 app.use('/', procurementRoutes);
 app.use('/', invoicesRoutes);
 app.use('/', qrMenuRoutes);
+app.use('/', digiturnoRoutes);
 
 // Serve static files from dist in production
 app.use(

@@ -1,11 +1,23 @@
-// Invoices + Credit/Debit Notes — estructura base para facturación electrónica DIAN
+// Invoices + Credit/Debit Notes — estructura completa para facturación electrónica DIAN
+// Ver docs/DIAN_MODULE_STATUS.md para estado y pasos de integración con proveedor.
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import { createInvoiceSchema, updateInvoiceSchema, createCreditNoteSchema } from '../schemas/invoices.js';
+import { generateInvoiceXml, generateDianRequestPayload, DIAN_CONFIG } from '../services/dianXml.js';
+import { broadcast } from '../websocket.js';
 
 const router = express.Router();
+
+// Helper: notificar WebSocket
+function notifyInvoiceUpdate(invoiceId, action) {
+  try {
+    broadcast('invoice:update', { invoiceId, action });
+  } catch (e) {
+    console.error('[WS] Error notificando invoice:', e.message);
+  }
+}
 
 // ===== INVOICES =====
 
@@ -47,32 +59,149 @@ router.get('/api/invoices/:id', authMiddleware, requireRole('ADMIN'), async (req
   }
 });
 
+// GET /api/invoices/:id/xml — ver/descargar XML de la factura
+router.get('/api/invoices/:id/xml', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, xml, "invoiceNumber", status FROM invoices WHERE id = $1', [req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Factura no encontrada' });
+    const inv = result.rows[0];
+    if (!inv.xml) return res.status(404).json({ error: 'XML no generado aún' });
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Content-Disposition', `attachment; filename="${inv.invoiceNumber || 'factura'}.xml"`);
+    res.send(inv.xml);
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener XML' });
+  }
+});
+
 // POST /api/invoices — crear factura desde una orden
 router.post('/api/invoices', authMiddleware, requireRole('ADMIN'), validate(createInvoiceSchema), async (req, res) => {
   try {
-    const { orderId, tipoDocumento, locationId } = req.body;
+    const { orderId, tipoDocumento, locationId, notes, emisorInfo, receptorInfo, fechaVencimiento, tipoOperacion, moneda } = req.body;
 
-    // Verificar que la orden existe
-    const order = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
-    if (!order.rows.length) return res.status(404).json({ error: 'Orden no encontrada' });
+    // Verificar que la orden existe y obtener datos
+    const orderResult = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+    if (!orderResult.rows.length) return res.status(404).json({ error: 'Orden no encontrada' });
+    const order = orderResult.rows[0];
 
     // Verificar que no tenga ya factura
     const existing = await pool.query('SELECT id FROM invoices WHERE "orderId" = $1', [orderId]);
     if (existing.rows.length) return res.status(409).json({ error: 'La orden ya tiene una factura asociada' });
 
-    const id = `inv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const invoiceNumber = `FE-${String(Date.now()).slice(-8)}`;
+    // Obtener datos del cliente si existe
+    let client = null;
+    if (order.clientId) {
+      const clientResult = await pool.query('SELECT * FROM clients WHERE id = $1', [order.clientId]);
+      if (clientResult.rows.length) client = clientResult.rows[0];
+    }
 
-    await pool.query(
-      `INSERT INTO invoices (id, "orderId", "invoiceNumber", "tipoDocumento", status, "locationId")
-       VALUES ($1, $2, $3, $4, 'pending', $5)`,
-      [id, orderId, invoiceNumber, tipoDocumento, locationId]
+    const id = `inv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const invoiceNumber = `${DIAN_CONFIG.facturacion.prefijo}-${String(Date.now()).slice(-8)}`;
+
+    // Construir datos del emisor (usar valores proporcionados o defaults)
+    const emisorData = emisorInfo || DIAN_CONFIG.emisor;
+
+    // Construir datos del receptor desde la orden/cliente
+    const receptorData = receptorInfo || {
+      tipoIdentificacion: '31',
+      numeroIdentificacion: client?.nit || order.customerPhone || '222222222222',
+      digitoVerificacion: client?.digitoVerificacion || '0',
+      razonSocial: client?.nombre || order.customerName || 'CONSUMIDOR FINAL',
+      direccion: client?.direccion || order.address || 'Sin dirección',
+      ciudad: client?.ciudad || 'Bogotá',
+      codigoCiudad: client?.codigoCiudad || '11001',
+      departamento: 'Bogotá',
+      codigoDepartamento: '11',
+      pais: 'Colombia',
+      codigoPais: 'CO',
+      email: client?.email || '',
+      telefono: client?.telefono || order.customerPhone || '',
+    };
+
+    // Generar XML de la factura
+    const xml = generateInvoiceXml(
+      { ...order, invoiceNumber, id, createdAt: new Date().toISOString(), notes },
+      order,
+      client
     );
 
-    const created = await pool.query('SELECT * FROM invoices WHERE id = $1', [id]);
+    const vencimiento = fechaVencimiento || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    await pool.query(
+      `INSERT INTO invoices (id, "orderId", "invoiceNumber", "tipoDocumento", status, "locationId",
+        xml, "emisorInfo", "receptorInfo", notes, "fechaVencimiento", "tipoOperacion", moneda)
+       VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [
+        id, orderId, invoiceNumber, tipoDocumento, locationId,
+        xml, JSON.stringify(emisorData), JSON.stringify(receptorData),
+        notes || '', vencimiento, tipoOperacion || '10', moneda || 'COP',
+      ]
+    );
+
+    const created = await pool.query('SELECT * FROM invoices WHERE id = $1', [id]);      // Notificar WebSocket
+    setImmediate(() => notifyInvoiceUpdate(id, 'created'));
+
     res.status(201).json(created.rows[0]);
   } catch (e) {
     res.status(500).json({ error: 'Error al crear factura' });
+  }
+});
+
+// POST /api/invoices/:id/send — simular envío a DIAN (prepara payload para proveedor)
+// Este endpoint prepara todos los datos necesarios para enviar al proveedor DIAN.
+// El XML ya fue generado al crear la factura. Aquí se construye el payload
+// completo para el proveedor y se actualiza el estado a 'sent'.
+// Los campos [MANUAL] deben completarse en DIAN_CONFIG o en la UI.
+router.post('/api/invoices/:id/send', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+  try {
+    const invoiceResult = await pool.query('SELECT * FROM invoices WHERE id = $1', [req.params.id]);
+    if (!invoiceResult.rows.length) return res.status(404).json({ error: 'Factura no encontrada' });
+    const invoice = invoiceResult.rows[0];
+
+    if (invoice.status !== 'pending') {
+      return res.status(409).json({ error: `La factura ya fue enviada (estado: ${invoice.status})` });
+    }
+
+    if (!invoice.xml) {
+      return res.status(400).json({ error: 'La factura no tiene XML generado. Creala de nuevo.' });
+    }
+
+    // Obtener la orden asociada para construir el payload
+    const orderResult = await pool.query('SELECT * FROM orders WHERE id = $1', [invoice.orderId]);
+    const order = orderResult.rows[0] || {};
+
+    // Construir payload para el proveedor DIAN
+    const dianPayload = generateDianRequestPayload(invoice, order);
+
+    // Actualizar estado a 'sent'
+    await pool.query(
+      `UPDATE invoices SET status = 'sent', "dianResponse" = $1 WHERE id = $2`,
+      [JSON.stringify({ ...dianPayload, enviadoEn: new Date().toISOString() }), invoice.id]
+    );
+
+    const updated = await pool.query('SELECT * FROM invoices WHERE id = $1', [invoice.id]);
+
+    // Notificar WebSocket
+    setImmediate(() => notifyInvoiceUpdate(invoice.id, 'sent'));
+
+    res.json({
+      message: 'Factura preparada para envío a DIAN',
+      invoice: updated.rows[0],
+      // El payload completo está en updated.rows[0].dianResponse
+      // Instrucciones para el proveedor:
+      instrucciones: {
+        proveedor: DIAN_CONFIG.software.proveedorTecnologico,
+        accion: 'Enviar XML firmado a la DIAN vía API del proveedor',
+        camposManuales: [
+          'Firma digital (certificado .pfx/.p12)',
+          'CUFE generado por DIAN',
+          'Respuesta del proveedor',
+        ],
+        endpointSiguiente: `PUT /api/invoices/${invoice.id} con { cufe, dianResponse, status: "accepted" }`,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al enviar a DIAN' });
   }
 });
 
@@ -84,33 +213,40 @@ router.put(
   validate(updateInvoiceSchema),
   async (req, res) => {
     try {
-      const { invoiceNumber, cufe, xml, pdf_url, status, dianResponse } = req.body;
+      const { invoiceNumber, cufe, xml, pdf_url, status, dianResponse, emisorInfo, receptorInfo, notes, fechaVencimiento, tipoOperacion, moneda } = req.body;
       const updates = [];
       const params = [];
 
-      if (invoiceNumber !== undefined) {
-        params.push(invoiceNumber);
-        updates.push(`"invoiceNumber" = $${params.length}`);
+      const fields = [
+        ['"invoiceNumber"', invoiceNumber],
+        ['cufe', cufe],
+        ['xml', xml],
+        ['pdf_url', pdf_url],
+        ['status', status],
+        ['notes', notes],
+        ['"fechaVencimiento"', fechaVencimiento],
+        ['"tipoOperacion"', tipoOperacion],
+        ['moneda', moneda],
+      ];
+
+      for (const [field, value] of fields) {
+        if (value !== undefined) {
+          params.push(value);
+          updates.push(`${field} = $${params.length}`);
+        }
       }
-      if (cufe !== undefined) {
-        params.push(cufe);
-        updates.push(`cufe = $${params.length}`);
-      }
-      if (xml !== undefined) {
-        params.push(xml);
-        updates.push(`xml = $${params.length}`);
-      }
-      if (pdf_url !== undefined) {
-        params.push(pdf_url);
-        updates.push(`pdf_url = $${params.length}`);
-      }
-      if (status !== undefined) {
-        params.push(status);
-        updates.push(`status = $${params.length}`);
-      }
+
       if (dianResponse !== undefined) {
         params.push(JSON.stringify(dianResponse));
         updates.push(`"dianResponse" = $${params.length}`);
+      }
+      if (emisorInfo !== undefined) {
+        params.push(JSON.stringify(emisorInfo));
+        updates.push(`"emisorInfo" = $${params.length}`);
+      }
+      if (receptorInfo !== undefined) {
+        params.push(JSON.stringify(receptorInfo));
+        updates.push(`"receptorInfo" = $${params.length}`);
       }
 
       if (!updates.length) return res.status(400).json({ error: 'Nada que actualizar' });
@@ -119,12 +255,50 @@ router.put(
       await pool.query(`UPDATE invoices SET ${updates.join(', ')} WHERE id = $${params.length}`, params);
 
       const updated = await pool.query('SELECT * FROM invoices WHERE id = $1', [req.params.id]);
+
+      // Notificar WebSocket
+      setImmediate(() => notifyInvoiceUpdate(req.params.id, 'updated'));
+
       res.json(updated.rows[0]);
     } catch (e) {
       res.status(500).json({ error: 'Error al actualizar factura' });
     }
   }
 );
+
+// POST /api/invoices/:id/resend — reenviar a DIAN (regenerar XML y payload)
+router.post('/api/invoices/:id/resend', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+  try {
+    const invoiceResult = await pool.query('SELECT * FROM invoices WHERE id = $1', [req.params.id]);
+    if (!invoiceResult.rows.length) return res.status(404).json({ error: 'Factura no encontrada' });
+    const inv = invoiceResult.rows[0];
+
+    // Obtener orden para regenerar XML
+    const orderResult = await pool.query('SELECT * FROM orders WHERE id = $1', [inv.orderId]);
+    const order = orderResult.rows[0] || {};
+
+    // Regenerar XML con estado actual
+    const xml = generateInvoiceXml(
+      { ...inv, createdAt: new Date().toISOString() },
+      order,
+      null
+    );
+
+    const dianPayload = generateDianRequestPayload(inv, order);
+
+    await pool.query(
+      `UPDATE invoices SET status = 'sent', xml = $1, "dianResponse" = $2, "updatedAt" = NOW() WHERE id = $3`,
+      [xml, JSON.stringify({ ...dianPayload, reenviadoEn: new Date().toISOString() }), inv.id]
+    );
+
+    const updated = await pool.query('SELECT * FROM invoices WHERE id = $1', [inv.id]);
+    setImmediate(() => notifyInvoiceUpdate(inv.id, 'resent'));
+
+    res.json(updated.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: 'Error al reenviar factura' });
+  }
+});
 
 // ===== CREDIT / DEBIT NOTES =====
 

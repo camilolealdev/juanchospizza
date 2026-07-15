@@ -38,6 +38,7 @@ const ALL_NAV: { module: GastroModule; label: string; icon: string; roles: UserR
   { module: 'mesas', label: 'Mesas', icon: 'table', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
   { module: 'caja', label: 'Caja', icon: 'cash-register', roles: [UserRole.ADMIN] },
   { module: 'comandas', label: 'Comandas', icon: 'utensils', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
+  { module: 'digiturno', label: 'Digiturno', icon: 'ticket', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
   { module: 'compras', label: 'Compras', icon: 'truck', roles: [UserRole.ADMIN] },
   { module: 'facturacion', label: 'Facturación', icon: 'file-invoice', roles: [UserRole.ADMIN] },
 ];
@@ -58,6 +59,7 @@ const MODULE_TITLES: Record<GastroModule, string> = {
   mesas: 'Mesas',
   caja: 'Caja',
   comandas: 'Comandas',
+  digiturno: 'Digiturno',
   compras: 'Compras',
   facturacion: 'Facturación',
 };

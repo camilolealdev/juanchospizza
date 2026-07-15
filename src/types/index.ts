@@ -138,7 +138,8 @@ export type GastroModule =
   | 'caja'
   | 'comandas'
   | 'compras'
-  | 'facturacion';
+  | 'facturacion'
+  | 'digiturno';
 
 export interface Client {
   id: string;
@@ -280,6 +281,43 @@ export interface PurchaseOrderItem {
   precioUnitario: number;
 }
 
+export interface InvoiceEmisorInfo {
+  nit: string;
+  digitoVerificacion: string;
+  razonSocial: string;
+  nombreComercial: string;
+  direccion: string;
+  ciudad: string;
+  codigoCiudad: string;
+  departamento: string;
+  codigoDepartamento: string;
+  pais: string;
+  codigoPais: string;
+  telefono: string;
+  email: string;
+  regimenFiscal: string;
+  responsabilidadFiscal: string;
+  tipoContribuyente: string;
+  matriculaMercantil: string | null;
+  codigoEstablecimiento: string;
+}
+
+export interface InvoiceReceptorInfo {
+  tipoIdentificacion: string;
+  numeroIdentificacion: string;
+  digitoVerificacion: string;
+  razonSocial: string;
+  direccion: string;
+  ciudad: string;
+  codigoCiudad: string;
+  departamento: string;
+  codigoDepartamento: string;
+  pais: string;
+  codigoPais: string;
+  email: string | null;
+  telefono: string | null;
+}
+
 export interface Invoice {
   id: string;
   orderId: string | null;
@@ -290,6 +328,12 @@ export interface Invoice {
   pdf_url: string | null;
   status: 'pending' | 'sent' | 'accepted' | 'rejected';
   dianResponse: Record<string, unknown> | null;
+  emisorInfo: InvoiceEmisorInfo | null;
+  receptorInfo: InvoiceReceptorInfo | null;
+  notes: string | null;
+  fechaVencimiento: string | null;
+  tipoOperacion: string;
+  moneda: string;
   createdAt: string;
   locationId: LocationId;
 }
@@ -319,6 +363,26 @@ export interface QrMenuConfig {
   categories: string[];
   active: boolean;
   updatedAt: string;
+}
+
+// ===== DIGITURNO (Turno digital para pedidos en local) =====
+export interface DigiturnoTicket {
+  id: string;
+  ticketNumber: number;
+  orderType: 'dine-in' | 'pickup';
+  status: 'waiting' | 'preparing' | 'ready' | 'served' | 'cancelled';
+  locationId: LocationId;
+  tableId: string | null;
+  tableName: string | null;
+  customerName: string | null;
+  guestCount: number;
+  source: 'mesa' | 'local' | 'pickup';
+  items: string[];
+  total: number;
+  notes: string | null;
+  createdAt: string;
+  calledAt: string | null;
+  completedAt: string | null;
 }
 
 export interface Shift {

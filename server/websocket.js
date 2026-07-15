@@ -94,3 +94,13 @@ export function notifyComandaUpdate(comandaId, action) {
   broadcast('comanda:update', { comandaId, action });
   broadcastToRole('OPERATOR', 'comanda:update', { comandaId, action });
 }
+
+export function notifyDigiturnoUpdate(ticket) {
+  broadcast('digiturno:update', { ticket });
+  broadcastToRole('OPERATOR', 'digiturno:update', { ticket });
+}
+
+export function notifyDigiturnoNew(ticket) {
+  broadcast('digiturno:new', { ticket });
+  broadcastToRole('OPERATOR', 'digiturno:new', { ticket });
+}

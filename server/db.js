@@ -419,6 +419,8 @@ export async function initDB() {
     await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_purchase_orders_number ON purchase_orders("orderNumber")');
 
     // === INVOICES (DIAN base structure) ===
+    // Ver docs/DIAN_MODULE_STATUS.md para estado completo de la integración.
+    // Campos marcados como [MANUAL] deben completarse antes de enviar a DIAN.
     await pool.query(`
       CREATE TABLE IF NOT EXISTS invoices (
         id TEXT PRIMARY KEY,
@@ -430,6 +432,12 @@ export async function initDB() {
         pdf_url TEXT,
         status TEXT DEFAULT 'pending',
         "dianResponse" JSON,
+        "emisorInfo" JSON DEFAULT '{}'::json,
+        "receptorInfo" JSON DEFAULT '{}'::json,
+        notes TEXT,
+        "fechaVencimiento" TIMESTAMPTZ,
+        "tipoOperacion" TEXT DEFAULT '10',
+        moneda TEXT DEFAULT 'COP',
         "createdAt" TIMESTAMPTZ DEFAULT NOW(),
         "locationId" TEXT DEFAULT 'nemocon'
       )
@@ -451,6 +459,14 @@ export async function initDB() {
         "createdBy" TEXT
       )
     `);
+
+    // Agregar columnas nuevas a invoices para bases existentes
+    await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "emisorInfo" JSON DEFAULT \'{}\'::json');
+    await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "receptorInfo" JSON DEFAULT \'{}\'::json');
+    await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS notes TEXT');
+    await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "fechaVencimiento" TIMESTAMPTZ');
+    await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "tipoOperacion" TEXT DEFAULT \'10\'');
+    await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS moneda TEXT DEFAULT \'COP\'');
 
     await pool.query('CREATE INDEX IF NOT EXISTS idx_invoices_orderId ON invoices("orderId")');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)');
@@ -490,6 +506,34 @@ export async function initDB() {
         notes TEXT
       )
     `);
+
+    // === DIGITURNO — Turnos digitales para pedidos en local ===
+    // Separa los pedidos de delivery (que tienen su propio flujo en orders)
+    // de los pedidos de consumo en el local, que se gestionan por turno.
+    // Cada ticket tiene un número secuencial por sede.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS digiturno_tickets (
+        id TEXT PRIMARY KEY,
+        "ticketNumber" INTEGER NOT NULL,
+        "orderType" TEXT DEFAULT 'dine-in',
+        status TEXT DEFAULT 'waiting',
+        "locationId" TEXT DEFAULT 'nemocon',
+        "tableId" TEXT REFERENCES dining_tables(id),
+        "tableName" TEXT,
+        "customerName" TEXT,
+        "guestCount" INTEGER DEFAULT 1,
+        source TEXT DEFAULT 'local',
+        items JSON DEFAULT '[]'::json,
+        total INTEGER DEFAULT 0,
+        notes TEXT,
+        "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+        "calledAt" TIMESTAMPTZ,
+        "completedAt" TIMESTAMPTZ
+      )
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_digiturno_status ON digiturno_tickets(status)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_digiturno_locationId_status ON digiturno_tickets("locationId", status)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_digiturno_createdAt ON digiturno_tickets("createdAt")');
 
     // === TIPS ===
     await pool.query(`

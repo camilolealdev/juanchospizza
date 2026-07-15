@@ -1074,6 +1074,65 @@ export const api = {
     return apiFetch(`/api/comandas/${comandaId}/kitchen-ticket`);
   },
 
+  // ---- DIGITURNO (turnos digitales para pedidos en local) ----
+  async getDigiturnoTickets(params?: { status?: string; locationId?: string; orderType?: string }) {
+    const query = new URLSearchParams();
+    if (params?.status) query.set('status', params.status);
+    if (params?.locationId) query.set('locationId', params.locationId);
+    if (params?.orderType) query.set('orderType', params.orderType);
+    const qs = query.toString();
+    return apiFetch(`/api/digiturno${qs ? `?${qs}` : ''}`);
+  },
+
+  async getDigiturnoQueue(locationId?: string) {
+    const qs = locationId ? `?locationId=${locationId}` : '';
+    return apiFetch(`/api/digiturno/queue${qs}`);
+  },
+
+  async getCurrentDigiturnoTicket(locationId?: string) {
+    const qs = locationId ? `?locationId=${locationId}` : '';
+    return apiFetch(`/api/digiturno/current${qs}`);
+  },
+
+  async createDigiturnoTicket(data: {
+    orderType?: string;
+    locationId?: string;
+    tableId?: string;
+    tableName?: string;
+    customerName?: string;
+    guestCount?: number;
+    source?: string;
+    items?: unknown[];
+    total?: number;
+    notes?: string;
+  }) {
+    return apiFetch('/api/digiturno', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateDigiturnoTicketStatus(id: string, status: string) {
+    return apiFetch(`/api/digiturno/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async updateDigiturnoTicket(id: string, data: Record<string, unknown>) {
+    return apiFetch(`/api/digiturno/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteDigiturnoTicket(id: string) {
+    return apiFetch(`/api/digiturno/${id}`, { method: 'DELETE' });
+  },
+
   // ---- PRINT ----
   getPrintReceiptUrl(orderId: string) {
     const token = getAuthToken();
@@ -1138,12 +1197,38 @@ export const api = {
     return apiFetch(`/api/invoices${qs ? `?${qs}` : ''}`);
   },
 
-  async createInvoice(data: { orderId: string; tipoDocumento?: string; locationId?: string }) {
+  async getInvoice(id: string) {
+    return apiFetch(`/api/invoices/${id}`);
+  },
+
+  async createInvoice(data: { orderId: string; tipoDocumento?: string; locationId?: string; notes?: string }) {
     return apiFetch('/api/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+  },
+
+  async updateInvoice(id: string, data: Record<string, unknown>) {
+    return apiFetch(`/api/invoices/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async sendInvoiceToDian(id: string) {
+    return apiFetch(`/api/invoices/${id}/send`, { method: 'POST' });
+  },
+
+  async resendInvoiceToDian(id: string) {
+    return apiFetch(`/api/invoices/${id}/resend`, { method: 'POST' });
+  },
+
+  getInvoiceXmlUrl(id: string) {
+    const token = getAuthToken();
+    const params = token ? `?token=${token}` : '';
+    return `${API_BASE}/api/invoices/${id}/xml${params}`;
   },
 
   async getCreditNotes(invoiceId?: string) {
@@ -1164,6 +1249,10 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+  },
+
+  async deleteCreditNote(id: string) {
+    return apiFetch(`/api/credit-notes/${id}`, { method: 'DELETE' });
   },
 
   // ---- QR MENU ----
