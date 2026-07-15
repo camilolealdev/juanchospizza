@@ -4,6 +4,10 @@ const { Pool } = pg;
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL || '',
+  max: parseInt(process.env.PG_POOL_MAX || '20', 10),
+  idleTimeoutMillis: parseInt(process.env.PG_IDLE_TIMEOUT || '30000', 10),
+  connectionTimeoutMillis: parseInt(process.env.PG_CONNECT_TIMEOUT || '5000', 10),
+  allowExitOnIdle: true,
 });
 
 export async function initDB() {
@@ -121,6 +125,9 @@ export async function initDB() {
     // no romper pedidos/filas existentes que nunca conocieron el concepto de sede.
     await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS "locationId" TEXT DEFAULT 'nemocon'`);
 
+    // UNIQUE constraints for data integrity
+    await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_number ON orders("orderNumber")');
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inventory_items (
         id TEXT PRIMARY KEY,
@@ -138,6 +145,7 @@ export async function initDB() {
         activo BOOLEAN DEFAULT TRUE
       )
     `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_inventory_nombre ON inventory_items(nombre)');
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inventory_movements (
@@ -168,8 +176,8 @@ export async function initDB() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS recipe_ingredients (
         id TEXT PRIMARY KEY,
-        "recipeId" TEXT,
-        "itemId" TEXT,
+        "recipeId" TEXT REFERENCES recipes(id),
+        "itemId" TEXT REFERENCES inventory_items(id),
         nombre TEXT,
         cantidad REAL DEFAULT 0,
         unidad TEXT DEFAULT 'unidad',
@@ -268,6 +276,7 @@ export async function initDB() {
         "createdAt" TIMESTAMPTZ DEFAULT NOW()
       )
     `);
+    await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_orderId ON reviews("orderId")');
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -299,6 +308,25 @@ export async function initDB() {
       )
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS shifts (
+        id TEXT PRIMARY KEY,
+        "locationId" TEXT NOT NULL,
+        status TEXT DEFAULT 'closed',
+        "openingCash" INTEGER DEFAULT 0,
+        "closingCash" INTEGER,
+        "expectedCash" INTEGER,
+        difference INTEGER,
+        "openedBy" TEXT REFERENCES employees(id),
+        "closedBy" TEXT,
+        "openedAt" TIMESTAMPTZ DEFAULT NOW(),
+        "closedAt" TIMESTAMPTZ,
+        notas TEXT
+      )
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_shifts_locationId_status ON shifts("locationId", status)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_shifts_openedBy ON shifts("openedBy")');
+
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders("createdAt")');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_clientId ON orders("clientId")');
@@ -309,7 +337,32 @@ export async function initDB() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_menu_promotions_activo ON menu_promotions(activo)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_locationId ON orders("locationId")');
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_shifts_locationId_status ON shifts("locationId", status)');
+
+    // === DINING TABLES ===
+    // Must be created before COMANDAS below -- comandas.tableId FKs to it,
+    // and CREATE TABLE ... REFERENCES a not-yet-existing table fails,
+    // aborting the rest of this sequential await chain (silently dropping
+    // every table defined after the failure point, not just this one).
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS dining_tables (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        capacity INTEGER DEFAULT 4,
+        area TEXT DEFAULT 'salon',
+        "locationId" TEXT DEFAULT 'nemocon',
+        status TEXT DEFAULT 'available',
+        notes TEXT,
+        qr_code TEXT,
+        active BOOLEAN DEFAULT TRUE,
+        "createdAt" TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_tables_name_location ON dining_tables (name, "locationId")
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_tables_location ON dining_tables("locationId")');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_tables_status ON dining_tables(status)');
 
     // === COMANDAS (mesa-based orders for dine-in) ===
     await pool.query(`
@@ -362,6 +415,7 @@ export async function initDB() {
         "locationId" TEXT DEFAULT 'nemocon'
       )
     `);
+    await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_purchase_orders_number ON purchase_orders("orderNumber")');
 
     // === INVOICES (DIAN base structure) ===
     await pool.query(`
@@ -417,28 +471,6 @@ export async function initDB() {
         "updatedAt" TIMESTAMPTZ DEFAULT NOW()
       )
     `);
-
-    // === DINING TABLES ===
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS dining_tables (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        capacity INTEGER DEFAULT 4,
-        area TEXT DEFAULT 'salon',
-        "locationId" TEXT DEFAULT 'nemocon',
-        status TEXT DEFAULT 'available',
-        notes TEXT,
-        qr_code TEXT,
-        active BOOLEAN DEFAULT TRUE,
-        "createdAt" TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-
-    await pool.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_tables_name_location ON dining_tables (name, "locationId")
-    `);
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_tables_location ON dining_tables("locationId")');
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_tables_status ON dining_tables(status)');
 
     // === CASH REGISTER ===
     await pool.query(`
