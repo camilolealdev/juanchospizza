@@ -1,47 +1,79 @@
-# Dependencies
-node_modules
+# ── Dependencies ─────────────────────────────────
+node_modules/
 
-# Build output
+# ── Build output ─────────────────────────────────
 dist
 build
+.next
 
-# Git
+# ── Git ──────────────────────────────────────────
 .git
 .gitignore
+.gitattributes
 
-# Environment files (secrets!)
+# ── Environment (secrets!) ───────────────────────
 .env
 .env.*
 !.env.example
 !.env.production.example
 
-# Logs
+# ── Logs ─────────────────────────────────────────
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Test artifacts
-test-results
-playwright-report
-coverage
-.nyc_output
+# ── Test artifacts (tiran 24+ MB extra) ──────────
+e2e/
+playwright-report/
+test-results/
+coverage/
+.nyc_output/
+tests/
+vitest.config.ts
+playwright.config.ts
 
-# IDE
-.vscode
-.idea
+# ── Documentation (8.7 MB — innecesario en runtime) ──
+docs/
+*.md
+!README.md
+ARCHITECTURE.md
+
+# ── IDE ──────────────────────────────────────────
+.vscode/
+.idea/
 *.swp
 *.swo
 
-# OS
+# ── OS artifacts ─────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Docker
+# ── Project metadata / CI (innecesario en imagen) ─
+metadata.json
+vercel.json
+docker-compose.yml
+docker-compose.ci.yml
 docker-compose.override.yml
 .docker/
-
-# Misc
-*.md
-!README.md
+deploy.sh
+nginx.conf
 *.local
+
+# ── Generated / analysis ─────────────────────────
+graphify-out/
+--version/
+nul
+
+# ── CI / GitHub ──────────────────────────────────
+.github/
+.husky/
+.claude/
+.obsidian/
+
+# ── Vite / PostCSS configs (ya empaquetados en dist) ─
+postcss.config.js
+tailwind.config.js
+vite.config.ts
+tsconfig.json
