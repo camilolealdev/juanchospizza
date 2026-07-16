@@ -14,14 +14,19 @@ const LOCATION_LABELS: Record<'nemocon' | 'zipaquira', string> = {
   zipaquira: 'Zipaquirá',
 };
 
-type FormState = { nombre: string; role: Employee['role']; locationId: '' | 'nemocon' | 'zipaquira'; pin: string };
+type FormState = {
+  nombre: string;
+  role: Employee['role'];
+  locationId: '' | 'nemocon' | 'zipaquira';
+  pin: string;
+  username: string;
+};
 
-const emptyForm: FormState = { nombre: '', role: 'OPERATOR', locationId: '', pin: '' };
+const emptyForm: FormState = { nombre: '', role: 'OPERATOR', locationId: '', pin: '', username: '' };
 
-// Roster CRUD only -- creating/editing an employee here does NOT create a
-// working login. server/routes/auth.js still only checks the 4-entry USERS
-// array in server/auth.js; wiring this table into the real login flow is
-// future work (see server/db.js employees table comment).
+// Roster CRUD -- server/auth.js logs in against this same employees table
+// (username+password or PIN). username/password are optional here: PIN alone
+// is still enough for shared-terminal roles (cocina, repartidor).
 const EmpleadosView: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,8 +63,25 @@ const EmpleadosView: React.FC = () => {
   };
   const openEdit = (emp: Employee) => {
     setEditingId(emp.id);
-    setForm({ nombre: emp.nombre, role: emp.role, locationId: emp.locationId || '', pin: '' });
+    setForm({
+      nombre: emp.nombre,
+      role: emp.role,
+      locationId: emp.locationId || '',
+      pin: '',
+      username: emp.username || '',
+    });
     setShowModal(true);
+  };
+
+  const handleResetPassword = async (emp: Employee) => {
+    const password = window.prompt(`Nueva contraseña para ${emp.nombre} (mínimo 10 caracteres, con letra y número):`);
+    if (!password) return;
+    try {
+      await api.setEmployeePassword(emp.id, password);
+      showToast('Contraseña actualizada.');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Error actualizando la contraseña.');
+    }
   };
 
   const handleDelete = async (emp: Employee) => {
@@ -93,6 +115,7 @@ const EmpleadosView: React.FC = () => {
           nombre: form.nombre,
           role: form.role,
           locationId: form.locationId || null,
+          username: form.username.trim() || undefined,
         });
         showToast('Empleado actualizado.');
       } else {
@@ -105,6 +128,7 @@ const EmpleadosView: React.FC = () => {
           role: form.role,
           pin: form.pin,
           locationId: form.locationId || undefined,
+          username: form.username.trim() || undefined,
         });
         showToast('Empleado registrado.');
       }
@@ -130,8 +154,8 @@ const EmpleadosView: React.FC = () => {
         <div>
           <h1 className="text-5xl font-brand">Empleados</h1>
           <p className="text-stone-500 mt-4 max-w-xl">
-            Roster de staff de Juancho&rsquo;s Pizza. Registro de quién está en planta por sede y rol -- todavía no
-            conectado al login real.
+            Roster de staff de Juancho&rsquo;s Pizza. Registro de quién está en planta por sede y rol -- este es el
+            login real (PIN o usuario/contraseña).
           </p>
         </div>
         <button
@@ -164,6 +188,13 @@ const EmpleadosView: React.FC = () => {
               <div className="flex items-center gap-4">
                 <button onClick={() => openEdit(emp)} className="text-stone-700 hover:text-white transition-colors">
                   <i className="fas fa-pen"></i>
+                </button>
+                <button
+                  onClick={() => handleResetPassword(emp)}
+                  title="Restablecer contraseña"
+                  className="text-stone-700 hover:text-orange-500 transition-colors"
+                >
+                  <i className="fas fa-key"></i>
                 </button>
                 <button
                   onClick={() => handleDelete(emp)}
@@ -258,6 +289,21 @@ const EmpleadosView: React.FC = () => {
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-2">
+                  Usuario (opcional)
+                </label>
+                <input
+                  className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-orange-500 transition-colors"
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  placeholder="usuario.login"
+                />
+                <p className="text-stone-600 text-[10px] mt-2">
+                  Solo necesario si este empleado va a loguearse con usuario/contraseña en vez de PIN. La contraseña se
+                  define aparte con el ícono de llave en la tarjeta.
+                </p>
+              </div>
               {!editingId && (
                 <div>
                   <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-2">
@@ -272,7 +318,7 @@ const EmpleadosView: React.FC = () => {
                     placeholder="••••"
                   />
                   <p className="text-stone-600 text-[10px] mt-2">
-                    Este PIN todavía no habilita el login real -- solo queda registrado en el roster.
+                    Este PIN habilita el login real del empleado en la terminal.
                   </p>
                 </div>
               )}

@@ -31,7 +31,7 @@ router.get('/api/cash-register', authMiddleware, requireRole('ADMIN'), async (re
 
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching cash register entries' });
   }
 });
@@ -44,14 +44,17 @@ router.post(
   validate(
     z.object({
       locationId: z.enum(['nemocon', 'zipaquira']),
-      openedBy: str(100),
       initialAmount: clampedNumber(0, 99999999, 0),
       notes: strOpt(200),
     })
   ),
   async (req, res) => {
     try {
-      const { locationId, openedBy, initialAmount, notes } = req.body;
+      const { locationId, initialAmount, notes } = req.body;
+      // openedBy se resuelve del token (req.auth.sub), nunca del body --
+      // mismo criterio que shifts.js: no confiar en que el cliente diga
+      // quién es.
+      const openedBy = req.auth.sub;
 
       // Verificar que no haya una caja abierta en esta sede
       const openRegister = await pool.query(
@@ -72,7 +75,7 @@ router.post(
       );
 
       res.status(201).json({ id, locationId, openedBy, initialAmount, status: 'open', notes: notes || null });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error opening cash register' });
     }
   }
@@ -86,13 +89,15 @@ router.post(
   validate(
     z.object({
       finalAmount: z.coerce.number().min(0, 'El monto final no puede ser negativo'),
-      closedBy: str(100),
       notes: strOpt(200),
     })
   ),
   async (req, res) => {
     try {
-      const { finalAmount, closedBy, notes } = req.body;
+      const { finalAmount, notes } = req.body;
+      // closedBy se resuelve del token (req.auth.sub), nunca del body --
+      // mismo criterio que shifts.js.
+      const closedBy = req.auth.sub;
 
       const register = await pool.query("SELECT * FROM cash_register WHERE id = $1 AND status = 'open'", [
         req.params.id,
@@ -102,12 +107,22 @@ router.post(
       }
 
       const entry = register.rows[0];
-      const expectedAmount = entry.expectedAmount;
+      // expectedAmount se recalcula al cerrar (initialAmount + ventas reales
+      // de la sede desde la apertura) en vez de usar el valor estático que
+      // se guardó al abrir -- mismo criterio "paidOnly" que shifts.js.
+      const salesResult = await pool.query(
+        `SELECT COALESCE(SUM(total), 0)::int as total FROM orders
+       WHERE "locationId" = $1 AND "createdAt" >= $2 AND "createdAt" <= NOW()
+       AND ("paymentStatus" = 'paid' OR "paymentMethod" IN ('cash', 'card'))`,
+        [entry.locationId, entry.openedAt]
+      );
+      const salesTotal = salesResult.rows[0]?.total || 0;
+      const expectedAmount = (entry.initialAmount || 0) + salesTotal;
       const difference = finalAmount - expectedAmount;
 
       await pool.query(
-        `UPDATE cash_register SET "closedAt" = NOW(), "closedBy" = $1, "finalAmount" = $2, difference = $3, status = 'closed', notes = COALESCE($4, notes) WHERE id = $5`,
-        [closedBy, finalAmount, difference, notes || null, req.params.id]
+        `UPDATE cash_register SET "closedAt" = NOW(), "closedBy" = $1, "finalAmount" = $2, "expectedAmount" = $3, difference = $4, status = 'closed', notes = COALESCE($5, notes) WHERE id = $6`,
+        [closedBy, finalAmount, expectedAmount, difference, notes || null, req.params.id]
       );
 
       res.json({
@@ -123,7 +138,7 @@ router.post(
         difference,
         status: 'closed',
       });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error closing cash register' });
     }
   }
@@ -157,7 +172,7 @@ router.get('/api/tips', authMiddleware, requireRole('ADMIN'), async (req, res) =
 
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching tips' });
   }
 });
@@ -187,7 +202,7 @@ router.post(
       );
 
       res.status(201).json({ id, orderId, amount, method, waiterName: waiterName || null, locationId });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error creating tip' });
     }
   }
@@ -218,7 +233,7 @@ router.get('/api/tips/summary', authMiddleware, requireRole('ADMIN'), async (req
 
     const result = await pool.query(query, params);
     res.json(result.rows[0]);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching tips summary' });
   }
 });

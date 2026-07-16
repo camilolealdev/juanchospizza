@@ -161,9 +161,12 @@ export interface Client {
   cumpleanos?: string;
 }
 
-// Staff roster (system of record only -- see server/routes/employees.js;
-// not wired into the actual login flow yet, which still only checks the
-// 4-entry USERS array in server/auth.js).
+// Staff roster -- server/auth.js logs in against this table directly (see
+// EMPLOYEE_COLUMNS in server/routes/employees.js). username/isSuperAdmin come
+// back from the API but are read-only from the client: isSuperAdmin is a
+// DB-only flag (not accepted by create/update schemas, see
+// server/schemas/employees.js), and password is set only via the dedicated
+// PATCH /api/employees/:id/password route.
 export interface Employee {
   id: string;
   nombre: string;
@@ -171,6 +174,8 @@ export interface Employee {
   locationId: 'nemocon' | 'zipaquira' | null;
   activo: boolean;
   creado: string;
+  username: string | null;
+  isSuperAdmin: boolean;
 }
 
 // Turno de caja -- ver server/routes/shifts.js. expectedCash/difference son

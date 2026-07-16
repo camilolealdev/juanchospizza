@@ -1,6 +1,6 @@
 import express from 'express';
 import { pool } from '../db.js';
-import { authMiddleware, requireRole } from '../auth.js';
+import { authMiddleware, requireRole, requireSameLocation } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import { openShiftSchema, closeShiftSchema } from '../schemas/shifts.js';
 
@@ -25,7 +25,7 @@ router.get('/api/shifts/current', authMiddleware, requireRole('ADMIN', 'OPERATOR
       params
     );
     res.json(result.rows[0] || null);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching current shift' });
   }
 });
@@ -48,7 +48,7 @@ router.get('/api/shifts', authMiddleware, requireRole('ADMIN', 'OPERATOR'), asyn
     query += ' ORDER BY "openedAt" DESC';
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching shifts' });
   }
 });
@@ -58,6 +58,7 @@ router.post(
   authMiddleware,
   requireRole('ADMIN', 'OPERATOR'),
   validate(openShiftSchema),
+  requireSameLocation((req) => req.body.locationId),
   async (req, res) => {
     try {
       const { locationId, openingCash } = req.body;
@@ -78,7 +79,7 @@ router.post(
 
       const result = await pool.query('SELECT * FROM shifts WHERE id = $1', [id]);
       res.status(201).json(result.rows[0]);
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error opening shift' });
     }
   }
@@ -100,6 +101,12 @@ router.patch(
       const shift = shiftResult.rows[0];
       if (shift.status === 'closed') {
         return res.status(400).json({ error: 'El turno ya está cerrado' });
+      }
+      // Mismo criterio que al abrir: un OPERATOR solo cierra turnos de su
+      // propia sede. Va después del lookup porque la sede del turno viene
+      // de la fila, no del request.
+      if (req.auth.role !== 'ADMIN' && req.auth.locationId && shift.locationId !== req.auth.locationId) {
+        return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
       }
 
       // Ventas en efectivo/pagadas dentro de la ventana del turno, para la
@@ -124,7 +131,7 @@ router.patch(
 
       const result = await pool.query('SELECT * FROM shifts WHERE id = $1', [req.params.id]);
       res.json(result.rows[0]);
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error closing shift' });
     }
   }

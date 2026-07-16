@@ -20,8 +20,10 @@ export interface NewEmployeePayload {
   role: Employee['role'];
   pin: string;
   locationId?: Employee['locationId'];
+  username?: string;
+  password?: string;
 }
-export type EmployeeUpdatePayload = Partial<Pick<Employee, 'nombre' | 'role' | 'locationId' | 'activo'>>;
+export type EmployeeUpdatePayload = Partial<Pick<Employee, 'nombre' | 'role' | 'locationId' | 'activo' | 'username'>>;
 type LoyaltyRewardPayload = Partial<LoyaltyReward>;
 type ProductPayload = Partial<Product>;
 
@@ -856,7 +858,7 @@ export const api = {
     return apiFetch('/api/recipes');
   },
 
-  // Employees (staff roster -- CRUD only, not wired into the login flow yet)
+  // Employees (staff roster -- server/auth.js logs in against this table directly)
   async getEmployees(): Promise<Employee[]> {
     return apiFetch('/api/employees');
   },
@@ -879,6 +881,14 @@ export const api = {
 
   async deleteEmployee(id: string) {
     return apiFetch(`/api/employees/${id}`, { method: 'DELETE' });
+  },
+
+  async setEmployeePassword(id: string, password: string) {
+    return apiFetch(`/api/employees/${id}/password`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
   },
 
   // Shifts (turnos y control de caja)

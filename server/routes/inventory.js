@@ -19,7 +19,7 @@ router.get('/api/inventory', authMiddleware, requireRole('ADMIN', 'OPERATOR'), a
         : 'SELECT * FROM inventory_items WHERE activo IS DISTINCT FROM false ORDER BY nombre';
     const result = await pool.query(query);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching inventory' });
   }
 });
@@ -63,7 +63,7 @@ router.post(
         ]
       );
       res.status(201).json({ id, nombre });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error creating inventory item' });
     }
   }
@@ -149,7 +149,7 @@ router.put(
       );
       if (result.rowCount === 0) return res.status(404).json({ error: 'Ítem no encontrado' });
       res.json({ id: req.params.id });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error updating inventory item' });
     }
   }
@@ -167,6 +167,9 @@ router.post(
       if (!item.rows.length) return res.status(404).json({ error: 'Item not found' });
       const saldoAnterior = item.rows[0].stockActual;
       const saldoNuevo = tipo === 'entrada' ? saldoAnterior + cantidad : saldoAnterior - cantidad;
+      if (saldoNuevo < 0) {
+        return res.status(400).json({ error: `Stock insuficiente, disponible: ${saldoAnterior}` });
+      }
       const movId = `mov_${Date.now()}`;
       await pool.query(
         `INSERT INTO inventory_movements (id, "itemId", tipo, cantidad, "saldoAnterior", "saldoNuevo", motivo, referencia, usuario) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
@@ -174,7 +177,7 @@ router.post(
       );
       await pool.query('UPDATE inventory_items SET "stockActual" = $1 WHERE id = $2', [saldoNuevo, itemId]);
       res.status(201).json({ id: movId, saldoNuevo });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error registering movement' });
     }
   }
@@ -184,7 +187,7 @@ router.get('/api/inventory/movements', authMiddleware, requireRole('ADMIN', 'OPE
   try {
     const result = await pool.query('SELECT * FROM inventory_movements ORDER BY creado DESC LIMIT 50');
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching movements' });
   }
 });

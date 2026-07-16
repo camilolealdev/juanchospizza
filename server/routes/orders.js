@@ -37,11 +37,16 @@ router.get('/api/orders', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPA
 
     let query = 'SELECT * FROM orders';
     if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-    query += ' ORDER BY "createdAt" DESC';
+    // Tope de seguridad -- sin esto, cada carga de dashboard/reportes trae
+    // la tabla completa y crece sin límite con el volumen de pedidos. 2000
+    // es generoso a propósito (no queremos truncar en silencio el análisis
+    // histórico de Reportes); si el negocio crece más que eso, lo correcto
+    // es agregar filtros de fecha reales a esta ruta, no subir el número.
+    query += ' ORDER BY "createdAt" DESC LIMIT 2000';
 
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching orders' });
   }
 });
@@ -67,7 +72,7 @@ router.get('/api/orders/track/:orderNumber', async (req, res) => {
     }
 
     res.json(result.rows[0]);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error tracking order' });
   }
 });
@@ -81,7 +86,7 @@ router.get('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR', '
     } else {
       res.status(404).json({ error: 'Order not found' });
     }
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching order' });
   }
 });
@@ -161,27 +166,27 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
       ]
     );
 
-    res
-      .status(201)
-      .json({
-        id,
-        orderNumber: sanitized.orderNumber,
-        customerName: sanitized.customerName,
-        customerPhone: sanitized.customerPhone,
-        address: sanitized.address,
-        items,
-        total: sanitized.total,
-        status,
-        createdAt,
-        estimatedTime: sanitized.estimatedTime,
-        paymentMethod: sanitized.paymentMethod,
-        clientId: sanitized.clientId,
-        paymentStatus,
-        locationId: sanitized.locationId,
-      });
+    res.status(201).json({
+      id,
+      orderNumber: sanitized.orderNumber,
+      customerName: sanitized.customerName,
+      customerPhone: sanitized.customerPhone,
+      address: sanitized.address,
+      items,
+      total: sanitized.total,
+      status,
+      createdAt,
+      estimatedTime: sanitized.estimatedTime,
+      paymentMethod: sanitized.paymentMethod,
+      clientId: sanitized.clientId,
+      paymentStatus,
+      locationId: sanitized.locationId,
+    });
 
     // ── Notificaciones post-creación (no bloqueantes) ────────────
     setImmediate(() => {
+      // notifyNewOrder (server/websocket.js) es síncrona, no retorna Promise —
+      // no encadenar .catch() aquí (lanzaba TypeError no capturado en cada pedido).
       notifyNewOrder({
         id,
         orderNumber: sanitized.orderNumber,
@@ -189,11 +194,23 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
         total: sanitized.total,
         status,
         paymentMethod: sanitized.paymentMethod,
-      }).catch((err) => console.error('[WS] Error notificando nuevo pedido:', err.message));
+      });
     });
-    notifyOrderConfirmation(sanitized.clientId, sanitized.customerName, sanitized.orderNumber, sanitized.total, sanitized.estimatedTime);
-    notifyWebhook('order.created', { id, orderNumber: sanitized.orderNumber, total: sanitized.total, status, paymentMethod: sanitized.paymentMethod });
-  } catch (e) {
+    notifyOrderConfirmation(
+      sanitized.clientId,
+      sanitized.customerName,
+      sanitized.orderNumber,
+      sanitized.total,
+      sanitized.estimatedTime
+    );
+    notifyWebhook('order.created', {
+      id,
+      orderNumber: sanitized.orderNumber,
+      total: sanitized.total,
+      status,
+      paymentMethod: sanitized.paymentMethod,
+    });
+  } catch (_e) {
     res.status(500).json({ error: 'Error creating order' });
   }
 });
@@ -269,11 +286,15 @@ router.patch(
       }
 
       // ── Notificaciones post-status (no bloqueantes) ────────────
-      if (['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'ASSIGNED', 'DELIVERING', 'COMPLETED', 'CANCELLED'].includes(status)) {
+      if (
+        ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'ASSIGNED', 'DELIVERING', 'COMPLETED', 'CANCELLED'].includes(
+          status
+        )
+      ) {
         setImmediate(() => {
-          notifyOrderUpdate(order.id, status).catch((err) =>
-            console.error('[WS] Error notificando cambio de estado:', err.message)
-          );
+          // notifyOrderUpdate (server/websocket.js) es síncrona, no retorna Promise —
+          // no encadenar .catch() aquí (lanzaba TypeError no capturado en cada cambio de estado).
+          notifyOrderUpdate(order.id, status);
           notifyOrderStatusChange(order, status).catch((err) =>
             console.error('[Order] Error en notificación de cambio de estado:', err.message)
           );
@@ -305,7 +326,7 @@ router.patch(
       }
 
       res.json(order);
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error updating order' });
     }
   }
@@ -355,7 +376,7 @@ router.put(
       } else {
         res.status(404).json({ error: 'Order not found' });
       }
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error updating order' });
     }
   }

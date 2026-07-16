@@ -42,7 +42,7 @@ router.get('/api/comandas', authMiddleware, requireRole('ADMIN', 'OPERATOR'), as
 
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al listar comandas' });
   }
 });
@@ -58,7 +58,7 @@ router.get('/api/comandas/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR')
     ]);
 
     res.json({ ...comanda.rows[0], items: items.rows });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al obtener comanda' });
   }
 });
@@ -92,11 +92,9 @@ router.post(
 
       // Notificar WebSocket
       setImmediate(() => {
-        notifyComandaUpdate(id, 'created').catch((err) =>
-          console.error('[WS] Error notificando comanda creada:', err.message)
-        );
+        notifyComandaUpdate(id, 'created');
       });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al crear comanda' });
     }
   }
@@ -140,11 +138,9 @@ router.put(
 
       // Notificar WebSocket
       setImmediate(() => {
-        notifyComandaUpdate(req.params.id, 'updated').catch((err) =>
-          console.error('[WS] Error notificando comanda actualizada:', err.message)
-        );
+        notifyComandaUpdate(req.params.id, 'updated');
       });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al actualizar comanda' });
     }
   }
@@ -179,11 +175,9 @@ router.patch(
 
       // Notificar WebSocket
       setImmediate(() => {
-        notifyComandaUpdate(req.params.id, 'closed').catch((err) =>
-          console.error('[WS] Error notificando comanda cerrada:', err.message)
-        );
+        notifyComandaUpdate(req.params.id, 'closed');
       });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al cerrar comanda' });
     }
   }
@@ -220,11 +214,9 @@ router.post(
 
       // Notificar WebSocket
       setImmediate(() => {
-        notifyComandaUpdate(comandaId, 'items_updated').catch((err) =>
-          console.error('[WS] Error notificando item agregado:', err.message)
-        );
+        notifyComandaUpdate(comandaId, 'items_updated');
       });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al agregar producto' });
     }
   }
@@ -271,11 +263,9 @@ router.post(
 
       // Notificar WebSocket
       setImmediate(() => {
-        notifyComandaUpdate(comandaId, 'items_updated').catch((err) =>
-          console.error('[WS] Error notificando items en bulk:', err.message)
-        );
+        notifyComandaUpdate(comandaId, 'items_updated');
       });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al agregar productos' });
     }
   }
@@ -331,11 +321,9 @@ router.patch(
 
       // Notificar WebSocket
       setImmediate(() => {
-        notifyComandaUpdate(updatedItem.rows[0].comandaId, 'items_updated').catch((err) =>
-          console.error('[WS] Error notificando item actualizado:', err.message)
-        );
+        notifyComandaUpdate(updatedItem.rows[0].comandaId, 'items_updated');
       });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al actualizar item' });
     }
   }
@@ -360,11 +348,9 @@ router.delete('/api/comandas/items/:id', authMiddleware, requireRole('ADMIN', 'O
 
     // Notificar WebSocket
     setImmediate(() => {
-      notifyComandaUpdate(comandaId, 'items_updated').catch((err) =>
-        console.error('[WS] Error notificando item eliminado:', err.message)
-      );
+      notifyComandaUpdate(comandaId, 'items_updated');
     });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al eliminar item' });
   }
 });
@@ -387,7 +373,7 @@ router.get('/api/comandas/:id/kitchen-ticket', authMiddleware, requireRole('ADMI
       items: items.rows,
       mesa: mesa.rows[0] || null,
     });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al generar ticket de cocina' });
   }
 });
@@ -453,11 +439,9 @@ router.post('/api/comandas/:id/split', authMiddleware, requireRole('ADMIN', 'OPE
 
     // Notificar WebSocket
     setImmediate(() => {
-      notifyComandaUpdate(req.params.id, 'split').catch((err) =>
-        console.error('[WS] Error notificando split de comanda:', err.message)
-      );
+      notifyComandaUpdate(req.params.id, 'split');
     });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al dividir comanda' });
   }
 });

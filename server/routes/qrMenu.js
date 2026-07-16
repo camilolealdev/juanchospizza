@@ -9,6 +9,17 @@ import { createQrMenuConfigSchema } from '../schemas/procurement.js';
 
 const router = express.Router();
 
+// Escapa entities básicas para interpolar strings de la BD en HTML (previene XSS almacenado)
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // GET /api/qr-menu/config — obtener configuración del menú QR
 router.get('/api/qr-menu/config', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
@@ -22,7 +33,7 @@ router.get('/api/qr-menu/config', authMiddleware, requireRole('ADMIN'), async (r
     query += ' LIMIT 1';
     const result = await pool.query(query, params);
     res.json(result.rows[0] || null);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al obtener configuración QR' });
   }
 });
@@ -55,7 +66,7 @@ router.post(
 
       const result = await pool.query('SELECT * FROM qr_menu_config WHERE "locationId" = $1', [locationId]);
       res.json(result.rows[0]);
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al guardar configuración' });
     }
   }
@@ -86,7 +97,7 @@ router.get('/api/qr-menu/qr-codes', authMiddleware, requireRole('ADMIN'), async 
     }));
 
     res.json({ locationId: locationId || 'all', total: qrCodes.length, qrCodes });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al generar QR codes' });
   }
 });
@@ -133,8 +144,8 @@ router.get('/menu/:tableId', async (req, res) => {
             (p) => `
           <div class="producto">
             <div class="producto-info">
-              <span class="producto-nombre">${p.nombre}</span>
-              ${p.descripcion ? `<span class="producto-desc">${p.descripcion}</span>` : ''}
+              <span class="producto-nombre">${escapeHtml(p.nombre)}</span>
+              ${p.descripcion ? `<span class="producto-desc">${escapeHtml(p.descripcion)}</span>` : ''}
             </div>
             ${config.showPrices ? `<span class="producto-precio">$${(p.basePrice || 0).toLocaleString('es-CO')}</span>` : ''}
           </div>`
@@ -144,7 +155,7 @@ router.get('/menu/:tableId', async (req, res) => {
         if (!catProducts) return '';
         return `
           <div class="categoria">
-            <h2 class="categoria-titulo">${cat.icon ? `<i class="fas fa-${cat.icon}"></i> ` : ''}${cat.name}</h2>
+            <h2 class="categoria-titulo">${cat.icon ? `<i class="fas fa-${escapeHtml(cat.icon)}"></i> ` : ''}${escapeHtml(cat.name)}</h2>
             ${catProducts}
           </div>`;
       })
@@ -156,8 +167,8 @@ router.get('/menu/:tableId', async (req, res) => {
             (c) => `
           <div class="producto combo">
             <div class="producto-info">
-              <span class="producto-nombre">${c.nombre}</span>
-              ${c.descripcion ? `<span class="producto-desc">${c.descripcion}</span>` : ''}
+              <span class="producto-nombre">${escapeHtml(c.nombre)}</span>
+              ${c.descripcion ? `<span class="producto-desc">${escapeHtml(c.descripcion)}</span>` : ''}
               ${c.ahorro ? `<span class="ahorro">Ahorras $${c.ahorro.toLocaleString('es-CO')}</span>` : ''}
             </div>
             ${config.showPrices ? `<span class="producto-precio">$${(c.precioTotal || 0).toLocaleString('es-CO')}</span>` : ''}
@@ -171,7 +182,7 @@ router.get('/menu/:tableId', async (req, res) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>${config.title || 'Menú'}${table ? ` — Mesa ${table.name}` : ''}</title>
+  <title>${escapeHtml(config.title || 'Menú')}${table ? ` — Mesa ${escapeHtml(table.name)}` : ''}</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -207,11 +218,11 @@ router.get('/menu/:tableId', async (req, res) => {
 <body>
   <div class="header">
     <h1>🍕 Juancho's Pizza</h1>
-    <p class="subtitle">${config.title || 'Menú'}</p>
-    ${table ? `<div class="mesa-badge"><i class="fas fa-table"></i> Mesa ${table.name}</div>` : ''}
+    <p class="subtitle">${escapeHtml(config.title || 'Menú')}</p>
+    ${table ? `<div class="mesa-badge"><i class="fas fa-table"></i> Mesa ${escapeHtml(table.name)}</div>` : ''}
   </div>
   <div class="container">
-    ${promotions.rows.length ? `<div class="promo-banner">🔥 ${promotions.rows[0].nombre}</div>` : ''}
+    ${promotions.rows.length ? `<div class="promo-banner">🔥 ${escapeHtml(promotions.rows[0].nombre)}</div>` : ''}
     ${combosHtml}
     ${categoryHtml}
   </div>
@@ -227,7 +238,7 @@ router.get('/menu/:tableId', async (req, res) => {
 
     res.set('Content-Type', 'text/html');
     res.send(html);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).send('<h1>Error al cargar el menú</h1><p>Intenta de nuevo más tarde.</p>');
   }
 });
@@ -254,7 +265,7 @@ router.post('/api/qr-menu/regenerate', authMiddleware, requireRole('ADMIN'), asy
     }
 
     res.json({ updated, baseUrl });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al regenerar QR codes' });
   }
 });

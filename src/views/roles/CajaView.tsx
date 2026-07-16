@@ -13,8 +13,8 @@ const CajaView: React.FC<Props> = ({ locationId }) => {
   const [loading, setLoading] = useState(true);
   const [showOpenForm, setShowOpenForm] = useState(false);
   const [showCloseForm, setShowCloseForm] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ openedBy: '', initialAmount: 0, notes: '' });
-  const [closeData, setCloseData] = useState({ finalAmount: 0, closedBy: '', notes: '' });
+  const [formData, setFormData] = useState({ initialAmount: 0, notes: '' });
+  const [closeData, setCloseData] = useState({ finalAmount: 0, notes: '' });
   const [activeTab, setActiveTab] = useState<'caja' | 'propinas'>('caja');
 
   const openEntry = entries.find((e) => e.status === 'open');
@@ -44,14 +44,16 @@ const CajaView: React.FC<Props> = ({ locationId }) => {
   const handleOpen = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // openedBy ya no se manda: el backend lo resuelve del token
+      // (req.auth.sub), igual que shifts.js.
       await api.openCashRegister({
         locationId,
-        openedBy: formData.openedBy,
+        openedBy: '',
         initialAmount: formData.initialAmount,
         notes: formData.notes,
       });
       setShowOpenForm(false);
-      setFormData({ openedBy: '', initialAmount: 0, notes: '' });
+      setFormData({ initialAmount: 0, notes: '' });
       loadData();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Error al abrir caja');
@@ -62,13 +64,15 @@ const CajaView: React.FC<Props> = ({ locationId }) => {
     e.preventDefault();
     if (!showCloseForm) return;
     try {
+      // closedBy ya no se manda: el backend lo resuelve del token
+      // (req.auth.sub), igual que shifts.js.
       await api.closeCashRegister(showCloseForm, {
         finalAmount: closeData.finalAmount,
-        closedBy: closeData.closedBy,
+        closedBy: '',
         notes: closeData.notes,
       });
       setShowCloseForm(null);
-      setCloseData({ finalAmount: 0, closedBy: '', notes: '' });
+      setCloseData({ finalAmount: 0, notes: '' });
       loadData();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Error al cerrar caja');
@@ -114,10 +118,7 @@ const CajaView: React.FC<Props> = ({ locationId }) => {
               <p className="text-stone-500 text-xs mt-1">{new Date(openEntry.openedAt).toLocaleString('es-CO')}</p>
             </div>
             <button
-              onClick={() => {
-                setShowCloseForm(openEntry.id);
-                setCloseData((c) => ({ ...c, closedBy: openEntry.openedBy }));
-              }}
+              onClick={() => setShowCloseForm(openEntry.id)}
               className="px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase tracking-widest transition-all"
             >
               Cerrar Caja
@@ -223,18 +224,6 @@ const CajaView: React.FC<Props> = ({ locationId }) => {
             <form onSubmit={handleOpen} className="space-y-4">
               <div>
                 <label className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block">
-                  Abierto por
-                </label>
-                <input
-                  value={formData.openedBy}
-                  onChange={(e) => setFormData((f) => ({ ...f, openedBy: e.target.value }))}
-                  className="crm-input w-full"
-                  placeholder="Nombre del administrador"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block">
                   Monto Inicial ($)
                 </label>
                 <input
@@ -278,17 +267,6 @@ const CajaView: React.FC<Props> = ({ locationId }) => {
           <div className="w-full max-w-md bg-stone-950 border border-white/10 rounded-[2rem] p-8 shadow-2xl">
             <h3 className="text-xl font-black text-white mb-6">Cerrar Caja</h3>
             <form onSubmit={handleClose} className="space-y-4">
-              <div>
-                <label className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block">
-                  Cerrado por
-                </label>
-                <input
-                  value={closeData.closedBy}
-                  onChange={(e) => setCloseData((f) => ({ ...f, closedBy: e.target.value }))}
-                  className="crm-input w-full"
-                  required
-                />
-              </div>
               <div>
                 <label className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block">
                   Monto Final ($)

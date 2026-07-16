@@ -17,7 +17,10 @@ vi.mock('../db.js', () => ({
 
 vi.mock('../auth.js', () => ({
   authMiddleware: (req, res, next) => next(),
-  requireRole: (...roles) => (req, res, next) => next(),
+  requireRole:
+    (..._roles) =>
+    (req, res, next) =>
+      next(),
 }));
 
 vi.mock('../websocket.js', () => ({
@@ -86,9 +89,7 @@ describe('Digiturno Routes', () => {
     it('debe filtrar por status y locationId', async () => {
       mockQuery.mockResolvedValueOnce({ rows: [mockTicket({ status: 'waiting' })] });
 
-      const res = await supertest(app)
-        .get('/api/digiturno')
-        .query({ status: 'waiting', locationId: 'nemocon' });
+      const res = await supertest(app).get('/api/digiturno').query({ status: 'waiting', locationId: 'nemocon' });
 
       expect(res.status).toBe(200);
       expect(mockQuery.mock.calls[0][1]).toContain('waiting');
@@ -102,6 +103,59 @@ describe('Digiturno Routes', () => {
 
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('Error al listar tickets');
+    });
+  });
+
+  describe('GET /api/digiturno/stats', () => {
+    it('debe retornar estadísticas diarias', async () => {
+      const statsRow = (count) => ({ rows: [{ count: String(count) }] });
+      const avgRow = (avg) => ({ rows: [{ avg_min: avg }] });
+
+      mockQuery
+        .mockResolvedValueOnce(statsRow(42)) // ticketsToday
+        .mockResolvedValueOnce(statsRow(38)) // servedToday
+        .mockResolvedValueOnce(statsRow(2)) // cancelledToday
+        .mockResolvedValueOnce(avgRow(12.5)) // averageWaitMinutes
+        .mockResolvedValueOnce(statsRow(5)); // currentQueueCount
+
+      const res = await supertest(app).get('/api/digiturno/stats');
+
+      expect(res.status).toBe(200);
+      expect(res.body.ticketsToday).toBe(42);
+      expect(res.body.servedToday).toBe(38);
+      expect(res.body.cancelledToday).toBe(2);
+      expect(res.body.averageWaitMinutes).toBe(12.5);
+      expect(res.body.currentQueueCount).toBe(5);
+      expect(res.body.bySource).toBeUndefined();
+      expect(res.body.busiestHour).toBeUndefined();
+    });
+
+    it('debe filtrar por locationId', async () => {
+      const statsRow = (count) => ({ rows: [{ count: String(count) }] });
+      const avgRow = (avg) => ({ rows: [{ avg_min: avg }] });
+
+      mockQuery
+        .mockResolvedValueOnce(statsRow(10))
+        .mockResolvedValueOnce(statsRow(8))
+        .mockResolvedValueOnce(statsRow(1))
+        .mockResolvedValueOnce(avgRow(8.0))
+        .mockResolvedValueOnce(statsRow(3));
+
+      const res = await supertest(app).get('/api/digiturno/stats').query({ locationId: 'zipaquira' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ticketsToday).toBe(10);
+      // Verificar que el locationId se pasó a las queries
+      expect(mockQuery.mock.calls[0][1]).toContain('zipaquira');
+    });
+
+    it('debe retornar 500 si la DB falla', async () => {
+      mockQuery.mockRejectedValue(new Error('DB Error'));
+
+      const res = await supertest(app).get('/api/digiturno/stats');
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe('Error al obtener estadísticas');
     });
   });
 
@@ -133,16 +187,21 @@ describe('Digiturno Routes', () => {
     it('debe iniciar con Content-Type text/event-stream', async () => {
       mockQuery.mockResolvedValue({ rows: [mockTicket()] });
 
-      // SSE nunca termina el stream, así que usamos AbortController en vez de supertest
-      const server = app.listen(0); // puerto aleatorio
+      // SSE nunca termina el stream, así que usamos AbortController en vez de supertest.
+      // El servidor Express arranca en puerto 0 (aleatorio) y esperamos a que esté listo.
+      const server = app.listen(0);
+      await new Promise((resolve) => server.on('listening', resolve));
+
       const { port } = server.address();
 
       const controller = new AbortController();
-      setTimeout(() => controller.abort(), 300);
+      // Esperar 2000ms antes de abortar — da tiempo a que el fetch reciba headers
+      const abortTimer = setTimeout(() => controller.abort(), 2000);
 
       const response = await fetch(`http://localhost:${port}/api/digiturno/queue/live`, {
         signal: controller.signal,
       }).catch((e) => {
+        clearTimeout(abortTimer);
         // AbortError es esperado — la respuesta ya se recibió
         if (e.name === 'AbortError') return null;
         throw e;
@@ -160,12 +219,10 @@ describe('Digiturno Routes', () => {
   describe('POST /api/digiturno', () => {
     it('debe crear un ticket exitosamente', async () => {
       mockQuery.mockResolvedValueOnce({ rows: [{ next: 1 }] }); // getNextTicketNumber
-      mockQuery.mockResolvedValueOnce({ rowCount: 1 });          // INSERT
+      mockQuery.mockResolvedValueOnce({ rowCount: 1 }); // INSERT
       mockQuery.mockResolvedValueOnce({ rows: [mockTicket()] }); // SELECT post-insert
 
-      const res = await supertest(app)
-        .post('/api/digiturno')
-        .send({ locationId: 'nemocon', source: 'local' });
+      const res = await supertest(app).post('/api/digiturno').send({ locationId: 'nemocon', source: 'local' });
 
       expect(res.status).toBe(201);
       expect(res.body.ticketNumber).toBe(1);
@@ -180,9 +237,7 @@ describe('Digiturno Routes', () => {
       mockQuery.mockResolvedValueOnce({ rowCount: 1 });
       mockQuery.mockResolvedValueOnce({ rows: [mockTicket({ ticketNumber: 2 })] });
 
-      const res = await supertest(app)
-        .post('/api/digiturno')
-        .send({ locationId: 'nemocon', source: 'local' });
+      const res = await supertest(app).post('/api/digiturno').send({ locationId: 'nemocon', source: 'local' });
 
       expect(res.status).toBe(201);
       expect(res.body.ticketNumber).toBe(2);
@@ -194,12 +249,10 @@ describe('Digiturno Routes', () => {
       // 5 intentos, cada uno: getNext + INSERT (23505) = 10 llamadas
       for (let i = 0; i < 5; i++) {
         mockQuery.mockResolvedValueOnce({ rows: [{ next: i + 1 }] }); // getNextTicketNumber
-        mockQuery.mockRejectedValueOnce({ code: '23505' });            // INSERT
+        mockQuery.mockRejectedValueOnce({ code: '23505' }); // INSERT
       }
 
-      const res = await supertest(app)
-        .post('/api/digiturno')
-        .send({ locationId: 'nemocon', source: 'local' });
+      const res = await supertest(app).post('/api/digiturno').send({ locationId: 'nemocon', source: 'local' });
 
       expect(res.status).toBe(409);
       expect(res.body.error).toContain('concurrencia');
@@ -209,9 +262,7 @@ describe('Digiturno Routes', () => {
       mockQuery.mockResolvedValueOnce({ rows: [{ next: 1 }] });
       mockQuery.mockRejectedValueOnce(new Error('DB error'));
 
-      const res = await supertest(app)
-        .post('/api/digiturno')
-        .send({ locationId: 'nemocon', source: 'local' });
+      const res = await supertest(app).post('/api/digiturno').send({ locationId: 'nemocon', source: 'local' });
 
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('Error al crear ticket');
@@ -223,9 +274,7 @@ describe('Digiturno Routes', () => {
       mockQuery.mockResolvedValueOnce({ rowCount: 1 }); // UPDATE
       mockQuery.mockResolvedValueOnce({ rows: [mockTicket({ status: 'preparing' })] }); // SELECT
 
-      const res = await supertest(app)
-        .patch('/api/digiturno/test-id/status')
-        .send({ status: 'preparing' });
+      const res = await supertest(app).patch('/api/digiturno/test-id/status').send({ status: 'preparing' });
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('preparing');
@@ -235,9 +284,7 @@ describe('Digiturno Routes', () => {
       mockQuery.mockResolvedValueOnce({ rowCount: 1 });
       mockQuery.mockResolvedValueOnce({ rows: [mockTicket({ status: 'ready' })] });
 
-      const res = await supertest(app)
-        .patch('/api/digiturno/test-id/status')
-        .send({ status: 'ready' });
+      const res = await supertest(app).patch('/api/digiturno/test-id/status').send({ status: 'ready' });
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('ready');
@@ -247,9 +294,7 @@ describe('Digiturno Routes', () => {
       mockQuery.mockResolvedValueOnce({ rowCount: 0 });
       mockQuery.mockResolvedValueOnce({ rows: [] });
 
-      const res = await supertest(app)
-        .patch('/api/digiturno/nonexistent/status')
-        .send({ status: 'served' });
+      const res = await supertest(app).patch('/api/digiturno/nonexistent/status').send({ status: 'served' });
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Ticket no encontrado');

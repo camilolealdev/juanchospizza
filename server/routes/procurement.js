@@ -29,7 +29,7 @@ router.get('/api/procurement', authMiddleware, requireRole('ADMIN', 'OPERATOR'),
 
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al listar órdenes de compra' });
   }
 });
@@ -40,7 +40,7 @@ router.get('/api/procurement/:id', authMiddleware, requireRole('ADMIN', 'OPERATO
     const result = await pool.query('SELECT * FROM purchase_orders WHERE id = $1', [req.params.id]);
     if (!result.rows.length) return res.status(404).json({ error: 'Orden no encontrada' });
     res.json(result.rows[0]);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al obtener orden' });
   }
 });
@@ -76,7 +76,7 @@ router.post(
 
       const created = await pool.query('SELECT * FROM purchase_orders WHERE id = $1', [id]);
       res.status(201).json(created.rows[0]);
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al crear orden de compra' });
     }
   }
@@ -125,7 +125,7 @@ router.put(
 
       const updated = await pool.query('SELECT * FROM purchase_orders WHERE id = $1', [req.params.id]);
       res.json(updated.rows[0]);
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al actualizar orden' });
     }
   }
@@ -139,40 +139,64 @@ router.patch('/api/procurement/:id/receive', authMiddleware, requireRole('ADMIN'
     if (order.rows[0].status === 'recibida') return res.status(400).json({ error: 'La orden ya fue recibida' });
 
     const items = order.rows[0].items || [];
-    let updatedCount = 0;
+    const recibidos = [];
+    const omitidos = [];
 
-    // Actualizar inventario para cada item
-    for (const item of items) {
-      if (item.itemId) {
-        const existingItem = await pool.query('SELECT * FROM inventory_items WHERE id = $1', [item.itemId]);
-        if (existingItem.rows.length) {
-          const newStock = (existingItem.rows[0].stockActual || 0) + (item.cantidad || 0);
-          await pool.query('UPDATE inventory_items SET "stockActual" = $1 WHERE id = $2', [newStock, item.itemId]);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-          // Registrar movimiento
-          const movId = `mov_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-          await pool.query(
-            `INSERT INTO inventory_movements (id, "itemId", tipo, cantidad, "saldoAnterior", "saldoNuevo", motivo, referencia)
-             VALUES ($1, $2, 'entrada', $3, $4, $5, $6, $7)`,
-            [
-              movId,
-              item.itemId,
-              item.cantidad,
-              existingItem.rows[0].stockActual || 0,
-              newStock,
-              `Recepción orden ${order.rows[0].orderNumber}`,
-              req.params.id,
-            ]
-          );
-          updatedCount++;
+      // Actualizar inventario para cada item
+      for (const item of items) {
+        if (!item.itemId) {
+          omitidos.push({ item, motivo: 'sin itemId — no vinculado a inventario' });
+          continue;
         }
+
+        const existingItem = await client.query('SELECT * FROM inventory_items WHERE id = $1', [item.itemId]);
+        if (!existingItem.rows.length) {
+          omitidos.push({ item, motivo: 'itemId no existe en inventory_items' });
+          continue;
+        }
+
+        const newStock = (existingItem.rows[0].stockActual || 0) + (item.cantidad || 0);
+        await client.query('UPDATE inventory_items SET "stockActual" = $1 WHERE id = $2', [newStock, item.itemId]);
+
+        // Registrar movimiento
+        const movId = `mov_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        await client.query(
+          `INSERT INTO inventory_movements (id, "itemId", tipo, cantidad, "saldoAnterior", "saldoNuevo", motivo, referencia)
+           VALUES ($1, $2, 'entrada', $3, $4, $5, $6, $7)`,
+          [
+            movId,
+            item.itemId,
+            item.cantidad,
+            existingItem.rows[0].stockActual || 0,
+            newStock,
+            `Recepción orden ${order.rows[0].orderNumber}`,
+            req.params.id,
+          ]
+        );
+        recibidos.push(item);
       }
+
+      await client.query('UPDATE purchase_orders SET status = $1 WHERE id = $2', ['recibida', req.params.id]);
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
     }
 
-    await pool.query('UPDATE purchase_orders SET status = $1 WHERE id = $2', ['recibida', req.params.id]);
-
-    res.json({ received: true, itemsUpdated: updatedCount, orderNumber: order.rows[0].orderNumber });
-  } catch (e) {
+    res.json({
+      received: true,
+      itemsUpdated: recibidos.length,
+      orderNumber: order.rows[0].orderNumber,
+      recibidos,
+      omitidos,
+    });
+  } catch (_e) {
     res.status(500).json({ error: 'Error al recibir orden' });
   }
 });
@@ -183,7 +207,7 @@ router.delete('/api/procurement/:id', authMiddleware, requireRole('ADMIN'), asyn
     const result = await pool.query('DELETE FROM purchase_orders WHERE id = $1 RETURNING id', [req.params.id]);
     if (!result.rows.length) return res.status(404).json({ error: 'Orden no encontrada' });
     res.json({ deleted: true });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al eliminar orden' });
   }
 });

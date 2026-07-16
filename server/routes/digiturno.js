@@ -6,11 +6,7 @@ import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import { broadcast, notifyDigiturnoNew, notifyDigiturnoUpdate } from '../websocket.js';
-import {
-  createDigiturnoSchema,
-  updateDigiturnoStatusSchema,
-  updateDigiturnoSchema,
-} from '../schemas/digiturno.js';
+import { createDigiturnoSchema, updateDigiturnoStatusSchema, updateDigiturnoSchema } from '../schemas/digiturno.js';
 
 const router = express.Router();
 
@@ -49,8 +45,77 @@ router.get('/api/digiturno', authMiddleware, async (req, res) => {
 
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al listar tickets' });
+  }
+});
+
+// GET /api/digiturno/stats — estadísticas diarias del digiturno
+// Retorna: tickets hoy, servidos hoy, tiempo promedio de espera, etc.
+router.get('/api/digiturno/stats', async (req, res) => {
+  try {
+    const { locationId } = req.query;
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    let baseWhere = '"createdAt" >= $1 AND "createdAt" <= $2';
+    const params = [todayStart.toISOString(), todayEnd.toISOString()];
+
+    if (locationId) {
+      baseWhere += ` AND "locationId" = $${params.length + 1}`;
+      params.push(locationId);
+    }
+
+    // Tickets creados hoy
+    const createdToday = await pool.query(`SELECT COUNT(*) AS count FROM digiturno_tickets WHERE ${baseWhere}`, params);
+
+    // Tickets servidos hoy (status = served)
+    const servedToday = await pool.query(
+      `SELECT COUNT(*) AS count FROM digiturno_tickets WHERE status = 'served' AND ${baseWhere}`,
+      params
+    );
+
+    // Tickets cancelados hoy
+    const cancelledToday = await pool.query(
+      `SELECT COUNT(*) AS count FROM digiturno_tickets WHERE status = 'cancelled' AND ${baseWhere}`,
+      params
+    );
+
+    // Tiempo promedio de espera (minutos) desde creación hasta llamado/completado
+    // Usa la misma lógica de baseWhere + params que las demás consultas
+    let avgWhere = '"calledAt" IS NOT NULL AND "createdAt" >= $1 AND "createdAt" <= $2';
+    const avgParams = [todayStart.toISOString(), todayEnd.toISOString()];
+    if (locationId) {
+      avgWhere += ` AND "locationId" = $${avgParams.length + 1}`;
+      avgParams.push(locationId);
+    }
+    const avgWait = await pool.query(
+      `SELECT AVG(EXTRACT(EPOCH FROM ("calledAt" - "createdAt")) / 60) AS avg_min
+       FROM digiturno_tickets WHERE ${avgWhere}`,
+      avgParams
+    );
+
+    // Cola actual
+    let queueQuery = `SELECT COUNT(*) AS count FROM digiturno_tickets WHERE status IN ('waiting', 'preparing', 'ready')`;
+    const queueParams = [];
+    if (locationId) {
+      queueParams.push(locationId);
+      queueQuery += ` AND "locationId" = $1`;
+    }
+    const queueCount = await pool.query(queueQuery, queueParams);
+
+    res.json({
+      ticketsToday: parseInt(createdToday.rows[0]?.count || '0', 10),
+      servedToday: parseInt(servedToday.rows[0]?.count || '0', 10),
+      cancelledToday: parseInt(cancelledToday.rows[0]?.count || '0', 10),
+      averageWaitMinutes: Math.round(parseFloat(avgWait.rows[0]?.avg_min || '0') * 10) / 10,
+      currentQueueCount: parseInt(queueCount.rows[0]?.count || '0', 10),
+    });
+  } catch (_e) {
+    res.status(500).json({ error: 'Error al obtener estadísticas' });
   }
 });
 
@@ -70,7 +135,7 @@ router.get('/api/digiturno/current', authMiddleware, requireRole('ADMIN', 'OPERA
 
     const result = await pool.query(query, params);
     res.json(result.rows[0] || null);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al obtener ticket actual' });
   }
 });
@@ -92,7 +157,7 @@ router.get('/api/digiturno/queue', async (req, res) => {
 
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al obtener cola' });
   }
 });
@@ -106,7 +171,7 @@ router.get('/api/digiturno/queue/live', async (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
 
@@ -191,21 +256,32 @@ router.post(
 
         // Notificar WebSocket
         setImmediate(() => {
-          try { notifyDigiturnoNew(created.rows[0]); }
-          catch (err) { console.error('[WS] Error notificando nuevo ticket:', err.message); }
+          try {
+            notifyDigiturnoNew(created.rows[0]);
+          } catch (err) {
+            console.error('[WS] Error notificando nuevo ticket:', err.message);
+          }
         });
         return; // Éxito — salir del handler
       } catch (e) {
         // Si es unique_violation (23505) y quedan intentos, reintentar
         if (e.code === '23505' && attempt < MAX_RETRIES - 1) {
-          console.warn('[Digiturno] Race condition en ticket # para', locationId, '- retry', attempt + 1, '/', MAX_RETRIES);
+          console.warn(
+            '[Digiturno] Race condition en ticket # para',
+            locationId,
+            '- retry',
+            attempt + 1,
+            '/',
+            MAX_RETRIES
+          );
           continue;
         }
         // Si es el último intento o no es unique_violation, retornar error
         return res.status(e.code === '23505' ? 409 : 500).json({
-          error: e.code === '23505'
-            ? 'Conflicto de concurrencia al asignar número de ticket. Intentá de nuevo.'
-            : 'Error al crear ticket',
+          error:
+            e.code === '23505'
+              ? 'Conflicto de concurrencia al asignar número de ticket. Intentá de nuevo.'
+              : 'Error al crear ticket',
         });
       }
     }
@@ -247,10 +323,13 @@ router.patch(
 
       // Notificar WebSocket
       setImmediate(() => {
-        try { notifyDigiturnoUpdate(updated.rows[0]); }
-        catch (err) { console.error('[WS] Error notificando cambio de ticket:', err.message); }
+        try {
+          notifyDigiturnoUpdate(updated.rows[0]);
+        } catch (err) {
+          console.error('[WS] Error notificando cambio de ticket:', err.message);
+        }
       });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al actualizar ticket' });
     }
   }
@@ -268,12 +347,30 @@ router.put(
       const updates = [];
       const params = [];
 
-      if (orderType !== undefined) { params.push(orderType); updates.push(`"orderType" = $${params.length}`); }
-      if (customerName !== undefined) { params.push(customerName); updates.push(`"customerName" = $${params.length}`); }
-      if (guestCount !== undefined) { params.push(guestCount); updates.push(`"guestCount" = $${params.length}`); }
-      if (notes !== undefined) { params.push(notes); updates.push(`notes = $${params.length}`); }
-      if (items !== undefined) { params.push(JSON.stringify(items)); updates.push(`items = $${params.length}`); }
-      if (total !== undefined) { params.push(total); updates.push(`total = $${params.length}`); }
+      if (orderType !== undefined) {
+        params.push(orderType);
+        updates.push(`"orderType" = $${params.length}`);
+      }
+      if (customerName !== undefined) {
+        params.push(customerName);
+        updates.push(`"customerName" = $${params.length}`);
+      }
+      if (guestCount !== undefined) {
+        params.push(guestCount);
+        updates.push(`"guestCount" = $${params.length}`);
+      }
+      if (notes !== undefined) {
+        params.push(notes);
+        updates.push(`notes = $${params.length}`);
+      }
+      if (items !== undefined) {
+        params.push(JSON.stringify(items));
+        updates.push(`items = $${params.length}`);
+      }
+      if (total !== undefined) {
+        params.push(total);
+        updates.push(`total = $${params.length}`);
+      }
 
       if (!updates.length) return res.status(400).json({ error: 'Nada que actualizar' });
 
@@ -282,31 +379,29 @@ router.put(
 
       const result = await pool.query('SELECT * FROM digiturno_tickets WHERE id = $1', [req.params.id]);
       res.json(result.rows[0]);
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al actualizar ticket' });
     }
   }
 );
 
 // DELETE /api/digiturno/:id — cancelar/eliminar ticket
-router.delete(
-  '/api/digiturno/:id',
-  authMiddleware,
-  requireRole('ADMIN'),
-  async (req, res) => {
-    try {
-      const result = await pool.query('DELETE FROM digiturno_tickets WHERE id = $1 RETURNING id', [req.params.id]);
-      if (!result.rows.length) return res.status(404).json({ error: 'Ticket no encontrado' });
-      res.json({ deleted: true });
+router.delete('/api/digiturno/:id', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+  try {
+    const result = await pool.query('DELETE FROM digiturno_tickets WHERE id = $1 RETURNING id', [req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Ticket no encontrado' });
+    res.json({ deleted: true });
 
-      setImmediate(() => {
-        try { broadcast('digiturno:deleted', { id: req.params.id }); }
-        catch (err) { console.error('[WS] Error notificando eliminación de ticket:', err.message); }
-      });
-    } catch (e) {
-      res.status(500).json({ error: 'Error al eliminar ticket' });
-    }
+    setImmediate(() => {
+      try {
+        broadcast('digiturno:deleted', { id: req.params.id });
+      } catch (err) {
+        console.error('[WS] Error notificando eliminación de ticket:', err.message);
+      }
+    });
+  } catch (_e) {
+    res.status(500).json({ error: 'Error al eliminar ticket' });
   }
-);
+});
 
 export default router;

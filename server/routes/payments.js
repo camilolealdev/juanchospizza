@@ -19,8 +19,8 @@ async function confirmOrderPayment(pool, orderRow, newPaymentStatus) {
     sendPushToPhone(pool, orderRow.customerPhone, {
       title: `Pedido ${orderRow.orderNumber}`,
       body: 'Confirmamos tu pago. ¡Ya estamos preparando tu pedido!',
-      url: '/'
-    }).catch(err => console.error('Error sending payment-confirmed push:', err.message));
+      url: '/',
+    }).catch((err) => console.error('Error sending payment-confirmed push:', err.message));
   }
 
   // ── Webhook de pago confirmado (no bloqueante) ──────────────
@@ -58,7 +58,12 @@ function notifyPaymentWebhook(order, status) {
 function verifyMercadoPagoSignature(xSignature, xRequestId, dataId, secret) {
   try {
     const parts = Object.fromEntries(
-      xSignature.split(',').map(p => p.trim().split('=').map(s => s.trim()))
+      xSignature.split(',').map((p) =>
+        p
+          .trim()
+          .split('=')
+          .map((s) => s.trim())
+      )
     );
     if (!parts.ts || !parts.v1) return false;
     const manifest = `id:${dataId};request-id:${xRequestId};ts:${parts.ts};`;
@@ -77,7 +82,7 @@ function verifyWompiChecksum(event, secret) {
     const { properties, checksum } = event.signature || {};
     if (!properties || !checksum) return false;
     const concatenated = properties
-      .map(propPath => propPath.split('.').reduce((obj, key) => obj?.[key], event.data))
+      .map((propPath) => propPath.split('.').reduce((obj, key) => obj?.[key], event.data))
       .join('');
     const toHash = `${concatenated}${event.timestamp}${secret}`;
     const expected = crypto.createHash('sha256').update(toHash).digest('hex');
@@ -123,15 +128,15 @@ router.post('/api/payments/bold/create-link', validate(createPaymentSchema), asy
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `x-api-key ${process.env.BOLD_API_KEY}`
+        Authorization: `x-api-key ${process.env.BOLD_API_KEY}`,
       },
       body: JSON.stringify({
         amount_type: 'CLOSE',
         amount: { currency: 'COP', total_amount: order.total },
         reference: order.orderNumber,
         description: `Pedido Juancho's Pizza #${order.orderNumber}`.slice(0, 100),
-        payment_methods: ['CREDIT_CARD', 'PSE', 'NEQUI', 'BOTON_BANCOLOMBIA']
-      })
+        payment_methods: ['CREDIT_CARD', 'PSE', 'NEQUI', 'BOTON_BANCOLOMBIA'],
+      }),
     });
 
     const data = await boldResponse.json();
@@ -140,10 +145,13 @@ router.post('/api/payments/bold/create-link', validate(createPaymentSchema), asy
       return res.status(502).json({ error: data.errors?.[0]?.message || 'Error creando el link de pago Bold' });
     }
 
-    await pool.query('UPDATE orders SET "paymentProviderRef" = $1 WHERE id = $2', [data.payload.payment_link, order.id]);
+    await pool.query('UPDATE orders SET "paymentProviderRef" = $1 WHERE id = $2', [
+      data.payload.payment_link,
+      order.id,
+    ]);
 
     res.status(201).json({ url: data.payload.url, paymentLink: data.payload.payment_link });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error de conexión con Bold' });
   }
 });
@@ -170,7 +178,7 @@ router.post('/api/payments/mercadopago/create-payment', validate(createPaymentSc
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`
+        Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
       },
       // payment_method_id hardcodeado a 'pix' -- Brasil, inválido pa una
       // cuenta MercadoPago colombiana. El método real depende de qué tenga
@@ -182,8 +190,8 @@ router.post('/api/payments/mercadopago/create-payment', validate(createPaymentSc
         description: `Pedido Juancho's Pizza #${order.orderNumber}`.slice(0, 100),
         payment_method_id: 'pix',
         payer: { email: String(customerEmail || '').slice(0, 100) },
-        external_reference: order.id
-      })
+        external_reference: order.id,
+      }),
     });
 
     const data = await mpResponse.json();
@@ -196,9 +204,9 @@ router.post('/api/payments/mercadopago/create-payment', validate(createPaymentSc
 
     res.status(201).json({
       transactionId: data.id,
-      qrCode: data.point_of_interaction?.transaction_data?.qr_code
+      qrCode: data.point_of_interaction?.transaction_data?.qr_code,
     });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error de conexión con MercadoPago' });
   }
 });
@@ -236,14 +244,16 @@ router.post('/api/payments/wompi/create-transaction', validate(createPaymentSche
         customer_email: String(customerEmail || '').slice(0, 100),
         payment_method: { type: 'CARD' },
         reference: order.orderNumber,
-        redirect_url: `${frontendUrl}/payment/return`
-      })
+        redirect_url: `${frontendUrl}/payment/return`,
+      }),
     });
 
     const data = await wompiResponse.json();
 
     if (data.id) {
-      await pool.query('UPDATE orders SET "paymentProviderRef" = $1 WHERE id = $2', [String(data.id), order.id]).catch(() => {});
+      await pool
+        .query('UPDATE orders SET "paymentProviderRef" = $1 WHERE id = $2', [String(data.id), order.id])
+        .catch(() => {});
     }
 
     // NOTA: "approved" acá es solo informativo para la UI -- el estado de
@@ -254,7 +264,7 @@ router.post('/api/payments/wompi/create-transaction', validate(createPaymentSche
     }
 
     res.status(201).json({ paymentUrl: data.redirect_url, approved: false });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error de conexión con Wompi' });
   }
 });
@@ -273,14 +283,17 @@ router.post('/api/payments/paypal/create-order', validate(createPaymentSchema), 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
+    if (order.paymentStatus === 'paid') {
+      return res.status(400).json({ error: 'Este pedido ya está pagado' });
+    }
 
     // S0 — PayPal también: nunca confiar en req.get('origin'). Usar FRONTEND_URL
     // del env (mismo fix que arriba). Cierra S2 del audit.
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     res.status(201).json({
-      paymentUrl: `https://www.paypal.com/checkoutnow?token=${order.id}&return=${encodeURIComponent(`${frontendUrl}/payment/success`)}&cancel=${encodeURIComponent(`${frontendUrl}/payment/cancel`)}`
+      paymentUrl: `https://www.paypal.com/checkoutnow?token=${order.id}&return=${encodeURIComponent(`${frontendUrl}/payment/success`)}&cancel=${encodeURIComponent(`${frontendUrl}/payment/cancel`)}`,
     });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error de conexión con PayPal' });
   }
 });
@@ -306,7 +319,11 @@ router.post('/api/payments/mercadopago/webhook', async (req, res) => {
     }
     const xSignature = req.headers['x-signature'];
     const xRequestId = req.headers['x-request-id'];
-    if (!xSignature || !xRequestId || !verifyMercadoPagoSignature(xSignature, xRequestId, paymentId, process.env.MP_WEBHOOK_SECRET)) {
+    if (
+      !xSignature ||
+      !xRequestId ||
+      !verifyMercadoPagoSignature(xSignature, xRequestId, paymentId, process.env.MP_WEBHOOK_SECRET)
+    ) {
       console.error('MercadoPago webhook: firma inválida, ignorado');
       return res.sendStatus(200);
     }
@@ -314,7 +331,7 @@ router.post('/api/payments/mercadopago/webhook', async (req, res) => {
     // Nunca confiar en el status del body del webhook: se consulta la API
     // de MercadoPago de forma autoritativa con el access token del server.
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN || ''}` }
+      headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN || ''}` },
     });
     const payment = await mpRes.json();
 
@@ -401,10 +418,9 @@ router.post('/api/payments/bold/webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    const orderResult = await pool.query(
-      'SELECT * FROM orders WHERE "orderNumber" = $1 OR "paymentProviderRef" = $1',
-      [reference]
-    );
+    const orderResult = await pool.query('SELECT * FROM orders WHERE "orderNumber" = $1 OR "paymentProviderRef" = $1', [
+      reference,
+    ]);
     const order = orderResult.rows[0];
     if (!order) return res.sendStatus(200);
 

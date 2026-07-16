@@ -51,7 +51,11 @@ const GastroProDashboard: React.FC<GastroProDashboardProps> = ({ locationId }) =
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [ord, cli, fin] = await Promise.all([api.getOrders(), api.getClients(), api.getFinanceSummary()]);
+      const [ord, cli, fin] = await Promise.all([
+        api.getOrders(undefined, { paidOnly: true }),
+        api.getClients(),
+        api.getFinanceSummary(),
+      ]);
       setOrders(ord.map(normalizeOrder));
       setClients(cli);
       setFinance(fin);
@@ -123,8 +127,11 @@ const GastroProDashboard: React.FC<GastroProDashboardProps> = ({ locationId }) =
     .map(([name, amount], i) => ({ rank: i + 1, name, amount }));
   const maxProducto = topProductos[0]?.amount || 1;
 
+  // Clients no tienen locationId propio; se filtran por sede vía los teléfonos
+  // presentes en validOrders (que ya respeta locationId), igual que las demás tarjetas.
+  const phonesEnSede = locationId ? new Set(validOrders.map((o) => o.customerPhone).filter(Boolean)) : null;
   const clientesRecientes = [...clients]
-    .filter((c) => c.ultimaCompra)
+    .filter((c) => c.ultimaCompra && (!phonesEnSede || phonesEnSede.has(c.telefono)))
     .sort((a, b) => new Date(b.ultimaCompra).getTime() - new Date(a.ultimaCompra).getTime())
     .slice(0, 5);
 

@@ -1,6 +1,7 @@
 // WebSocket server para notificaciones en tiempo real.
 // Reemplaza el polling de 10s del frontend con eventos push.
 import { WebSocketServer } from 'ws';
+import auth from './auth.js';
 
 let wss = null;
 
@@ -14,10 +15,23 @@ export function initWebSocket(server) {
   wss.on('connection', (ws, req) => {
     allConnections.add(ws);
 
-    // Identificar tipo de conexión vía query param
+    // El cliente puede pedir un rol privilegiado por query param, pero ese
+    // valor no es de fiar por sí solo (cualquiera podría conectar con
+    // ?role=OPERATOR y escuchar el feed de pedidos). El rol real sale del
+    // JWT (mismo que usan las rutas HTTP vía auth.js) -- si no viene un
+    // token válido, la conexión se degrada a 'public' en vez de rechazarse,
+    // porque la pantalla pública del digiturno también usa este socket sin
+    // autenticarse a propósito.
     const url = new URL(req.url, `http://${req.headers.host}`);
-    const role = url.searchParams.get('role') || 'public';
+    const requestedRole = url.searchParams.get('role') || 'public';
     const locationId = url.searchParams.get('locationId') || null;
+    const token = url.searchParams.get('token');
+
+    let role = 'public';
+    if (requestedRole !== 'public') {
+      const payload = token ? auth.verifyToken(token) : null;
+      role = payload?.role || 'public';
+    }
 
     ws.role = role;
     ws.locationId = locationId;
@@ -25,7 +39,7 @@ export function initWebSocket(server) {
     if (!connections.has(role)) connections.set(role, new Set());
     connections.get(role).add(ws);
 
-    // Enviar confirmación de conexión
+    // Enviar confirmación de conexión (el rol confirmado, no el pedido)
     ws.send(JSON.stringify({ type: 'connected', role, locationId, timestamp: new Date().toISOString() }));
 
     ws.on('close', () => {

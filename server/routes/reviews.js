@@ -3,11 +3,12 @@ import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import { createReviewSchema, reviewStatusSchema } from '../schemas/reviews.js';
+import { reviewRateLimit } from '../middleware/rateLimit.js';
 
 const router = express.Router();
 
 // --- REVIEWS ---
-router.post('/api/reviews', validate(createReviewSchema), async (req, res) => {
+router.post('/api/reviews', reviewRateLimit, validate(createReviewSchema), async (req, res) => {
   try {
     const { orderId, clientPhone, clientName, rating: ratingNum, comment } = req.body;
 
@@ -40,7 +41,7 @@ router.post('/api/reviews', validate(createReviewSchema), async (req, res) => {
     );
 
     res.status(201).json({ id, ...sanitized, status: 'pending' });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error creating review' });
   }
 });
@@ -51,7 +52,7 @@ router.get('/api/reviews/approved', async (req, res) => {
       `SELECT id, rating, comment, "clientName", "createdAt" FROM reviews WHERE status = 'approved' ORDER BY "createdAt" DESC LIMIT 50`
     );
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching reviews' });
   }
 });
@@ -63,7 +64,7 @@ router.get('/api/reviews', authMiddleware, requireRole('ADMIN', 'MARKETING'), as
       ? await pool.query('SELECT * FROM reviews WHERE status = $1 ORDER BY "createdAt" DESC', [status])
       : await pool.query('SELECT * FROM reviews ORDER BY "createdAt" DESC');
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching reviews' });
   }
 });
@@ -87,7 +88,7 @@ router.patch(
       }
 
       res.json(result.rows[0]);
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error updating review status' });
     }
   }
@@ -98,7 +99,7 @@ router.delete('/api/reviews/:id', authMiddleware, requireRole('ADMIN', 'MARKETIN
     const result = await pool.query('DELETE FROM reviews WHERE id = $1', [req.params.id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Review not found' });
     res.status(204).end();
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error deleting review' });
   }
 });

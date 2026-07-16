@@ -321,7 +321,72 @@
     </div>
   </main>
 
-  <footer>Actualizado en tiempo real · Juancho's Pizza © 2026</footer>
+  <footer>
+    <span id="live-clock"></span> · Actualizado en tiempo real · Juancho's Pizza © 2026
+  </footer>
+
+  <!-- Stats bar flotante -->
+  <div id="stats-bar">
+    <div class="stat">
+      <span class="stat-value" id="stat-today">0</span>
+      <span class="stat-label">Hoy</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-served">0</span>
+      <span class="stat-label">Servidos</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-wait">--</span>
+      <span class="stat-label">Espera</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-queue">0</span>
+      <span class="stat-label">En cola</span>
+    </div>
+  </div>
+
+  <style>
+    #stats-bar {
+      position: fixed;
+      bottom: 56px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      gap: 4px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 10px 20px;
+      backdrop-filter: blur(12px);
+    }
+    #stats-bar .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 14px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    #stats-bar .stat:last-child { border-right: none; }
+    #stats-bar .stat-value {
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.2;
+    }
+    #stats-bar .stat-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.3);
+    }
+    @media (max-width: 600px) {
+      #stats-bar { padding: 8px 10px; gap: 2px; }
+      #stats-bar .stat { padding: 0 8px; }
+      #stats-bar .stat-value { font-size: 16px; }
+    }
+  </style>
 
   <script>
     // El HTML lo sirve el mismo servidor Express que expone el API,
@@ -332,6 +397,8 @@
     let eventSource = null;
     let reconnectTimer = null;
     let itemCache = new Map();
+    let clockInterval = null;
+    let statsInterval = null;
 
     const statusLabels = {
       waiting: 'Esperando',
@@ -345,6 +412,50 @@
     const $queueList = document.getElementById('queue-list');
     const $emptyState = document.getElementById('empty-state');
     const $sede = document.getElementById('sede');
+    const $clock = document.getElementById('live-clock');
+    const $statToday = document.getElementById('stat-today');
+    const $statServed = document.getElementById('stat-served');
+    const $statWait = document.getElementById('stat-wait');
+    const $statQueue = document.getElementById('stat-queue');
+
+    // ── Reloj en vivo ──────────────────────────────────────────────
+    function updateClock() {
+      const now = new Date();
+      const time = now.toLocaleTimeString('es-CO', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      });
+      const date = now.toLocaleDateString('es-CO', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      });
+      $clock.textContent = `${date} · ${time}`;
+    }
+    updateClock();
+    clockInterval = setInterval(updateClock, 1000);
+
+    // ── Stats ───────────────────────────────────────────────────────
+    async function fetchStats() {
+      try {
+        const locationId = $sede.value;
+        const url = `${API_BASE}/api/digiturno/stats${locationId ? `?locationId=${locationId}` : ''}`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const stats = await res.json();
+
+        $statToday.textContent = stats.ticketsToday;
+        $statServed.textContent = stats.servedToday;
+        $statWait.textContent = stats.averageWaitMinutes > 0
+          ? `${stats.averageWaitMinutes} min`
+          : '--';
+        $statQueue.textContent = stats.currentQueueCount;
+      } catch {
+        // Silencioso — no romper la pantalla si stats falla
+      }
+    }
 
     function setConnStatus(cls, label) {
       $status.className = cls;
@@ -369,6 +480,8 @@
           clearTimeout(reconnectTimer);
           reconnectTimer = null;
         }
+        // Cargar stats al conectar
+        fetchStats();
       };
 
       eventSource.onmessage = (e) => {
@@ -420,7 +533,7 @@
       $emptyState.style.display = 'none';
 
       let html = '';
-      ordered.slice(0, 15).forEach((t, i) => {
+      ordered.slice(0, 15).forEach((t) => {
         const isNew = !itemCache.has(t.id);
         itemCache.set(t.id, true);
         const statusClass = `status-${t.status}`;
@@ -446,10 +559,15 @@
 
     $sede.addEventListener('change', () => {
       itemCache.clear();
+      fetchStats();
       connectSSE();
     });
 
+    // Cargar stats cada 30s (un solo intervalo, fetchStats lee $sede.value dinámicamente)
+    statsInterval = setInterval(fetchStats, 30000);
+
     // Initial connection
+    fetchStats();
     connectSSE();
   </script>
 </body>

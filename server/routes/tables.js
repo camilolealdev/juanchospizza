@@ -38,7 +38,7 @@ router.get('/api/tables', authMiddleware, requireRole('ADMIN', 'OPERATOR'), asyn
 
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching tables' });
   }
 });
@@ -73,7 +73,7 @@ router.get('/api/tables/floor-plan', authMiddleware, requireRole('ADMIN', 'OPERA
       occupied: result.rows.filter((t) => t.status === 'occupied').length,
       floorPlan,
     });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching floor plan' });
   }
 });
@@ -96,12 +96,10 @@ router.patch(
       // Notificar WebSocket para cada mesa actualizada
       setImmediate(() => {
         result.rows.forEach((table) => {
-          notifyTableUpdate(table.id, table.status).catch((err) =>
-            console.error('[WS] Error notificando mesa actualizada:', err.message)
-          );
+          notifyTableUpdate(table.id, table.status);
         });
       });
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error updating table statuses' });
     }
   }
@@ -115,7 +113,7 @@ router.get('/api/tables/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR'), 
     const result = await pool.query('SELECT * FROM dining_tables WHERE id = $1', [req.params.id]);
     if (!result.rows.length) return res.status(404).json({ error: 'Mesa no encontrada' });
     res.json(result.rows[0]);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching table' });
   }
 });
@@ -136,9 +134,7 @@ router.post('/api/tables', authMiddleware, requireRole('ADMIN'), validate(create
 
     // Notificar WebSocket
     setImmediate(() => {
-      notifyTableUpdate(id, 'available').catch((err) =>
-        console.error('[WS] Error notificando mesa creada:', err.message)
-      );
+      notifyTableUpdate(id, 'available');
     });
   } catch (e) {
     if (e.code === '23505') {
@@ -198,11 +194,9 @@ router.put('/api/tables/:id', authMiddleware, requireRole('ADMIN'), validate(upd
 
     // Notificar WebSocket
     setImmediate(() => {
-      notifyTableUpdate(req.params.id, status || updated.rows[0]?.status).catch((err) =>
-        console.error('[WS] Error notificando mesa actualizada:', err.message)
-      );
+      notifyTableUpdate(req.params.id, status || updated.rows[0]?.status);
     });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error updating table' });
   }
 });

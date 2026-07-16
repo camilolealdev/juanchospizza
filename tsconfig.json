@@ -1,5 +1,5 @@
 {
-  "exclude": ["_legacy", "node_modules", "dist"],
+  "exclude": ["_legacy", "node_modules", "dist", "public"],
   "compilerOptions": {
     "target": "ES2022",
     "experimentalDecorators": true,

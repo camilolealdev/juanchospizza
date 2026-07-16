@@ -41,6 +41,11 @@ const MarketingView: React.FC = () => {
   }, []);
 
   const campaignStats = campaigns.map((c) => ({ name: c.name.substring(0, 15), conv: c.conversions }));
+  // reach/conversions are DB columns that are set to 0 on creation and never updated by any
+  // sending pipeline (no email/push/WhatsApp integration exists yet). Until that's wired up,
+  // this is always true and the UI below must say so instead of showing a fake "0".
+  const metricsNotTracked = campaigns.length > 0 && campaigns.every((c) => c.reach === 0 && c.conversions === 0);
+  const METRICS_TOOLTIP = 'Métrica no disponible: el envío de campañas aún no está conectado a ningún canal.';
 
   const openCreate = () => {
     setEditingId(null);
@@ -109,25 +114,39 @@ const MarketingView: React.FC = () => {
         <div className="flex justify-between items-center mb-10">
           <h3 className="font-bold text-xl flex items-center gap-4">
             <i className="fas fa-bullseye text-orange-500"></i> Conversiones por campaña
+            {metricsNotTracked && (
+              <span
+                title={METRICS_TOOLTIP}
+                className="text-[8px] font-black uppercase px-4 py-2 rounded-full border bg-stone-800 text-stone-500 border-stone-700 tracking-widest"
+              >
+                No disponible
+              </span>
+            )}
           </h3>
         </div>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={campaignStats}>
-              <XAxis dataKey="name" stroke="#444" fontSize={9} axisLine={false} tickLine={false} />
-              <YAxis stroke="#444" fontSize={9} axisLine={false} tickLine={false} />
-              <Tooltip
-                cursor={{ fill: '#ffffff05' }}
-                contentStyle={{ backgroundColor: '#1c1917', border: '1px solid #333', borderRadius: '16px' }}
-              />
-              <Bar dataKey="conv" radius={[10, 10, 0, 0]} barSize={50}>
-                {campaignStats.map((_entry, index) => (
-                  <Cell key={`cell-${index}`} fill={index === 1 ? '#ea580c' : '#444'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {metricsNotTracked ? (
+          <p className="text-stone-600 text-sm" title={METRICS_TOOLTIP}>
+            Sin datos de conversión todavía — el envío de campañas no está conectado a ningún canal.
+          </p>
+        ) : (
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={campaignStats}>
+                <XAxis dataKey="name" stroke="#444" fontSize={9} axisLine={false} tickLine={false} />
+                <YAxis stroke="#444" fontSize={9} axisLine={false} tickLine={false} />
+                <Tooltip
+                  cursor={{ fill: '#ffffff05' }}
+                  contentStyle={{ backgroundColor: '#1c1917', border: '1px solid #333', borderRadius: '16px' }}
+                />
+                <Bar dataKey="conv" radius={[10, 10, 0, 0]} barSize={50}>
+                  {campaignStats.map((_entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === 1 ? '#ea580c' : '#444'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -164,11 +183,18 @@ const MarketingView: React.FC = () => {
             <div className="grid grid-cols-2 gap-6 border-t border-white/5 pt-8">
               <div>
                 <p className="text-[9px] text-stone-600 uppercase font-black tracking-widest mb-1">Impacto</p>
-                <p className="text-2xl font-black text-white">{c.reach.toLocaleString()}</p>
+                <p className="text-2xl font-black text-white" title={c.reach === 0 ? METRICS_TOOLTIP : undefined}>
+                  {c.reach === 0 ? '—' : c.reach.toLocaleString()}
+                </p>
               </div>
               <div>
                 <p className="text-[9px] text-stone-600 uppercase font-black tracking-widest mb-1">Conversión</p>
-                <p className="text-2xl font-black text-orange-500">{c.conversions}</p>
+                <p
+                  className="text-2xl font-black text-orange-500"
+                  title={c.conversions === 0 ? METRICS_TOOLTIP : undefined}
+                >
+                  {c.conversions === 0 ? '—' : c.conversions}
+                </p>
               </div>
             </div>
           </div>

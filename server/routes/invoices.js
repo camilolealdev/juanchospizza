@@ -43,7 +43,7 @@ router.get('/api/invoices', authMiddleware, requireRole('ADMIN'), async (req, re
 
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al listar facturas' });
   }
 });
@@ -54,7 +54,7 @@ router.get('/api/invoices/:id', authMiddleware, requireRole('ADMIN'), async (req
     const result = await pool.query('SELECT * FROM invoices WHERE id = $1', [req.params.id]);
     if (!result.rows.length) return res.status(404).json({ error: 'Factura no encontrada' });
     res.json(result.rows[0]);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al obtener factura' });
   }
 });
@@ -62,14 +62,16 @@ router.get('/api/invoices/:id', authMiddleware, requireRole('ADMIN'), async (req
 // GET /api/invoices/:id/xml — ver/descargar XML de la factura
 router.get('/api/invoices/:id/xml', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, xml, "invoiceNumber", status FROM invoices WHERE id = $1', [req.params.id]);
+    const result = await pool.query('SELECT id, xml, "invoiceNumber", status FROM invoices WHERE id = $1', [
+      req.params.id,
+    ]);
     if (!result.rows.length) return res.status(404).json({ error: 'Factura no encontrada' });
     const inv = result.rows[0];
     if (!inv.xml) return res.status(404).json({ error: 'XML no generado aún' });
     res.setHeader('Content-Type', 'application/xml');
     res.setHeader('Content-Disposition', `attachment; filename="${inv.invoiceNumber || 'factura'}.xml"`);
     res.send(inv.xml);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al obtener XML' });
   }
 });
@@ -77,7 +79,17 @@ router.get('/api/invoices/:id/xml', authMiddleware, requireRole('ADMIN'), async 
 // POST /api/invoices — crear factura desde una orden
 router.post('/api/invoices', authMiddleware, requireRole('ADMIN'), validate(createInvoiceSchema), async (req, res) => {
   try {
-    const { orderId, tipoDocumento, locationId, notes, emisorInfo, receptorInfo, fechaVencimiento, tipoOperacion, moneda } = req.body;
+    const {
+      orderId,
+      tipoDocumento,
+      locationId,
+      notes,
+      emisorInfo,
+      receptorInfo,
+      fechaVencimiento,
+      tipoOperacion,
+      moneda,
+    } = req.body;
 
     // Verificar que la orden existe y obtener datos
     const orderResult = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
@@ -132,17 +144,26 @@ router.post('/api/invoices', authMiddleware, requireRole('ADMIN'), validate(crea
         xml, "emisorInfo", "receptorInfo", notes, "fechaVencimiento", "tipoOperacion", moneda)
        VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
-        id, orderId, invoiceNumber, tipoDocumento, locationId,
-        xml, JSON.stringify(emisorData), JSON.stringify(receptorData),
-        notes || '', vencimiento, tipoOperacion || '10', moneda || 'COP',
+        id,
+        orderId,
+        invoiceNumber,
+        tipoDocumento,
+        locationId,
+        xml,
+        JSON.stringify(emisorData),
+        JSON.stringify(receptorData),
+        notes || '',
+        vencimiento,
+        tipoOperacion || '10',
+        moneda || 'COP',
       ]
     );
 
-    const created = await pool.query('SELECT * FROM invoices WHERE id = $1', [id]);      // Notificar WebSocket
+    const created = await pool.query('SELECT * FROM invoices WHERE id = $1', [id]); // Notificar WebSocket
     setImmediate(() => notifyInvoiceUpdate(id, 'created'));
 
     res.status(201).json(created.rows[0]);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al crear factura' });
   }
 });
@@ -174,10 +195,10 @@ router.post('/api/invoices/:id/send', authMiddleware, requireRole('ADMIN'), asyn
     const dianPayload = generateDianRequestPayload(invoice, order);
 
     // Actualizar estado a 'sent'
-    await pool.query(
-      `UPDATE invoices SET status = 'sent', "dianResponse" = $1 WHERE id = $2`,
-      [JSON.stringify({ ...dianPayload, enviadoEn: new Date().toISOString() }), invoice.id]
-    );
+    await pool.query(`UPDATE invoices SET status = 'sent', "dianResponse" = $1 WHERE id = $2`, [
+      JSON.stringify({ ...dianPayload, enviadoEn: new Date().toISOString() }),
+      invoice.id,
+    ]);
 
     const updated = await pool.query('SELECT * FROM invoices WHERE id = $1', [invoice.id]);
 
@@ -192,15 +213,11 @@ router.post('/api/invoices/:id/send', authMiddleware, requireRole('ADMIN'), asyn
       instrucciones: {
         proveedor: DIAN_CONFIG.software.proveedorTecnologico,
         accion: 'Enviar XML firmado a la DIAN vía API del proveedor',
-        camposManuales: [
-          'Firma digital (certificado .pfx/.p12)',
-          'CUFE generado por DIAN',
-          'Respuesta del proveedor',
-        ],
+        camposManuales: ['Firma digital (certificado .pfx/.p12)', 'CUFE generado por DIAN', 'Respuesta del proveedor'],
         endpointSiguiente: `PUT /api/invoices/${invoice.id} con { cufe, dianResponse, status: "accepted" }`,
       },
     });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al enviar a DIAN' });
   }
 });
@@ -213,7 +230,20 @@ router.put(
   validate(updateInvoiceSchema),
   async (req, res) => {
     try {
-      const { invoiceNumber, cufe, xml, pdf_url, status, dianResponse, emisorInfo, receptorInfo, notes, fechaVencimiento, tipoOperacion, moneda } = req.body;
+      const {
+        invoiceNumber,
+        cufe,
+        xml,
+        pdf_url,
+        status,
+        dianResponse,
+        emisorInfo,
+        receptorInfo,
+        notes,
+        fechaVencimiento,
+        tipoOperacion,
+        moneda,
+      } = req.body;
       const updates = [];
       const params = [];
 
@@ -260,7 +290,7 @@ router.put(
       setImmediate(() => notifyInvoiceUpdate(req.params.id, 'updated'));
 
       res.json(updated.rows[0]);
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al actualizar factura' });
     }
   }
@@ -278,24 +308,21 @@ router.post('/api/invoices/:id/resend', authMiddleware, requireRole('ADMIN'), as
     const order = orderResult.rows[0] || {};
 
     // Regenerar XML con estado actual
-    const xml = generateInvoiceXml(
-      { ...inv, createdAt: new Date().toISOString() },
-      order,
-      null
-    );
+    const xml = generateInvoiceXml({ ...inv, createdAt: new Date().toISOString() }, order, null);
 
     const dianPayload = generateDianRequestPayload(inv, order);
 
-    await pool.query(
-      `UPDATE invoices SET status = 'sent', xml = $1, "dianResponse" = $2, "updatedAt" = NOW() WHERE id = $3`,
-      [xml, JSON.stringify({ ...dianPayload, reenviadoEn: new Date().toISOString() }), inv.id]
-    );
+    await pool.query(`UPDATE invoices SET status = 'sent', xml = $1, "dianResponse" = $2 WHERE id = $3`, [
+      xml,
+      JSON.stringify({ ...dianPayload, reenviadoEn: new Date().toISOString() }),
+      inv.id,
+    ]);
 
     const updated = await pool.query('SELECT * FROM invoices WHERE id = $1', [inv.id]);
     setImmediate(() => notifyInvoiceUpdate(inv.id, 'resent'));
 
     res.json(updated.rows[0]);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al reenviar factura' });
   }
 });
@@ -315,7 +342,7 @@ router.get('/api/credit-notes', authMiddleware, requireRole('ADMIN'), async (req
     query += ' ORDER BY "createdAt" DESC';
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al listar notas' });
   }
 });
@@ -326,7 +353,7 @@ router.get('/api/credit-notes/:id', authMiddleware, requireRole('ADMIN'), async 
     const result = await pool.query('SELECT * FROM credit_notes WHERE id = $1', [req.params.id]);
     if (!result.rows.length) return res.status(404).json({ error: 'Nota no encontrada' });
     res.json(result.rows[0]);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al obtener nota' });
   }
 });
@@ -355,7 +382,7 @@ router.post(
 
       const created = await pool.query('SELECT * FROM credit_notes WHERE id = $1', [id]);
       res.status(201).json(created.rows[0]);
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error al crear nota' });
     }
   }
@@ -367,7 +394,7 @@ router.delete('/api/credit-notes/:id', authMiddleware, requireRole('ADMIN'), asy
     const result = await pool.query('DELETE FROM credit_notes WHERE id = $1 RETURNING id', [req.params.id]);
     if (!result.rows.length) return res.status(404).json({ error: 'Nota no encontrada' });
     res.json({ deleted: true });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error al eliminar nota' });
   }
 });
