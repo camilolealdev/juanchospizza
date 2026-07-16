@@ -105,6 +105,13 @@ export async function initDB() {
         cumpleanos DATE
       )
     `);
+    // Evita clientes duplicados por teléfono (orders.js resuelve el cliente
+    // por telefono con LIMIT 1 sin ORDER BY -- un duplicado fragmenta puntos
+    // de lealtad y puede pegar un pedido al cliente equivocado). Parcial
+    // porque telefono es nullable.
+    await pool.query(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_telefono ON clients(telefono) WHERE telefono IS NOT NULL'
+    );
 
     // La columna clientId nunca existió en el esquema original de orders;
     // se agrega aquí (después de clients, a la que referencia) vía ALTER
@@ -263,10 +270,7 @@ export async function initDB() {
         usado INTEGER DEFAULT 0,
         limite INTEGER DEFAULT 100
       )
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS reviews (
+    `);    await pool.query(`CREATE TABLE IF NOT EXISTS reviews (
         id TEXT PRIMARY KEY,
         "orderId" TEXT REFERENCES orders(id),
         "clientPhone" TEXT,
@@ -275,9 +279,60 @@ export async function initDB() {
         comment TEXT,
         status TEXT DEFAULT 'pending',
         "createdAt" TIMESTAMPTZ DEFAULT NOW()
+      )`);
+    await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_orderId ON reviews("orderId")');
+
+    // ── Ley 1581/2012 (Habeas Data, Colombia) ────────────────────────
+    // Captura evidencia de consentimiento expreso. Dec. 1377/2013 obliga
+    // al responsable a conservar prueba del consentimiento y de cada
+    // revocación. Diseño: una fila viva en `clients` (último estado) +
+    // log histórico en `consent_eventos` para auditoría SIC.
+    await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "dataTreatmentAuthorized" BOOLEAN DEFAULT FALSE');
+    await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "marketingAuthorized" BOOLEAN DEFAULT FALSE');
+    await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "consentAt" TIMESTAMPTZ');
+    await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "consentIp" VARCHAR(45)');
+    await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "consentUserAgent" TEXT');
+    await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "consentVersion" VARCHAR(20)');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS consent_eventos (
+        id TEXT PRIMARY KEY,
+        "clientId" TEXT REFERENCES clients(id),
+        "consentType" TEXT NOT NULL,
+        granted BOOLEAN NOT NULL,
+        ip VARCHAR(45),
+        "userAgent" TEXT,
+        source TEXT DEFAULT 'web',
+        path TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
-    await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_orderId ON reviews("orderId")');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_consent_eventos_clientId ON consent_eventos("clientId")');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_consent_eventos_created ON consent_eventos(created_at)');
+
+    // ── Derechos ARCO (Art. 14-15 Ley 1581) ───────────────────────────
+    // Cada solicitud de consulta / rectificación / supresión / reclamo
+    // queda registrada con timestamps para evidenciar plazo de 10 días
+    // hábiles de respuesta (Art. 15). El estado permite ver el backlog
+    // desde el CRM sin ir a buscar el correo/WhatsApp.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS derechos_solicitudes (
+        id TEXT PRIMARY KEY,
+        "clientId" TEXT REFERENCES clients(id),
+        tipo TEXT NOT NULL,
+        descripcion TEXT,
+        "identificador" TEXT,
+        estado TEXT DEFAULT 'pendiente',
+        "respuesta" TEXT,
+        "respondedBy" TEXT,
+        "respondedAt" TIMESTAMPTZ,
+        "ipOrigen" VARCHAR(45),
+        "userAgent" TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_derechos_clientId ON derechos_solicitudes("clientId")');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_derechos_estado ON derechos_solicitudes(estado)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_derechos_created ON derechos_solicitudes(created_at)');
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -292,10 +347,9 @@ export async function initDB() {
     `);
 
     // Roster de staff (múltiples logins por rol, ej. varios cocineros por
-    // turno en cada sede). Todavía NO está conectada al login real -- ver
-    // server/routes/auth.js, que sigue usando el USERS hardcodeado. Esta
-    // tabla es solo el sistema de registro (CRUD) para gestionar quién está
-    // en planta; integrarla al login es trabajo futuro.
+    // turno en cada sede). Ya está conectada al login real -- server/auth.js
+    // consulta esta tabla directamente (username/PIN, password+2FA para
+    // super admin). Ver server/auth.js `authenticate()`.
     await pool.query(`
       CREATE TABLE IF NOT EXISTS employees (
         id TEXT PRIMARY KEY,

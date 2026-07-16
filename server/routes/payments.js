@@ -221,6 +221,12 @@ router.post('/api/payments/wompi/create-transaction', validate(createPaymentSche
       return res.status(400).json({ error: 'Este pedido ya está pagado' });
     }
 
+    // S0 — Usa la URL del frontend desde env var en vez de req.get('origin').
+    // Mantener esto acá evita Host Header Injection donde un atacante forja
+    // Origin y logra que el cliente sea redirigido a una web de phishing tras
+    // pagar. Cierra el hallazgo S2 del AUDIT_COMPLETO 2026-07-15.
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
     const wompiResponse = await fetch('https://sandbox.wompi.co/v1/transactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -230,7 +236,7 @@ router.post('/api/payments/wompi/create-transaction', validate(createPaymentSche
         customer_email: String(customerEmail || '').slice(0, 100),
         payment_method: { type: 'CARD' },
         reference: order.orderNumber,
-        redirect_url: `${req.get('origin') || 'http://localhost:3000'}/payment/return`
+        redirect_url: `${frontendUrl}/payment/return`
       })
     });
 
@@ -268,9 +274,11 @@ router.post('/api/payments/paypal/create-order', validate(createPaymentSchema), 
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    const origin = req.get('origin') || 'http://localhost:3000';
+    // S0 — PayPal también: nunca confiar en req.get('origin'). Usar FRONTEND_URL
+    // del env (mismo fix que arriba). Cierra S2 del audit.
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     res.status(201).json({
-      paymentUrl: `https://www.paypal.com/checkoutnow?token=${order.id}&return=${encodeURIComponent(`${origin}/payment/success`)}&cancel=${encodeURIComponent(`${origin}/payment/cancel`)}`
+      paymentUrl: `https://www.paypal.com/checkoutnow?token=${order.id}&return=${encodeURIComponent(`${frontendUrl}/payment/success`)}&cancel=${encodeURIComponent(`${frontendUrl}/payment/cancel`)}`
     });
   } catch (e) {
     res.status(500).json({ error: 'Error de conexión con PayPal' });

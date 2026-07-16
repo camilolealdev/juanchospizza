@@ -106,7 +106,7 @@ export async function authenticate(username, credentials) {
   const { pin, password } = credentials || {};
 
   const result = await pool.query(
-    'SELECT id, role, "pinHash", salt, "passwordHash", "passwordSalt", "isSuperAdmin" FROM employees WHERE username = $1 AND activo = true',
+    'SELECT id, role, "pinHash", salt, "passwordHash", "passwordSalt", "isSuperAdmin", "locationId" FROM employees WHERE username = $1 AND activo = true',
     [String(username).trim().toLowerCase()]
   );
   const employee = result.rows[0];
@@ -143,6 +143,10 @@ export async function authenticate(username, credentials) {
     {
       sub: employee.id,
       role: employee.role,
+      // null para ADMIN/roster sin sede asignada -- esos siguen sin
+      // restricción de sede (ver requireSameLocation en las rutas que
+      // necesitan scoping, ej. server/routes/shifts.js).
+      locationId: employee.locationId || null,
       type: 'access',
       origIat: now,
     },
@@ -168,6 +172,7 @@ export function refreshToken(oldToken) {
     {
       sub: payload.sub,
       role: payload.role,
+      locationId: payload.locationId ?? null,
       type: 'access',
       origIat,
     },
@@ -195,7 +200,17 @@ export async function login(username, credentials) {
 export function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  // Cookie es la fuente primaria de verdad — HttpOnly + SameSite=Lax
+  // evita que un XSS robe la sesión y SameSite=Lax sigue permitiendo la
+  // navegación normal site-mismo (los POS no redirigen cross-origin).
+  // Si por alguna razón todavía llega un Bearer (clientes viejos, tools
+  // de debugging, scripts de migración), seguimos aceptándolo mientras
+  // dura la transición.
+  const cookieToken = readAuthCookie(req);
+  const bearerToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = cookieToken || bearerToken;
+
+  if (!token) {
     // Bypass de dev: requiere las DOS variables a propósito, no solo
     // NODE_ENV=development -- un deploy que por error deje NODE_ENV sin
     // setear a 'production' no debe abrir esto solo.
@@ -206,7 +221,6 @@ export function authMiddleware(req, res, next) {
     return res.status(401).json({ error: 'Token requerido' });
   }
 
-  const token = authHeader.split(' ')[1];
   const payload = verifyToken(token);
 
   if (!payload) {
@@ -216,6 +230,64 @@ export function authMiddleware(req, res, next) {
   req.auth = payload;
   next();
 }
+
+// ── Helpers de cookie HttpOnly ─────────────────────────────────────
+// Parseamos req.headers.cookie a mano para no añadir la dependencia
+// cookie-parser (es trivial; un par de líneas con un Set-Cookie header
+// correctamente formado basta). Si en el futuro se necesitan flags
+// adicionales (Domain, Partitioned) podemos migrar a cookie-parser
+// sin romper nada porque la firma `_idToken` es la misma.
+const AUTH_COOKIE_NAME = 'auth_token';
+
+// Exportada para que server/routes/auth.js refresh use el mismo parser y
+// no duplique la lógica (un cambio futuro al formato se aplica en un
+// solo lugar).
+export function readAuthCookie(req) {
+  const header = req.headers.cookie;
+  if (!header) return null;
+  const parts = header.split(';');
+  for (const part of parts) {
+    const [rawName, ...rest] = part.trim().split('=');
+    if (rawName === AUTH_COOKIE_NAME) {
+      return decodeURIComponent(rest.join('='));
+    }
+  }
+  return null;
+}
+
+// Centraliza el armado del header Set-Cookie para que login, refresh y
+// logout usen exactamente los mismos flags. Secure solo en producción
+// (en dev con http://localhost el navegador lo aceptaría igualmente
+// pero marcamos Secure únicamente cuando corresponde para evitar warnings
+// en el dev tools). SameSite=Lax es el balance correcto: permite
+// navegación normal site-mismo pero bloquea CSRF cross-origin.
+export function buildAuthCookie(token, maxAgeSeconds = 15 * 60) {
+  const isProd = process.env.NODE_ENV === 'production';
+  const flags = [
+    `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}`,
+    'HttpOnly',
+    'SameSite=Lax',
+    'Path=/',
+    `Max-Age=${maxAgeSeconds}`,
+  ];
+  if (isProd) flags.push('Secure');
+  return flags.join('; ');
+}
+
+export function buildClearAuthCookie() {
+  const isProd = process.env.NODE_ENV === 'production';
+  const flags = [
+    `${AUTH_COOKIE_NAME}=`,
+    'HttpOnly',
+    'SameSite=Lax',
+    'Path=/',
+    'Max-Age=0',
+  ];
+  if (isProd) flags.push('Secure');
+  return flags.join('; ');
+}
+
+export const AUTH_COOKIE = AUTH_COOKIE_NAME;
 
 // Verificar rol
 export function requireRole(...roles) {
@@ -232,6 +304,22 @@ export function requireRole(...roles) {
   };
 }
 
+// Bloquea acciones sobre una sede distinta a la del token -- ADMIN y roster
+// sin sede asignada (locationId null, ej. cuentas legadas) no se restringen.
+// Uso: requireSameLocation((req) => req.body.locationId) como middleware
+// después de requireRole, en rutas donde importa qué sede se está tocando
+// (ej. abrir/cerrar caja de turno).
+export function requireSameLocation(getLocationId) {
+  return (req, res, next) => {
+    if (req.auth?.role === 'ADMIN' || !req.auth?.locationId) return next();
+    const targetLocationId = getLocationId(req);
+    if (targetLocationId && targetLocationId !== req.auth.locationId) {
+      return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+    }
+    next();
+  };
+}
+
 export default {
   getSecret,
   hashPin,
@@ -241,4 +329,5 @@ export default {
   login,
   authMiddleware,
   requireRole,
+  requireSameLocation,
 };

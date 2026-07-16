@@ -76,6 +76,9 @@ router.post(
         }).catch((err) => console.error('[Email] Error enviando bienvenida:', err.message));
       }
     } catch (e) {
+      if (e.code === '23505') {
+        return res.status(409).json({ error: 'Ya existe un cliente con ese teléfono' });
+      }
       res.status(500).json({ error: 'Error creating client' });
     }
   }
@@ -164,6 +167,9 @@ router.put(
       if (!result.rows.length) return res.status(404).json({ error: 'Client not found' });
       res.json({ ...result.rows[0], tags: result.rows[0].tags || [], vip: !!result.rows[0].vip });
     } catch (e) {
+      if (e.code === '23505') {
+        return res.status(409).json({ error: 'Ya existe un cliente con ese teléfono' });
+      }
       res.status(500).json({ error: 'Error updating client profile' });
     }
   }

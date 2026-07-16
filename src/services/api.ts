@@ -149,8 +149,14 @@ export interface Review {
 type ReviewPayload = { orderId: string; clientPhone?: string; clientName?: string; rating: number; comment?: string };
 
 // ---- Auth/session storage helpers ----
-// Shared so every request can automatically attach the bearer token without
-// repeating the header logic at each call site.
+// Source of truth para el JWT es la cookie HttpOnly que el backend setea
+// desde /api/auth/login y limpia desde /api/auth/logout (cambia C1 -- el
+// localStorage era un vector de robo frente a XSS). Esto quedó solo como
+// fallback transitorio para:
+//   - mostrar role/username en UI sin roundtrip (getStoredRole/getStoredUsername)
+//   - tools de depuración o scripts que todavía mandan Bearer explícito
+// Si la cookie está presente, el backend la lee primero; caemos al Bearer
+// solo si la cookie se borró por algún motivo.
 const TOKEN_KEY = 'auth_token';
 const ROLE_KEY = 'auth_role';
 const USERNAME_KEY = 'auth_username';
@@ -185,6 +191,16 @@ export const getStoredUsername = (): string | null => {
 
 export const setAuthSession = (session: { token: string; role?: string; username?: string }): void => {
   try {
+    // WARNING: desde la migración a cookie HttpOnly, el token en localStorage
+    // es redundante -- la fuente de verdad es la cookie que el backend
+    // setea vía Set-Cookie. Guardamos de todos modos por dos razones:
+    //   1. Herramientas de dev / debugging pueden leerlo (consola,
+    //      React DevTools).
+    //   2. Compat: clientes muy viejos hacen Bearer explícito en algunos
+    //      endpoints no-CORS-friendly. Eso eventualmente se retira.
+    // La cookie HttpOnly protege contra XSS: aunque un atacante inyecte
+    // JS, document.cookie NO expone la cookie. Esta es la mejora
+    // material contra robo de sesión.
     localStorage.setItem(TOKEN_KEY, session.token);
     if (session.role) localStorage.setItem(ROLE_KEY, session.role);
     if (session.username) localStorage.setItem(USERNAME_KEY, session.username);
@@ -323,6 +339,10 @@ const handleResponse = async (response: Response) => {
 
 // Central fetch wrapper: refresca token si es necesario, mergea headers,
 // y reintenta automáticamente si un 401 se resolvió con refresh.
+// `credentials: 'include'` activa el envío de cookies cross-origin — la
+// cookie HttpOnly que el backend setea en /api/auth/login viaja en cada
+// request automáticamente. Es la misma-origin => no hay riesgo CORS,
+// pero el atributo es explícito porque el navegador requiere opt-in.
 const apiFetch = async (path: string, options: RequestInit = {}) => {
   const tokenHeaders = await ensureFreshToken();
   const headers: Record<string, string> = {
@@ -331,7 +351,11 @@ const apiFetch = async (path: string, options: RequestInit = {}) => {
   };
 
   const doFetch = (customHeaders: Record<string, string>): Promise<Response> =>
-    fetch(`${API_BASE}${path}`, { ...options, headers: customHeaders });
+    fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: customHeaders,
+      credentials: 'include',
+    });
 
   try {
     const response = await doFetch(headers);
@@ -393,6 +417,21 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
     });
+  },
+
+  // Limpia la cookie HttpOnly del backend + limpia el fallback en
+  // localStorage. El backend responde 204 + Set-Cookie con Max-Age=0,
+  // así que el navegador elimina la cookie en cuanto recibe la
+  // respuesta. No hace falta lógica extra acá.
+  async logout() {
+    clearAuthSession();
+    try {
+      await apiFetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Aun si el endpoint falla, la sesión local se limpia y la UI puede
+      // redirigir a /login. El próximo /api/auth/refresh devolverá 401 y
+      // nos avisará al guard de App.tsx.
+    }
   },
 
   // Health
@@ -1131,6 +1170,11 @@ export const api = {
 
   async deleteDigiturnoTicket(id: string) {
     return apiFetch(`/api/digiturno/${id}`, { method: 'DELETE' });
+  },
+
+  async getDigiturnoStats(locationId?: string) {
+    const qs = locationId ? `?locationId=${locationId}` : '';
+    return apiFetch(`/api/digiturno/stats${qs}`);
   },
 
   // ---- PRINT ----

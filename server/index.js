@@ -39,6 +39,7 @@ import procurementRoutes from './routes/procurement.js';
 import invoicesRoutes from './routes/invoices.js';
 import qrMenuRoutes from './routes/qrMenu.js';
 import digiturnoRoutes from './routes/digiturno.js';
+import consentRoutes from './routes/consent.js';
 
 dotenv.config();
 initPush();
@@ -57,16 +58,30 @@ const PORT = parseInt(process.env.PORT || '3001', 10);
 app.set('trust proxy', 1);
 
 // ── Helmet: headers de seguridad HTTP ──────────────────────────
-// Configuración compatible con SPA (CSP relajado para archivos .js/.css
-// servidos por Vite/build, conexiones WebSocket, y APIs de terceros
-// como Google Fonts/Gemini/Bold/MercadoPago/Wompi).
+// CSP siempre activo (no se desactiva del todo). En dev se permite
+// 'unsafe-inline' en script y style para que Vite HMR + el bloque <style>
+// gigante del index.html sigan funcionando; en prod esos permisos se
+// retiran, porque todos los <script> ya están servidos por Express bajo
+// 'self' (/src/main.tsx build hasheado + /pizza-builder.js +
+// /consent-banner.js). No tocamos frameSrc/connectSrc por dominio:
+// esos son los reales (Gemini, Bold, Wompi, etc.).
+const isProduction = process.env.NODE_ENV === 'production';
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com'],
+        scriptSrc: [
+          "'self'",
+          'https://cdnjs.cloudflare.com',
+          ...(isProduction ? [] : ["'unsafe-inline'"]),
+        ],
+        styleSrc: [
+          "'self'",
+          'https://fonts.googleapis.com',
+          'https://cdnjs.cloudflare.com',
+          ...(isProduction ? [] : ["'unsafe-inline'"]),
+        ],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
         imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: [
@@ -132,6 +147,7 @@ app.use('/', procurementRoutes);
 app.use('/', invoicesRoutes);
 app.use('/', qrMenuRoutes);
 app.use('/', digiturnoRoutes);
+app.use('/', consentRoutes);
 
 // Serve static files: public/ (para pantallas públicas como digiturno) y dist/
 app.use(express.static(path.join(__dirname, 'public')));
@@ -160,6 +176,14 @@ app.get('*', (req, res) => {
 // Validar config al iniciar
 if (!process.env.DATABASE_URL) {
   console.error('❌ Falta DATABASE_URL en .env');
+  process.exit(1);
+}
+
+// FRONTEND_URL obligatorio en producción — si falta, las pasarelas de pago
+// redirigirían al literal 'undefined' (rompiendo el checkout). Hacer
+// fail-fast al boot es mejor que discover-on-deploy.
+if (!isProduction && !process.env.FRONTEND_URL) {
+  console.error('❌ Falta FRONTEND_URL en .env para entorno de producción');
   process.exit(1);
 }
 

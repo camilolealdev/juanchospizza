@@ -161,6 +161,64 @@ const MIGRATIONS = [
       await pool.query(`UPDATE employees SET "isSuperAdmin" = true WHERE id = 'admin_default'`);
     },
   },
+
+  // ── 005: Ley 1581/2012 (Habeas Data, Colombia) ──────────────────
+  // Agrega columnas de consentimiento a `clients` y crea dos tablas de
+  // evidencia: consent_eventos (log histórico de cada decisión) y
+  // derechos_solicitudes (consulta / rectificación / supresión / reclamo
+  // Art. 14-15 Ley 1581 con plazo de 10 días hábiles para responder).
+  //
+  // Idempotente: usa ADD COLUMN IF NOT EXISTS y CREATE TABLE IF NOT
+  // EXISTS, igual que los ALTER del initDB. Para instalaciones NUEVAS el
+  // initDB ya crea las columnas y tablas; esta migración queda como no-op.
+  {
+    id: 5,
+    name: 'Habeas Data: columns + consent_eventos + derechos_solicitudes',
+    up: async (pool) => {
+      await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "dataTreatmentAuthorized" BOOLEAN DEFAULT FALSE');
+      await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "marketingAuthorized" BOOLEAN DEFAULT FALSE');
+      await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "consentAt" TIMESTAMPTZ');
+      await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "consentIp" VARCHAR(45)');
+      await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "consentUserAgent" TEXT');
+      await pool.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS "consentVersion" VARCHAR(20)');
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS consent_eventos (
+          id TEXT PRIMARY KEY,
+          "clientId" TEXT REFERENCES clients(id),
+          "consentType" TEXT NOT NULL,
+          granted BOOLEAN NOT NULL,
+          ip VARCHAR(45),
+          "userAgent" TEXT,
+          source TEXT DEFAULT 'web',
+          path TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_consent_eventos_clientId ON consent_eventos("clientId")');
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_consent_eventos_created ON consent_eventos(created_at)');
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS derechos_solicitudes (
+          id TEXT PRIMARY KEY,
+          "clientId" TEXT REFERENCES clients(id),
+          tipo TEXT NOT NULL,
+          descripcion TEXT,
+          "identificador" TEXT,
+          estado TEXT DEFAULT 'pendiente',
+          "respuesta" TEXT,
+          "respondedBy" TEXT,
+          "respondedAt" TIMESTAMPTZ,
+          "ipOrigen" VARCHAR(45),
+          "userAgent" TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_derechos_clientId ON derechos_solicitudes("clientId")');
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_derechos_estado ON derechos_solicitudes(estado)');
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_derechos_created ON derechos_solicitudes(created_at)');
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────

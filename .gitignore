@@ -69,9 +69,14 @@ nul
 # Legacy / archived code
 _legacy/
 
-# Archivos CI
-.github/
+# scripts y archivos auxiliares de CI/deploy que NO queremos trackear
+# (estos son locales de un servidor específico, no parte de la app)
 deploy.sh
 docker-compose.ci.yml
-nginx.conf
 docker-compose.override.yml
+nginx.conf
+
+# .github/ SI se trackea — contiene /workflows/ci.yml necesario para
+# que GitHub Actions encuentre el pipeline de lint/tsc/build/test/audit.
+# Si añadís secrets locales o scripts one-off, ponelos en
+# .github/_local/ que sigue siendo excluido.
