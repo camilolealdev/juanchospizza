@@ -78,5 +78,6 @@ nginx.conf
 
 # .github/ SI se trackea — contiene /workflows/ci.yml necesario para
 # que GitHub Actions encuentre el pipeline de lint/tsc/build/test/audit.
-# Si añadís secrets locales o scripts one-off, ponelos en
-# .github/_local/ que sigue siendo excluido.
+# Si añadís secrets locales o scripts one-off, ponelos en .github/_local/
+# (excluido a continuación) o en un .gitignore_global/.git/info/exclude.
+.github/_local/
