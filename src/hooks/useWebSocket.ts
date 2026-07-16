@@ -1,5 +1,4 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { getAuthToken } from '../services/api';
 
 const WS_BASE = import.meta.env.VITE_API_URL?.replace(/^http/, 'ws') || 'ws://localhost:3001';
 
@@ -26,9 +25,10 @@ const connect = (role?: string, locationId?: string) => {
   if (isConnecting) return;
   isConnecting = true;
 
-  const token = getAuthToken();
+  // La cookie HttpOnly viaja sola en el handshake del WS (mismo-site que la
+  // API) -- el servidor la lee ahí (server/websocket.js), no hace falta (ni
+  // se puede: el JWT ya no es legible del lado cliente) mandar un token acá.
   const params = new URLSearchParams();
-  if (token) params.set('token', token);
   if (role) params.set('role', role);
   if (locationId) params.set('locationId', locationId);
 

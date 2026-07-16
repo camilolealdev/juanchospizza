@@ -12,7 +12,7 @@ import {
   updateComandaItemSchema,
   bulkAddItemsSchema,
 } from '../schemas/comandas.js';
-import { notifyComandaUpdate } from '../websocket.js';
+import { notifyComandaUpdate, notifyTableUpdate } from '../websocket.js';
 
 const router = express.Router();
 
@@ -93,6 +93,7 @@ router.post(
       // Notificar WebSocket
       setImmediate(() => {
         notifyComandaUpdate(id, 'created');
+        notifyTableUpdate(tableId, 'occupied');
       });
     } catch (_e) {
       res.status(500).json({ error: 'Error al crear comanda' });
@@ -176,6 +177,9 @@ router.patch(
       // Notificar WebSocket
       setImmediate(() => {
         notifyComandaUpdate(req.params.id, 'closed');
+        if (comanda.rows[0]?.tableId) {
+          notifyTableUpdate(comanda.rows[0].tableId, 'available');
+        }
       });
     } catch (_e) {
       res.status(500).json({ error: 'Error al cerrar comanda' });

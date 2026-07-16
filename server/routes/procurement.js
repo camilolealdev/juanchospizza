@@ -143,6 +143,7 @@ router.patch('/api/procurement/:id/receive', authMiddleware, requireRole('ADMIN'
     const omitidos = [];
 
     const client = await pool.connect();
+    let alreadyReceived = false;
     try {
       await client.query('BEGIN');
 
@@ -180,13 +181,25 @@ router.patch('/api/procurement/:id/receive', authMiddleware, requireRole('ADMIN'
         recibidos.push(item);
       }
 
-      await client.query('UPDATE purchase_orders SET status = $1 WHERE id = $2', ['recibida', req.params.id]);
-      await client.query('COMMIT');
+      const statusUpdate = await client.query(
+        `UPDATE purchase_orders SET status = $1 WHERE id = $2 AND status != 'recibida'`,
+        ['recibida', req.params.id]
+      );
+      if (statusUpdate.rowCount === 0) {
+        await client.query('ROLLBACK');
+        alreadyReceived = true;
+      } else {
+        await client.query('COMMIT');
+      }
     } catch (e) {
       await client.query('ROLLBACK');
       throw e;
     } finally {
       client.release();
+    }
+
+    if (alreadyReceived) {
+      return res.status(409).json({ error: 'Esta orden ya fue recibida' });
     }
 
     res.json({

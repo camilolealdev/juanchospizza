@@ -26,39 +26,37 @@ router.post('/api/auth/login', loginRateLimit, async (req, res) => {
       return res.status(401).json({ error: result.error });
     }
 
-    // Setear cookie HttpOnly es la fuente de verdad ahora. El frontend ya
-    // no necesita leer el token -- lo enviamos en el body igual por
-    // compatibilidad durante la transición (clientes viejos en localStorage
-    // pueden seguir mandándolo como Bearer).
+    // La cookie HttpOnly es la ÚNICA fuente de verdad -- el token nunca
+    // sale en el body de la respuesta. Devolverlo ahí anulaba la protección
+    // contra XSS (cualquier JS, incluido uno inyectado, podía leerlo del
+    // body y guardarlo en localStorage, que es exactamente lo que hacía el
+    // frontend hasta ahora). role/username no son secretos, se devuelven
+    // para que la UI los muestre.
     res.setHeader('Set-Cookie', buildAuthCookie(result.token, 15 * 60));
     res.json({
-      token: result.token,
       role: result.role,
       username: result.username,
       expiresIn: result.expiresIn,
-      auth_via_cookie: true,
     });
-  } catch (e) {
+  } catch (_e) {
     res.status(401).json({ error: 'Credenciales inválidas' });
   }
 });
 
 router.post('/api/auth/refresh', async (req, res) => {
   try {
-    // Refresh acepta token del body (clientes viejos con localStorage) o
-    // directamente de la cookie (camino normal post-migración). El
-    // middleware de auth NO corre acá porque /api/auth/refresh debe
-    // estar disponible sin autenticar la sesión actual (el propio token
-    // viejo es la prueba de identidad hasta que expira).
-    const cookieToken = readAuthCookie(req);
-    const bodyToken = req.body && req.body.token;
-    const oldToken = cookieToken || bodyToken;
+    // La cookie es la única fuente de identidad -- el frontend ya no tiene
+    // (ni puede tener) el token para mandarlo en el body. El middleware de
+    // auth NO corre acá porque /api/auth/refresh debe estar disponible sin
+    // autenticar la sesión actual (el propio token viejo, vía cookie, es la
+    // prueba de identidad hasta que expira).
+    const oldToken = readAuthCookie(req);
 
     if (!oldToken) {
       return res.status(401).json({ error: 'Token inválido o expirado' });
     }
 
-    const newToken = refreshToken(oldToken);
+    const newToken = await refreshToken(oldToken);
 
     if (!newToken) {
       return res.status(401).json({ error: 'Token inválido o expirado' });
@@ -66,10 +64,11 @@ router.post('/api/auth/refresh', async (req, res) => {
 
     // Refresh emite un nuevo access de 15m. Rotar la cookie garantiza que
     // un atacante que solo tenga el viejo (filtrado por logs viejos, por
-    // ejemplo) no sobreviva al refresh.
+    // ejemplo) no sobreviva al refresh. El nuevo token nunca sale en el
+    // body, mismo criterio que /login.
     res.setHeader('Set-Cookie', buildAuthCookie(newToken, 15 * 60));
-    res.json({ token: newToken, auth_via_cookie: true });
-  } catch (e) {
+    res.status(204).end();
+  } catch (_e) {
     res.status(401).json({ error: 'Token inválido o expirado' });
   }
 });

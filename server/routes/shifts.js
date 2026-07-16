@@ -11,47 +11,59 @@ const router = express.Router();
 // mismo criterio que clientId en orders.js: no confiar en que el cliente
 // diga quién es.
 
-router.get('/api/shifts/current', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
-  try {
-    const { locationId } = req.query;
-    const conditions = [`status = 'open'`];
-    const params = [];
-    if (locationId) {
-      params.push(locationId);
-      conditions.push(`"locationId" = $${params.length}`);
+router.get(
+  '/api/shifts/current',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR'),
+  requireSameLocation((req) => req.query.locationId),
+  async (req, res) => {
+    try {
+      const { locationId } = req.query;
+      const conditions = [`status = 'open'`];
+      const params = [];
+      if (locationId) {
+        params.push(locationId);
+        conditions.push(`"locationId" = $${params.length}`);
+      }
+      const result = await pool.query(
+        `SELECT * FROM shifts WHERE ${conditions.join(' AND ')} ORDER BY "openedAt" DESC LIMIT 1`,
+        params
+      );
+      res.json(result.rows[0] || null);
+    } catch (_e) {
+      res.status(500).json({ error: 'Error fetching current shift' });
     }
-    const result = await pool.query(
-      `SELECT * FROM shifts WHERE ${conditions.join(' AND ')} ORDER BY "openedAt" DESC LIMIT 1`,
-      params
-    );
-    res.json(result.rows[0] || null);
-  } catch (_e) {
-    res.status(500).json({ error: 'Error fetching current shift' });
   }
-});
+);
 
-router.get('/api/shifts', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
-  try {
-    const { locationId, status } = req.query;
-    const conditions = [];
-    const params = [];
-    if (locationId) {
-      params.push(locationId);
-      conditions.push(`"locationId" = $${params.length}`);
+router.get(
+  '/api/shifts',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR'),
+  requireSameLocation((req) => req.query.locationId),
+  async (req, res) => {
+    try {
+      const { locationId, status } = req.query;
+      const conditions = [];
+      const params = [];
+      if (locationId) {
+        params.push(locationId);
+        conditions.push(`"locationId" = $${params.length}`);
+      }
+      if (status) {
+        params.push(status);
+        conditions.push(`status = $${params.length}`);
+      }
+      let query = 'SELECT * FROM shifts';
+      if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+      query += ' ORDER BY "openedAt" DESC';
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (_e) {
+      res.status(500).json({ error: 'Error fetching shifts' });
     }
-    if (status) {
-      params.push(status);
-      conditions.push(`status = $${params.length}`);
-    }
-    let query = 'SELECT * FROM shifts';
-    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-    query += ' ORDER BY "openedAt" DESC';
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (_e) {
-    res.status(500).json({ error: 'Error fetching shifts' });
   }
-});
+);
 
 router.post(
   '/api/shifts',

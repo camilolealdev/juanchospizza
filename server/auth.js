@@ -160,7 +160,7 @@ export async function authenticate(username, credentials) {
 // refresque -- fuerza un re-login real más allá de esa ventana.
 const MAX_SESSION_SECONDS = 30 * 24 * 60 * 60; // 30 días
 
-export function refreshToken(oldToken) {
+export async function refreshToken(oldToken) {
   const payload = verifyToken(oldToken);
   if (!payload) return null;
 
@@ -168,11 +168,20 @@ export function refreshToken(oldToken) {
   const now = Math.floor(Date.now() / 1000);
   if (now - origIat > MAX_SESSION_SECONDS) return null;
 
+  // El JWT viejo solo prueba que ALGUNA VEZ hubo un login válido -- sin este
+  // chequeo, desactivar/borrar un empleado no cortaba su sesión ya emitida,
+  // que seguía refrescándose sola hasta los 30 días de MAX_SESSION_SECONDS.
+  // role/locationId también se refrescan desde DB (no del payload viejo)
+  // por si cambiaron desde el login original.
+  const result = await pool.query('SELECT role, "locationId", activo FROM employees WHERE id = $1', [payload.sub]);
+  const employee = result.rows[0];
+  if (!employee || !employee.activo) return null;
+
   return generateToken(
     {
       sub: payload.sub,
-      role: payload.role,
-      locationId: payload.locationId ?? null,
+      role: employee.role,
+      locationId: employee.locationId ?? null,
       type: 'access',
       origIat,
     },
@@ -276,13 +285,7 @@ export function buildAuthCookie(token, maxAgeSeconds = 15 * 60) {
 
 export function buildClearAuthCookie() {
   const isProd = process.env.NODE_ENV === 'production';
-  const flags = [
-    `${AUTH_COOKIE_NAME}=`,
-    'HttpOnly',
-    'SameSite=Lax',
-    'Path=/',
-    'Max-Age=0',
-  ];
+  const flags = [`${AUTH_COOKIE_NAME}=`, 'HttpOnly', 'SameSite=Lax', 'Path=/', 'Max-Age=0'];
   if (isProd) flags.push('Secure');
   return flags.join('; ');
 }

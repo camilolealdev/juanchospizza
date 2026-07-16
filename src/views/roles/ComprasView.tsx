@@ -10,6 +10,7 @@ const ComprasView: React.FC<Props> = ({ locationId }) => {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
@@ -26,7 +27,7 @@ const ComprasView: React.FC<Props> = ({ locationId }) => {
     try {
       const data = await api.getPurchaseOrders({ status: statusFilter || undefined, locationId });
       setOrders(data);
-    } catch (e) {
+    } catch (_e) {
       setError('Error al cargar órdenes');
     } finally {
       setLoading(false);
@@ -49,16 +50,25 @@ const ComprasView: React.FC<Props> = ({ locationId }) => {
         items: [{ itemId: '', nombre: '', cantidad: 1, unidad: 'unidad', precioUnitario: 0 }],
       });
       loadOrders();
-    } catch (e) {
+    } catch (_e) {
       setError('Error al crear orden');
     }
   };
 
   const receiveOrder = async (id: string) => {
     try {
-      await api.receivePurchaseOrder(id);
+      const result = await api.receivePurchaseOrder(id);
+      if (result?.omitidos?.length > 0) {
+        setWarning(
+          `${result.omitidos.length} producto(s) no actualizaron inventario: ${result.omitidos
+            .map((o: { item?: { nombre?: string; itemId?: string } }) => o.item?.nombre || o.item?.itemId || '?')
+            .join(', ')}`
+        );
+      } else {
+        setWarning('');
+      }
       loadOrders();
-    } catch (e) {
+    } catch (_e) {
       setError('Error al recibir orden');
     }
   };
@@ -106,6 +116,12 @@ const ComprasView: React.FC<Props> = ({ locationId }) => {
       {error && (
         <div className="p-4 bg-red-900/20 border border-red-800/30 rounded-xl text-red-400 text-sm font-bold">
           {error}
+        </div>
+      )}
+
+      {warning && (
+        <div className="p-4 bg-yellow-900/20 border border-yellow-800/30 rounded-xl text-yellow-500 text-sm font-bold">
+          {warning}
         </div>
       )}
 

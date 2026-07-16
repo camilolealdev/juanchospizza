@@ -13,20 +13,96 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <link rel="stylesheet" href="/styles.css">
-<script type="application/ld+json" src="/schema.json"></script></head>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FoodEstablishment",
+  "name": "Juancho's Pizza y Comidas Rápidas",
+  "description": "Pizzas artesanales, lasañas y spaguettis con sedes en Nemocón y Zipaquirá, Cundinamarca.",
+  "url": "https://juanchospizza.com",
+  "telephone": "+57-311-707-4843",
+  "servesCuisine": "Pizza, Comida Rápida, Italiana",
+  "areaServed": [
+    "Nemocón",
+    "Zipaquirá",
+    "Cundinamarca"
+  ],
+  "hasMenu": "https://juanchospizza.com",
+  "sameAs": [
+    "https://www.instagram.com/juanchospizzanemocon/",
+    "https://www.facebook.com/juanchospizzanemocon",
+    "https://www.tiktok.com/@juanchospizzanemocon"
+  ],
+  "department": [
+    {
+      "@type": "FoodEstablishment",
+      "name": "Juancho's Pizza Nemocón",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Cra 6 No. 5-40, Vía Principal",
+        "addressLocality": "Nemocón",
+        "addressRegion": "Cundinamarca",
+        "addressCountry": "CO"
+      },
+      "telephone": "+57-311-707-4843",
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        "opens": "16:00",
+        "closes": "23:00"
+      }
+    },
+    {
+      "@type": "FoodEstablishment",
+      "name": "Juancho's Pizza Zipaquirá",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Diagonal 4 #29-10, Barrio Las Villas",
+        "addressLocality": "Zipaquirá",
+        "addressRegion": "Cundinamarca",
+        "addressCountry": "CO"
+      },
+      "telephone": "+57-311-707-4843",
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        "opens": "16:00",
+        "closes": "23:00"
+      }
+    }
+  ]
+}
+</script>
+</head>
 <body>
 
 <header>
-    <a href="#" class="logo" onclick="event.preventDefault();showPage('inicio')"><img src="/logo.png" alt="Juancho's Pizza" class="logo-img"> Juancho's Pizza</a>
+    <a href="#" class="logo" data-nav-page="inicio"><img src="/logo.png" alt="Juancho's Pizza" class="logo-img"> Juancho's Pizza</a>
     <div class="hamburger" id="navToggle"><i class="fa-solid fa-bars"></i></div>
     <ul class="nav-links" id="navMenu">
-        <li><a href="#" onclick="event.preventDefault();showPage('inicio')">Inicio</a></li>
-        <li><a href="#" onclick="event.preventDefault();showPage('crea-tu-pizza')">Crea tu Pizza</a></li>
-        <li><a href="#" onclick="event.preventDefault();showPage('menu')">Menú</a></li>
-        <li><a href="#" onclick="event.preventDefault();showPage('domicilios')">Domicilios</a></li>
-        <li><a href="#" onclick="event.preventDefault();showPage('carrito')">Carrito</a></li>
+        <li><a href="#" data-nav-page="inicio">Inicio</a></li>
+        <li><a href="#" data-nav-page="crea-tu-pizza">Crea tu Pizza</a></li>
+        <li><a href="#" data-nav-page="menu">Menú</a></li>
+        <li><a href="#" data-nav-page="domicilios">Domicilios</a></li>
+        <li><a href="#" data-nav-page="carrito">Carrito</a></li>
         <li class="nav-actions">
-            <a href="#" id="navCartBtn" class="nav-cart" title="Carrito" onclick="event.preventDefault();showPage('carrito')">
+            <a href="#" id="navCartBtn" class="nav-cart" title="Carrito" data-nav-page="carrito">
                 <i class="fa-solid fa-basket-shopping"></i>
                 <span class="cart-count" id="cartCounter">0</span>
             </a>
@@ -45,7 +121,7 @@
         <div class="hero-content container-max">
             <h1>En Sabor y Calidad, No Hay Igual</h1>
             <p>Las mejores pizzas, lasañas y spaguettis de Nemocón y Zipaquirá directamente a tu puerta.</p>
-            <a href="#" class="btn-primary" onclick="event.preventDefault();showPage('menu')">VER MENÚ Y ORDENAR <i class="fa-solid fa-arrow-right"></i></a>
+            <a href="#" class="btn-primary" data-nav-page="menu">VER MENÚ Y ORDENAR <i class="fa-solid fa-arrow-right"></i></a>
         </div>
     </section>
 

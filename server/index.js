@@ -71,11 +71,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'",
-          'https://cdnjs.cloudflare.com',
-          ...(isProduction ? [] : ["'unsafe-inline'"]),
-        ],
+        scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com', ...(isProduction ? [] : ["'unsafe-inline'"])],
         styleSrc: [
           "'self'",
           'https://fonts.googleapis.com',
@@ -182,7 +178,7 @@ if (!process.env.DATABASE_URL) {
 // FRONTEND_URL obligatorio en producción — si falta, las pasarelas de pago
 // redirigirían al literal 'undefined' (rompiendo el checkout). Hacer
 // fail-fast al boot es mejor que discover-on-deploy.
-if (!isProduction && !process.env.FRONTEND_URL) {
+if (isProduction && !process.env.FRONTEND_URL) {
   console.error('❌ Falta FRONTEND_URL en .env para entorno de producción');
   process.exit(1);
 }

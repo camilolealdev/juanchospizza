@@ -1,7 +1,7 @@
 // WebSocket server para notificaciones en tiempo real.
 // Reemplaza el polling de 10s del frontend con eventos push.
 import { WebSocketServer } from 'ws';
-import auth from './auth.js';
+import auth, { readAuthCookie } from './auth.js';
 
 let wss = null;
 
@@ -18,14 +18,17 @@ export function initWebSocket(server) {
     // El cliente puede pedir un rol privilegiado por query param, pero ese
     // valor no es de fiar por sí solo (cualquiera podría conectar con
     // ?role=OPERATOR y escuchar el feed de pedidos). El rol real sale del
-    // JWT (mismo que usan las rutas HTTP vía auth.js) -- si no viene un
-    // token válido, la conexión se degrada a 'public' en vez de rechazarse,
-    // porque la pantalla pública del digiturno también usa este socket sin
-    // autenticarse a propósito.
+    // JWT -- la cookie HttpOnly es la fuente primaria (viaja sola en el
+    // handshake del WS porque es same-origin, sin que el cliente tenga que
+    // leerla ni mandarla a mano); ?token= query param queda solo como
+    // fallback por si algún día hace falta un cliente sin cookie (ej. un
+    // script externo). Si no hay identidad válida, la conexión se degrada a
+    // 'public' en vez de rechazarse, porque la pantalla pública del
+    // digiturno también usa este socket sin autenticarse a propósito.
     const url = new URL(req.url, `http://${req.headers.host}`);
     const requestedRole = url.searchParams.get('role') || 'public';
     const locationId = url.searchParams.get('locationId') || null;
-    const token = url.searchParams.get('token');
+    const token = readAuthCookie(req) || url.searchParams.get('token');
 
     let role = 'public';
     if (requestedRole !== 'public') {

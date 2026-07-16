@@ -7,13 +7,7 @@ import CartSection from './components/CartSection';
 import { CartProvider } from './context/CartContext';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import ApprovedReviews from './components/ApprovedReviews';
-import api, {
-  AUTH_UNAUTHORIZED_EVENT,
-  clearAuthSession,
-  getAuthToken,
-  getStoredRole,
-  setAuthSession,
-} from './services/api';
+import api, { AUTH_UNAUTHORIZED_EVENT, getStoredRole, getStoredUsername, setAuthSession } from './services/api';
 
 // CRM modules only ever render behind a staff login -- lazy-loaded so an
 // anonymous landing-page visitor's bundle isn't paying for admin code they
@@ -128,7 +122,13 @@ const App: React.FC = () => {
     const storedRole = getStoredRole();
     return isKnownRole(storedRole) ? storedRole : UserRole.CLIENT;
   });
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getAuthToken());
+  // El JWT vive solo en la cookie HttpOnly -- JS no puede leerlo para saber
+  // si sigue siendo válido. username SÍ persiste en localStorage (no es
+  // secreto) y solo se setea en un login de staff real, así que su
+  // presencia es la señal optimista de "había sesión" en este refresh; si
+  // la cookie ya no es válida, la primera llamada API dispara un 401 →
+  // AUTH_UNAUTHORIZED_EVENT → esto se corrige solo (ver el listener abajo).
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getStoredUsername());
   const [showLogin, setShowLogin] = useState(false);
   const [gastroModule, setGastroModuleState] = useState<GastroModule>(() => {
     const storedRole = getStoredRole();
@@ -180,7 +180,12 @@ const App: React.FC = () => {
   }, []);
 
   const logout = () => {
-    clearAuthSession();
+    // api.logout() ya limpia clearAuthSession() y llama a POST
+    // /api/auth/logout para vaciar la cookie HttpOnly server-side -- sin
+    // esto, cerrar sesión solo borraba el estado local y la cookie seguía
+    // siendo válida en el backend. No se espera la promesa: la UI se
+    // resetea de inmediato, el request corre en segundo plano.
+    void api.logout();
     setRole(UserRole.CLIENT);
     setIsAuthenticated(false);
     if (window.location.pathname.startsWith('/admin/')) {
@@ -216,8 +221,8 @@ const App: React.FC = () => {
     // unreachable) needs to reach LoginModal's own catch with its real
     // message, not collapse into the same "PIN incorrecto" a wrong PIN gets.
     const result = await api.login(username, pin, password);
-    if (!result?.token) return false;
-    setAuthSession({ token: result.token, role: result.role, username: result.username });
+    if (!result?.role) return false;
+    setAuthSession({ role: result.role, username: result.username });
     const resolvedRole = isKnownRole(result.role) ? result.role : selectedRole;
     setRole(resolvedRole);
     setIsAuthenticated(true);
