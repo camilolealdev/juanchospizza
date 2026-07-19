@@ -13,6 +13,7 @@ export const createProductSchema = z.object({
   vegetariano: bool(),
   isPremium: bool(),
   exclusiva: bool(),
+  subcategory: strOpt(50),
 });
 
 export const updateProductSchema = z.object({
@@ -27,4 +28,5 @@ export const updateProductSchema = z.object({
   vegetariano: boolOpt(),
   isPremium: boolOpt(),
   exclusiva: boolOpt(),
+  subcategory: strOpt(50),
 });

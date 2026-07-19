@@ -20,7 +20,7 @@ router.get('/api/products', async (req, res) => {
 
     const result = await pool.query(query, params);
     res.json(result.rows);
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching products' });
   }
 });
@@ -34,7 +34,7 @@ router.get('/api/products/:id', async (req, res) => {
     } else {
       res.status(404).json({ error: 'Product not found' });
     }
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error fetching product' });
   }
 });
@@ -45,7 +45,7 @@ router.post('/api/products', authMiddleware, requireRole('ADMIN'), validate(crea
     const id = `prod_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     await pool.query(
-      `INSERT INTO products (id, "categoryId", nombre, descripcion, "basePrice", type, image, tiempo, popularidad, vegetariano, "isPremium", exclusiva) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      `INSERT INTO products (id, "categoryId", nombre, descripcion, "basePrice", type, image, tiempo, popularidad, vegetariano, "isPremium", exclusiva, subcategory) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
       [
         id,
         sanitized.categoryId,
@@ -59,11 +59,12 @@ router.post('/api/products', authMiddleware, requireRole('ADMIN'), validate(crea
         sanitized.vegetariano,
         sanitized.isPremium,
         sanitized.exclusiva,
+        sanitized.subcategory,
       ]
     );
 
     res.status(201).json({ id, ...sanitized });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error creating product' });
   }
 });
@@ -99,7 +100,7 @@ router.post('/api/products/bulk', authMiddleware, requireRole('ADMIN'), async (r
     try {
       const id = `prod_${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${i}`;
       await pool.query(
-        `INSERT INTO products (id, "categoryId", nombre, descripcion, "basePrice", type, image, tiempo, popularidad, vegetariano, "isPremium", exclusiva) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        `INSERT INTO products (id, "categoryId", nombre, descripcion, "basePrice", type, image, tiempo, popularidad, vegetariano, "isPremium", exclusiva, subcategory) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
         [
           id,
           sanitized.categoryId,
@@ -113,10 +114,11 @@ router.post('/api/products/bulk', authMiddleware, requireRole('ADMIN'), async (r
           sanitized.vegetariano,
           sanitized.isPremium,
           sanitized.exclusiva,
+          sanitized.subcategory,
         ]
       );
       inserted++;
-    } catch (e) {
+    } catch (_e) {
       errors.push({ row: i + 1, nombre: sanitized.nombre, error: 'Error de base de datos' });
     }
   }
@@ -143,6 +145,7 @@ router.put(
         vegetariano,
         isPremium,
         exclusiva,
+        subcategory,
       } = req.body;
 
       const updates = [];
@@ -191,6 +194,10 @@ router.put(
         params.push(exclusiva);
         updates.push(`exclusiva = $${params.length}`);
       }
+      if (subcategory !== undefined) {
+        params.push(subcategory);
+        updates.push(`subcategory = $${params.length}`);
+      }
 
       if (updates.length) {
         params.push(req.params.id);
@@ -204,7 +211,7 @@ router.put(
       } else {
         res.status(404).json({ error: 'Product not found' });
       }
-    } catch (e) {
+    } catch (_e) {
       res.status(500).json({ error: 'Error updating product' });
     }
   }
@@ -219,7 +226,7 @@ router.delete('/api/products/:id', authMiddleware, requireRole('ADMIN'), async (
     }
 
     res.json({ success: true });
-  } catch (e) {
+  } catch (_e) {
     res.status(500).json({ error: 'Error deleting product' });
   }
 });
