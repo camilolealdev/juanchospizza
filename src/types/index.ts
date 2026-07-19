@@ -6,6 +6,16 @@ export enum UserRole {
   MARKETING = 'MARKETING',
 }
 
+/**
+ * Valores legacy del cart pre-pivot a pizza_sizes dinámico.
+ *
+ * @deprecated Usar los ids de la tabla `pizza_sizes` (server/db.js) en minúscula
+ * (`'small'`, `'junior'`, `'mediana'`, `'familiar'`) o el subset
+ * `{ id: string; nombre: string; precio: number }` propagado en CartItem.size y
+ * OrderItem.size. Mantenido solo para compatibilidad con el campo `size` en
+ * historial JSON de orders.items (no podemos romper el shape sin un PR de
+ * migración de datos separado).
+ */
 export enum PizzaSize {
   PERSONAL = 'Personal',
   MEDIANA = 'Mediana',
@@ -74,12 +84,22 @@ export interface OrderItem {
   id: string;
   productId: string;
   name: string;
-  size: PizzaSize;
+  // PizzaSize enum legacy sigue siendo válido para orders viejos. Strings libres
+  // ('small'/'junior'/'mediana'/'familiar') son el camino nuevo, alineado con
+  // pizza_sizes.id y con CartItem.size que el frontend popula desde
+  // MenuDigital.handleAddPizza -- antes ese handle forzaba PizzaSize.PERSONAL
+  // y la pizza Familiar llegaba a cocina como "Personal".
+  size?: PizzaSize | string;
   quantity: number;
   price: number;
   details?: string;
 }
 
+// CartItem vive también en src/context/CartContext.tsx -- mantener ambos en
+// sync. El campo `size` se popula desde MenuDigital.handleAddPizza con el
+// label del tamaño que el cliente eligió (small/junior/mediana/familiar o
+// cualquier id futuro de pizza_sizes). Si está undefined, el OrderItem
+// generado cae al fallback PizzaSize.PERSONAL (legacy cart pre-pivot).
 export interface CartItem {
   id: string;
   productId: string;
@@ -88,6 +108,7 @@ export interface CartItem {
   quantity: number;
   image?: string;
   details?: string;
+  size?: string;
 }
 
 // Las 2 sedes físicas del negocio -- ver server/schemas/orders.js LOCATION_IDS.

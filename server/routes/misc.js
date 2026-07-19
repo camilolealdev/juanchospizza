@@ -78,25 +78,20 @@ router.post('/api/seed', authMiddleware, requireRole('ADMIN'), async (req, res) 
       );
     }
 
-    for (const i of INGREDIENTS) {
+    for (const i of INGREDIENTS) {      // `disponible` se omite del UPDATE SET a propósito: el seed solo siembra
+      // el catálogo (qué ingredientes EXISTEN), no debe revivir ingredientes que
+      // el admin marcó como agotados (disponible=false) tras un incidente de
+      // stock. Para volver a habilitar uno agotado, el flujo correcto es la UI
+      // admin (PATCH /api/ingredients/:id) o UPDATE directo, no el seed.
       await pool.query(
         `INSERT INTO ingredients (id, nombre, descripcion, precio_extra, categoria, vegetariano, vegano, premium, dulce, disponible, "defaultIng")
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
          ON CONFLICT (id) DO UPDATE SET
            nombre = $2, descripcion = $3, precio_extra = $4, categoria = $5, vegetariano = $6,
-           vegano = $7, premium = $8, dulce = $9, disponible = $10, "defaultIng" = $11`,
+           vegano = $7, premium = $8, dulce = $9, "defaultIng" = $11`,
         [
-          i.id,
-          i.nombre,
-          i.descripcion,
-          i.precio_extra,
-          i.categoria,
-          i.vegetariano,
-          i.vegano,
-          i.premium,
-          i.dulce,
-          i.disponible,
-          i.defaultIng,
+          i.id, i.nombre, i.descripcion, i.precio_extra, i.categoria, i.vegetariano,
+          i.vegano, i.premium, i.dulce, i.disponible, i.defaultIng,
         ]
       );
     }

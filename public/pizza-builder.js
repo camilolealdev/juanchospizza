@@ -521,6 +521,35 @@ window.addEventListener('cart-updated', function(e) {
     showPage(initial || 'inicio', true);
 })();
 if (cartCounter) cartCounter.textContent = itemsInCart;
-// Restore advanced builder state from localStorage
-loadAdvancedState();
+
+// Try to import CTP builder selections via bridge
+function tryImportFromCTP() {
+  try {
+    var raw = localStorage.getItem('juanchos_builder_bridge');
+    if (!raw) return false;
+    var data = JSON.parse(raw);
+    if (!data || data.source !== 'ctp' || !Array.isArray(data.ingredientIds)) return false;
+    // Only import if within last 2 minutes
+    if (Date.now() - (data.timestamp || 0) > 120000) return false;
+    // Match CTP ingredient IDs to advanced builder
+    var matched = data.ingredientIds.filter(function(id) {
+      return INGREDIENTS.some(function(ing) { return ing.id === id; });
+    });
+    if (matched.length === 0) return false;
+    // Pre-populate selections.whole with matched IDs
+    selections.whole = matched;
+    // Clear the bridge so we don't re-import
+    localStorage.removeItem('juanchos_builder_bridge');
+    return true;
+  } catch(_e) { return false; }
+}
+
+// Restore advanced builder state from localStorage, then try CTP bridge
+var hadSaved = loadAdvancedState();
+if (!hadSaved) {
+  // No saved state - try importing from CTP
+  tryImportFromCTP();
+}
+// Expose globally so CTP toggle button can trigger import without page reload
+window.__tryImportFromCTP = tryImportFromCTP;
 render();

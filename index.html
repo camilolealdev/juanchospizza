@@ -209,6 +209,11 @@
       <!-- ========== COLUMNA 2: Ingredientes (dinámicos desde datos) ========== -->
       <div class="ctp-card ctp-ingredients-card">
         <h3 class="ctp-step"><span class="ctp-step-num">2</span> Elige tus ingredientes</h3>
+        <div class="ctp-search-wrap">
+          <i class="fas fa-search ctp-search-icon"></i>
+          <input type="text" class="ctp-search-input" id="ctpSearchInput" placeholder="Buscar ingredientes..." autocomplete="off">
+          <button class="ctp-search-clear" id="ctpSearchClear" style="display:none"><i class="fas fa-times"></i></button>
+        </div>
         <div id="ctpIngredientsContainer"></div>
         <div id="ctpTooltip" class="ctp-tooltip"></div>
         <div class="ctp-included-hint" id="ctpIncludedHint">Selecciona un tamaño para ver los ingredientes incluidos</div>
@@ -401,6 +406,7 @@
     var selectedSize = null;
     var selectedIngs = {};  // { 'carne_1': true, 'veg_5': true, ... }
     var collapsedGroups = {}; // { 'carnes': false, ... }
+    var searchQuery = '';
 
     /* ---- Phyllotaxis para posiciones SVG ---- */
     function generatePizzaPositions(count, radiusScale) {
@@ -476,14 +482,23 @@
       var html = '';
       var groupKeys = ['carnes','vegetales','frutas_dulces','extras'];
       var allChecked = [];
+      var isSearching = searchQuery.trim().length > 0;
 
       groupKeys.forEach(function(key) {
         var ings = CTP_INGREDIENTS[key];
+        // Filtrar por búsqueda si hay query activa
+        if (isSearching) {
+          var q = searchQuery.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          ings = ings.filter(function(ing) {
+            return ing.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').indexOf(q) !== -1;
+          });
+          if (ings.length === 0) return; // Saltar grupos sin coincidencias
+        }
         var label = GROUP_LABELS[key];
         var icon = GROUP_FA_ICONS[key];
         var isCollapsed = collapsedGroups[key];
-        var visibleIngs = isCollapsed ? ings : ings.slice(0, MAX_VISIBLE_CHIPS);
-        var hasMore = ings.length > MAX_VISIBLE_CHIPS;
+        var visibleIngs = isSearching ? ings : (isCollapsed ? ings : ings.slice(0, MAX_VISIBLE_CHIPS));
+        var hasMore = !isSearching && ings.length > MAX_VISIBLE_CHIPS;
 
         html += '<div class="ctp-group" data-group="' + key + '">' +
           '<p class="ctp-group-title"><i class="fas ' + icon + '"></i> ' + label + ' <span class="ctp-group-count" id="ctpCount_' + key + '">0/' + ings.length + '</span></p>' +
@@ -616,7 +631,49 @@
       });
     }
 
-    /* ---- RENDER: Pizza SVG ---- */
+    /* ---- SVG Shape Generators by Category ---- */
+    function svgShape_circle(cx, cy, r, color, opacity) {
+      return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + color + '" opacity="' + opacity + '" />';
+    }
+    function svgShape_meat(cx, cy, r, color, opacity) {
+      return '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r * 0.6) + '" fill="' + color + '" opacity="' + opacity + '" />' +
+        '<circle cx="' + (cx - r * 0.15) + '" cy="' + (cy - r * 0.15) + '" r="' + (r * 0.2) + '" fill="rgba(0,0,0,0.15)" />' +
+        '<circle cx="' + (cx + r * 0.2) + '" cy="' + (cy + r * 0.1) + '" r="' + (r * 0.15) + '" fill="rgba(0,0,0,0.12)" />';
+    }
+    function svgShape_veggie(cx, cy, r, color, opacity) {
+      var s = r * 0.35;
+      return '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + (s * 1.5) + '" ry="' + (s * 0.8) + '" fill="' + color + '" opacity="' + opacity + '" transform="rotate(' + ((cx + cy) % 360) + ', ' + cx + ', ' + cy + ')" />';
+    }
+    function svgShape_fruit(cx, cy, r, color, opacity) {
+      var s = r * 0.3;
+      var star = '';
+      for (var i = 0; i < 5; i++) {
+        var a1 = (i * 72 - 90) * Math.PI / 180;
+        var a2 = (i * 72 + 36 - 90) * Math.PI / 180;
+        var x1 = cx + s * Math.cos(a1);
+        var y1 = cy + s * Math.sin(a1);
+        var x2 = cx + s * 0.45 * Math.cos(a2);
+        var y2 = cy + s * 0.45 * Math.sin(a2);
+        if (i === 0) star += 'M' + x1 + ',' + y1 + ' L' + x2 + ',' + y2;
+        else star += ' L' + x1 + ',' + y1 + ' L' + x2 + ',' + y2;
+      }
+      star += ' Z';
+      return '<path d="' + star + '" fill="' + color + '" opacity="' + opacity + '" />';
+    }
+    function svgShape_extra(cx, cy, r, color, opacity) {
+      var s = r * 0.4;
+      var points = (cx - s) + ',' + cy + ' ' + cx + ',' + (cy - s) + ' ' + (cx + s) + ',' + cy + ' ' + cx + ',' + (cy + s);
+      return '<polygon points="' + points + '" fill="' + color + '" opacity="' + opacity + '" />';
+    }
+
+    var SHAPE_FUNCS = {
+      carnes: svgShape_meat,
+      vegetales: svgShape_veggie,
+      frutas_dulces: svgShape_fruit,
+      extras: svgShape_extra
+    };
+
+    /* ---- RENDER: Pizza SVG con formas variadas ---- */
     function renderPizzaSVG() {
       var checkedIds = Object.keys(selectedIngs).filter(function(id) { return selectedIngs[id]; });
       if (checkedIds.length === 0) {
@@ -636,16 +693,17 @@
         });
       });
 
-      // Generate SVG circles using phyllotaxis
+      // Generate SVG with varied shapes using phyllotaxis
       var svgContent = '';
       ingredientData.forEach(function(data, idx) {
         var pos = MASTER_POSITIONS[(idx * 7 + 3) % MASTER_POSITIONS.length];
         var size = 2.5 + (idx % 3) * 1.2;
         var opacity = 0.7 + (idx % 5) * 0.06;
-        // Inner circle
-        svgContent += '<circle cx="' + pos.x + '" cy="' + pos.y + '" r="' + size + '" fill="' + data.color + '" opacity="' + opacity + '" />';
+        var shapeFn = SHAPE_FUNCS[data.group] || svgShape_circle;
         // Glow
-        svgContent += '<circle cx="' + pos.x + '" cy="' + pos.y + '" r="' + (size + 1.5) + '" fill="' + data.color + '" opacity="' + (opacity * 0.15) + '" />';
+        svgContent += '<circle cx="' + pos.x + '" cy="' + pos.y + '" r="' + (size + 1.5) + '" fill="' + data.color + '" opacity="' + (opacity * 0.12) + '" />';
+        // Shape
+        svgContent += shapeFn(pos.x, pos.y, size * 1.3, data.color, opacity);
       });
 
       toppingsGroup.innerHTML = svgContent;
@@ -787,6 +845,18 @@
       var details = name + ' · ' + (checkedNames.length > 0 ? checkedNames.slice(0, 5).join(', ') + (checkedNames.length > 5 ? ' +' + (checkedNames.length - 5) + ' más' : '') : 'sin ingredientes');
       if (extras > 0) details += ' (+' + extras + ' extra)';
 
+      // Builder sync bridge: compartir selección con advanced builder
+      try {
+        var bridgeData = {
+          size: selectedSize.label,
+          ingredientIds: Object.keys(selectedIngs).filter(function(id) { return selectedIngs[id]; }),
+          ingredientNames: checkedNames,
+          timestamp: Date.now(),
+          source: 'ctp'
+        };
+        localStorage.setItem('juanchos_builder_bridge', JSON.stringify(bridgeData));
+      } catch(e) { /* ignore */ }
+
       // Cart bridge
       if (window.__pizzaBuilderAddToCart && window.__pizzaBuilderAddToCart !== window.__pizzaBuilderFallback) {
         window.__pizzaBuilderAddToCart('Pizza Personalizada (' + name + ')', details);
@@ -812,6 +882,33 @@
       }, 1800);
     });
 
+    /* ---- Search input ---- */
+    var searchInput = document.getElementById('ctpSearchInput');
+    var searchClear = document.getElementById('ctpSearchClear');
+    var searchTimer = null;
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(function() {
+          searchQuery = searchInput.value;
+          if (searchClear) searchClear.style.display = searchQuery.length > 0 ? 'flex' : 'none';
+          renderIngredients();
+          renderPizzaSVG();
+          renderSummary();
+        }, 150);
+      });
+    }
+    if (searchClear) {
+      searchClear.addEventListener('click', function() {
+        searchQuery = '';
+        searchInput.value = '';
+        searchClear.style.display = 'none';
+        renderIngredients();
+        renderPizzaSVG();
+        renderSummary();
+      });
+    }
+
     /* ---- Clear button ---- */
     var clearBtn = document.getElementById('ctpClearBtn');
     if (clearBtn) {
@@ -819,6 +916,9 @@
         selectedSize = null;
         selectedIngs = {};
         collapsedGroups = {};
+        searchQuery = '';
+        if (searchInput) searchInput.value = '';
+        if (searchClear) searchClear.style.display = 'none';
         saveState();
         renderAll();
       });
@@ -884,6 +984,8 @@
           ? 'Personalización avanzada <i class="fa-solid fa-chevron-up"></i>'
           : 'Personalización avanzada <i class="fa-solid fa-chevron-down"></i>';
         if (isHidden && window.__pizzaBuilderRender) {
+          // Try to import CTP selections into advanced builder before render
+          if (window.__tryImportFromCTP) window.__tryImportFromCTP();
           window.__pizzaBuilderRender();
         }
       });

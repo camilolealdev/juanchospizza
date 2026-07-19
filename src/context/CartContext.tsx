@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
 
+// Mantener shape sincronizado con src/types/index.ts CartItem. El `size?: string`
+// lleva el label real del tamaño que eligió el cliente (small/junior/mediana/
+// familiar). Antes del fix se perdía acá y OrderItem.size siempre salía como
+// PizzaSize.PERSONAL, así que pizzas Familiares viajaban a cocina con el
+// shape viejo.
 export interface CartItem {
   id: string;
   productId: string;
@@ -7,6 +12,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   details?: string;
+  size?: string;
 }
 
 interface CartContextType {
@@ -33,7 +39,7 @@ export const useCart = () => useContext(CartContext);
 
 declare global {
   interface Window {
-    __pizzaBuilderAddToCart?: (name: string, details?: string) => void;
+    __pizzaBuilderAddToCart?: (name: string, details?: string, size?: string) => void;
   }
 }
 
@@ -82,7 +88,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Expose global bridge for vanilla pizza builder (accepts optional details/ingredients)
   useEffect(() => {
-    window.__pizzaBuilderAddToCart = (name: string, details?: string) => {
+    window.__pizzaBuilderAddToCart = (name: string, details?: string, size?: string) => {
       // Read actual price from the DOM (set by vanilla pizza builder)
       const priceEl = document.getElementById('priceDisplay');
       const priceText = priceEl?.textContent || '$0';
@@ -92,10 +98,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const doughEl = document.getElementById('doughName');
       const dough = doughEl?.textContent || 'Personalizada';
       const itemDetails = details || `Pizza artesanal · ${dough}`;
+      // Default a 'small' si el builder vanilla no pasa size (mejor que undefined
+      // para que OrderItem.size no quede vacío y cocina vea "Sin tamaño").
+      const itemSize = size || 'small';
 
       const id = 'pizza-builder-' + Date.now();
       setCart((prev) => {
-        const next = [...prev, { id, productId: 'pizza-builder', name, price, quantity: 1, details: itemDetails }];
+        const next = [...prev, { id, productId: 'pizza-builder', name, price, quantity: 1, details: itemDetails, size: itemSize }];
         const count = next.reduce((s, i) => s + i.quantity, 0);
         localStorage.setItem('juanchos_cart', count.toString());
         window.dispatchEvent(new CustomEvent('cart-updated', { detail: count }));

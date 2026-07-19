@@ -1098,6 +1098,59 @@
   background: rgba(192,57,43,.04);
 }
 
+/* Search input */
+.ctp-search-wrap {
+  position: relative;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+}
+.ctp-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ctp-muted, #8B572A);
+  opacity: .35;
+  font-size: .8rem;
+  pointer-events: none;
+}
+.ctp-search-input {
+  width: 100%;
+  padding: 10px 36px 10px 34px;
+  border: 1px solid var(--ctp-line, rgba(139,87,42,.15));
+  border-radius: 999px;
+  font-family: 'Poppins', sans-serif;
+  font-size: .8rem;
+  background: var(--ctp-cream, #F4EFEA);
+  color: var(--negro-carbon, #1A1A1A);
+  outline: none;
+  transition: all .2s ease;
+}
+.ctp-search-input:focus {
+  border-color: var(--rrojo-acento, #C0392B);
+  box-shadow: 0 0 0 3px rgba(192,57,43,.08);
+}
+.ctp-search-input::placeholder {
+  color: var(--ctp-muted, #8B572A);
+  opacity: .35;
+}
+.ctp-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--ctp-muted, #8B572A);
+  opacity: .4;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: .75rem;
+  transition: opacity .15s ease;
+}
+.ctp-search-clear:hover { opacity: .8; }
+
 /* ==============================
    CTP Tooltip — Hover Preview
    ============================== */

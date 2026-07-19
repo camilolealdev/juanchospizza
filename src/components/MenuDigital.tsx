@@ -193,7 +193,10 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
         const sz = product.sizes.find((s) => s.label === size);
         if (sz) price = sz.price;
       }
-      contextAddToCart({ productId: product.id, name: product.name, price, quantity: 1, details });
+      // Propagamos `size` al cart para que OrderItem.size generado por el
+      // checkout lleve el tamaño real del cliente (small/junior/mediana/familiar)
+      // y no el fallback legacy PizzaSize.PERSONAL hardcodeado.
+      contextAddToCart({ productId: product.id, name: product.name, price, quantity: 1, size, details });
       setShowSuccess(product.name);
       setTimeout(() => setShowSuccess(''), 2000);
       setShowCrossSell(product.category);
@@ -242,7 +245,11 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
       id: item.id,
       productId: item.productId,
       name: item.name,
-      size: PizzaSize.PERSONAL,
+      // Acá estaba el bug B2: hardcode PizzaSize.PERSONAL descartaba la
+      // selección real. Ahora respetamos item.size (populado por
+      // MenuDigital.handleAddPizza y el bridge __pizzaBuilderAddToCart) o
+      // caemos al legacy enum solo si el cart item es pre-pivot.
+      size: item.size || PizzaSize.PERSONAL,
       quantity: item.quantity,
       price: item.price,
       details: item.details,
