@@ -98,13 +98,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const doughEl = document.getElementById('doughName');
       const dough = doughEl?.textContent || 'Personalizada';
       const itemDetails = details || `Pizza artesanal · ${dough}`;
-      // Default a 'small' si el builder vanilla no pasa size (mejor que undefined
-      // para que OrderItem.size no quede vacío y cocina vea "Sin tamaño").
-      const itemSize = size || 'small';
+      // IMPORTANTE: no defaultear size a 'small' acá (decisión del code-review).
+      // Si `public/pizza-builder.js` renderiza un Familiar de $88k y olvida
+      // pasar size, falsificarlo a 'small' silenciaría el OrderItem.size como
+      // 'small' en cocina (mismatch precio/tamaño). Mejor que item.size quede
+      // undefined y MenuDigital.buildOrderDraft caiga al fallback legacy
+      // (PizzaSize.PERSONAL) — menos mentiroso que mentir sobre el size nuevo.
+      // TODO: actualizar public/pizza-builder.js para que SIEMPRE pase size
+      // cuando llame al bridge acá y este default-relaxation ya no sea
+      // necesario.
+      const itemSize = size;
 
       const id = 'pizza-builder-' + Date.now();
       setCart((prev) => {
-        const next = [...prev, { id, productId: 'pizza-builder', name, price, quantity: 1, details: itemDetails, size: itemSize }];
+        const next = [
+          ...prev,
+          { id, productId: 'pizza-builder', name, price, quantity: 1, details: itemDetails, size: itemSize },
+        ];
         const count = next.reduce((s, i) => s + i.quantity, 0);
         localStorage.setItem('juanchos_cart', count.toString());
         window.dispatchEvent(new CustomEvent('cart-updated', { detail: count }));

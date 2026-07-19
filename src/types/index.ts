@@ -16,6 +16,16 @@ export enum UserRole {
  * historial JSON de orders.items (no podemos romper el shape sin un PR de
  * migración de datos separado).
  */
+/**
+ * Enum legacy del cart pre-pivot a pizza_sizes dinámico.
+ *
+ * @deprecated Usar los ids de `pizza_sizes` (server/db.js) en minúscula
+ * (`'small'`, `'junior'`, `'mediana'`, `'familiar'`) o el subset
+ * `{ id: string; nombre: string; precio: number }` propagado en `CartItem.size`
+ * y `OrderItem.size`. Mantenido solo para compat con `OrderItem.size` en
+ * historial JSON de orders.items -- no se puede romper ese shape sin un PR
+ * de migración de datos separado.
+ */
 export enum PizzaSize {
   PERSONAL = 'Personal',
   MEDIANA = 'Mediana',
