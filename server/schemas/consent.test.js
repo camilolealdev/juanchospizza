@@ -38,7 +38,7 @@ describe('postConsentSchema', () => {
   });
 
   it('rechaza cuando falta consent_type (requerido)', () => {
-    const { consent_type, ...sinCT } = baseValid;
+    const { consent_type: _consent_type, ...sinCT } = baseValid;
     const r = postConsentSchema.safeParse(sinCT);
     expect(r.success).toBe(false);
     if (!r.success) {
@@ -59,7 +59,7 @@ describe('postConsentSchema', () => {
   });
 
   it('rechaza granted ausente (es requerido, no opcional)', () => {
-    const { granted, ...sin } = baseValid;
+    const { granted: _granted, ...sin } = baseValid;
     const r = postConsentSchema.safeParse(sin);
     expect(r.success).toBe(false);
   });
@@ -102,8 +102,8 @@ describe('postConsentSchema', () => {
     expect(postConsentSchema.safeParse({ ...baseValid, email: 'no-es-email' }).success).toBe(false);
   });
 
-  it('acepta path ausente (es optional)', () => {
-    const { path, ...sinPath } = baseValid;
+  it('acepta path ausente (es opcional)', () => {
+    const { path: _path, ...sinPath } = baseValid;
     const r = postConsentSchema.safeParse(sinPath);
     expect(r.success).toBe(true);
   });
