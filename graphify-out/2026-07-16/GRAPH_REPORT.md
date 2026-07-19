@@ -1,19 +1,19 @@
-# Graph Report - pizzeria-master (2026-07-16)
+# Graph Report - pizzeria-master (2026-07-15)
 
 ## Corpus Check
 
-- 192 files · ~584,674 words
+- 179 files · ~575,375 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
 
-- 1314 nodes · 2029 edges · 135 communities (99 shown, 36 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 25 edges (avg confidence: 0.51)
+- 1191 nodes · 1868 edges · 121 communities (85 shown, 36 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 19 edges (avg confidence: 0.52)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
 
-- Built from commit: `1dbd6997`
+- Built from commit: `4c1c022b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -133,29 +133,15 @@
 - inventory.js
 - dianSigner.js
 - 🔐 Auth
-- extract-inline-styles.js
-- consent-banner.js
-- consent.js
-- 🔷 7. BRECHAS vs CHECKLIST ORIGINAL
-- categories.js
-- derechos.js
-- 🔷 3. SEGURIDAD — Auditoría de Brechas
-- 🔷 5. DEUDA TÉCNICA DETECTADA
-- 🔷 8. RECOMENDACIONES PRIORIZADAS
-- 🔷 1. INVENTARIO DE MÓDULOS vs CHECKLIST
-- 🔷 2. BASE DE DATOS — Auditoría de Tablas
-- 🎯 S4 — Performance
-- 🎯 S1 — Datos y cuentas
-- AUTH_COOKIE
 
 ## God Nodes (most connected - your core abstractions)
 
-1. `pool` - 32 edges
-2. `API Documentation — Juancho's Pizza / GastroPro` - 32 edges
-3. `authMiddleware()` - 30 edges
-4. `requireRole()` - 28 edges
-5. `validate()` - 25 edges
-6. `api` - 25 edges
+1. `API Documentation — Juancho's Pizza / GastroPro` - 32 edges
+2. `pool` - 31 edges
+3. `authMiddleware()` - 28 edges
+4. `requireRole()` - 27 edges
+5. `api` - 25 edges
+6. `validate()` - 24 edges
 7. `str()` - 23 edges
 8. `strOpt()` - 22 edges
 9. `LocationId` - 21 edges
@@ -165,30 +151,30 @@
 
 - `initAI()` --references--> `@google/generative-ai` [EXTRACTED]
   src/services/geminiService.ts → package.json
-- `InvoicesView()` --calls--> `useWebSocket()` [EXTRACTED]
-  src/views/roles/InvoicesView.tsx → src/hooks/useWebSocket.ts
 - `Props` --references--> `LocationId` [EXTRACTED]
-  src/views/roles/ComandasView.tsx → src/types/index.ts
+  src/views/roles/CajaView.tsx → src/types/index.ts
 - `Props` --references--> `LocationId` [EXTRACTED]
   src/views/roles/DigiturnoView.tsx → src/types/index.ts
 - `GastroProDashboardProps` --references--> `LocationId` [EXTRACTED]
   src/views/roles/GastroProDashboard.tsx → src/types/index.ts
+- `TurnosViewProps` --references--> `LocationId` [EXTRACTED]
+  src/views/roles/TurnosView.tsx → src/types/index.ts
 
 ## Import Cycles
 
 - None detected.
 
-## Communities (135 total, 36 thin omitted)
+## Communities (121 total, 36 thin omitted)
 
 ### Community 0 - "index.js"
 
-Cohesion: 0.13
-Nodes (20): initPush(), isPushEnabled(), sendPushToPhone(), router, computeNivel(), notifyOrderConfirmation(), notifyOrderStatusChange(), notifyWebhook() (+12 more)
+Cohesion: 0.05
+Nodes (76): authenticate(), authMiddleware(), devSecretCache, generateSalt(), generateToken(), getSecret(), hashPin(), login() (+68 more)
 
 ### Community 1 - "helpers.js"
 
-Cohesion: 0.11
-Nodes (31): router, createEmployeeSchema, LOCATIONS, ROLES, setPasswordSchema, bool(), boolOpt(), clampedNumber() (+23 more)
+Cohesion: 0.22
+Nodes (13): createExpenseSchema, updateExpenseSchema, bool(), boolOpt(), clampedNumberOpt(), passwordBase(), passwordRequired(), passwordSecure() (+5 more)
 
 ### Community 2 - "MenuDigital.tsx"
 
@@ -198,7 +184,7 @@ Nodes (26): CartSection(), BADGE_STYLES, CATEGORIES, CROSS_SELL, MenuDigital(), 
 ### Community 3 - "App.tsx"
 
 Cohesion: 0.05
-Nodes (42): App(), AuthContext, AuthContextType, CajaView, ClientesView, ComandasView, ComprasView, DigiturnoView (+34 more)
+Nodes (41): App(), AuthContext, AuthContextType, CajaView, ClientesView, ComandasView, ComprasView, DigiturnoView (+33 more)
 
 ### Community 4 - "dependencies"
 
@@ -227,8 +213,8 @@ Nodes (13): @google/generative-ai, CATEGORIES, INGREDIENTS, PRODUCTS, SIZE_FACTO
 
 ### Community 9 - "api.ts"
 
-Cohesion: 0.08
-Nodes (30): apiFetch(), clearAuthSession(), ClientPayload, EmployeeUpdatePayload, ExpensePayload, handleResponse(), InventoryItem, InventoryItemPayload (+22 more)
+Cohesion: 0.13
+Nodes (21): apiFetch(), clearAuthSession(), ClientPayload, decodeTokenPayload(), EmployeeUpdatePayload, ensureFreshToken(), ExpensePayload, getAuthToken() (+13 more)
 
 ### Community 10 - "Arquitectura — Juancho's Pizza / GastroPro"
 
@@ -237,8 +223,8 @@ Nodes (15): Arquitectura — Juancho's Pizza / GastroPro, Autenticación, Backen
 
 ### Community 11 - "index.ts"
 
-Cohesion: 0.12
-Nodes (21): connect(), disconnect(), globalListeners, reconnectWS(), scheduleReconnect(), subscribeWS(), useWebSocket(), WSEvent (+13 more)
+Cohesion: 0.11
+Nodes (20): useWebSocket(), Comanda, ComandaItem, CreditNote, DiningTable, FloorPlan, Invoice, LocationId (+12 more)
 
 ### Community 12 - "api"
 
@@ -257,8 +243,8 @@ Nodes (12): LoyaltyLevel, emptyForm, FidelizacionView(), formatDate(), LEVEL_ACC
 
 ### Community 15 - "OperatorView.tsx"
 
-Cohesion: 0.25
-Nodes (6): 4.1 Métricas de Calidad, 4.2 Tests Desglosados, 🔷 4. ESTADO DEL CÓDIGO — Build, Tests, Lint, 🔷 6. DOCUMENTACIÓN — Estado, 🔷 9. RESUMEN VISUAL, 📋 Auditoría Completa — Juancho's Pizza / GastroPro v2.0.0
+Cohesion: 0.06
+Nodes (30): 1.1 Módulos Backend (Total: 29 archivos de ruta/20 schemas), 1.2 Módulos Frontend (Total: 22 vistas de rol), 🔷 1. INVENTARIO DE MÓDULOS vs CHECKLIST, 2.1 Inventario Completo (29 tablas), 2.2 Verificación de Celdas Fantasma, 🔷 2. BASE DE DATOS — Auditoría de Tablas, 3.1 Autenticación (server/auth.js), 3.2 Middleware de Seguridad (+22 more)
 
 ### Community 16 - "FinanzasView.tsx"
 
@@ -287,13 +273,13 @@ Nodes (7): Antes de cualquier cambio, Comandos útiles del proyecto, Instruccion
 
 ### Community 21 - "ReportesView.tsx"
 
-Cohesion: 0.20
-Nodes (8): Campaign, LoyaltyReward, OrderStatus, emptyForm, ApiOrder, normalizeOrder(), ReportesView(), reportTypes
+Cohesion: 0.29
+Nodes (7): LoyaltyReward, OrderStatus, ApiOrder, groupOptions, normalizeOrder(), ReportesView(), reportTypes
 
 ### Community 22 - "InventarioView.tsx"
 
-Cohesion: 0.09
-Nodes (28): calcPrice(), cartCounter, CAT_COLORS, CAT_ICONS, CAT_LABELS, CAT_VIS_COLORS, confirmBtn, getCurrentMasa() (+20 more)
+Cohesion: 0.28
+Nodes (8): InventoryItem, InventoryMovement, Recipe, badgeStyle(), formatter, getStatus(), InventarioView(), statusConfig
 
 ### Community 23 - "GastroProDashboard.tsx"
 
@@ -342,8 +328,8 @@ Nodes (22): 🔐 Admin CRM — 17 Módulos (requieren backend), 🌐 Análisis d
 
 ### Community 74 - "API Documentation — Juancho's Pizza / GastroPro"
 
-Cohesion: 0.08
-Nodes (25): API Documentation — Juancho's Pizza / GastroPro, 🔐 Auth, 📂 Categories, ⚠️ Códigos de Error, `GET /api/categories`, `GET /api/health`, `GET /api/menu`, `GET /api/payments/status` (+17 more)
+Cohesion: 0.11
+Nodes (18): API Documentation — Juancho's Pizza / GastroPro, 📂 Categories, ⚠️ Códigos de Error, `GET /api/categories`, `GET /api/health`, `GET /api/menu`, `GET /api/payments/status`, `GET /api/recipes` (+10 more)
 
 ### Community 75 - "Contribuyendo a Juancho's Pizza / GastroPro"
 
@@ -358,7 +344,7 @@ Nodes (15): 1.1 Dashboard Ejecutivo (`GastroProDashboard.tsx`), 1.2 Clientes CRM
 ### Community 77 - "dependencies"
 
 Cohesion: 0.12
-Nodes (17): dependencies, cors, dotenv, express, framer-motion, helmet, node-forge, nodemailer (+9 more)
+Nodes (16): dependencies, cors, dotenv, express, framer-motion, helmet, nodemailer, pdf-lib (+8 more)
 
 ### Community 78 - "[2.0.0] — 2026-07-15"
 
@@ -367,8 +353,8 @@ Nodes (13): [1.0.0] — 2026-06, [2.0.0] — 2026-07-15, Changelog — Juancho's
 
 ### Community 79 - "str"
 
-Cohesion: 0.43
-Nodes (5): router, createClientSchema, ESTADOS, patchClientSchema, updateClientSchema
+Cohesion: 0.19
+Nodes (9): createCategorySchema, updateCategorySchema, createClientSchema, ESTADOS, patchClientSchema, updateClientSchema, str(), strOpt() (+1 more)
 
 ### Community 80 - "🏷️ Menu Variants / Combos / Promotions"
 
@@ -382,8 +368,8 @@ Nodes (11): 📁 ARCHIVOS CLAVE, ✅ COMPLETADO, Documentación (100%), Frontend
 
 ### Community 82 - "orders.js"
 
-Cohesion: 0.39
-Nodes (5): requireSameLocation(), router, LOCATION_IDS, closeShiftSchema, openShiftSchema
+Cohesion: 0.26
+Nodes (8): createOrderSchema, itemsField, LOCATION_IDS, validOrder, updateOrderSchema, updateOrderStatusSchema, closeShiftSchema, openShiftSchema
 
 ### Community 83 - "📋 Comandas"
 
@@ -392,33 +378,33 @@ Nodes (11): 📋 Comandas, `DELETE /api/comandas/items/:id`, `GET /api/comandas/
 
 ### Community 84 - "helpers.js"
 
-Cohesion: 0.08
-Nodes (26): CartItem, CashFlow, CashRegisterEntry, Combo, CreditNote, Expense, InventoryItem, InventoryMovement (+18 more)
+Cohesion: 0.09
+Nodes (21): Campaign, CartItem, CashFlow, CashRegisterEntry, Combo, Expense, InventoryItem, InventoryMovement (+13 more)
 
 ### Community 85 - "helpers.test.js"
 
 Cohesion: 0.40
-Nodes (4): router, addPointsSchema, createRewardSchema, updateRewardSchema
+Nodes (4): clampedNumberDefaultOnUndef(), addPointsSchema, createRewardSchema, updateRewardSchema
 
 ### Community 86 - "websocket.js"
 
 Cohesion: 0.06
-Nodes (41): readAuthCookie(), router, router, notifyInvoiceUpdate(), router, bulkAddItemsSchema, closeComandaSchema, createComandaItemSchema (+33 more)
+Nodes (40): router, router, notifyInvoiceUpdate(), router, bulkAddItemsSchema, closeComandaSchema, createComandaItemSchema, createComandaSchema (+32 more)
 
 ### Community 87 - "menuExtras.js"
 
-Cohesion: 0.20
-Nodes (14): authenticate(), buildAuthCookie(), buildClearAuthCookie(), devSecretCache, generateSalt(), generateToken(), getSecret(), hashPin() (+6 more)
+Cohesion: 0.33
+Nodes (8): router, createComboSchema, createPromotionSchema, createVariantSchema, productosField, updateComboSchema, updatePromotionSchema, updateVariantSchema
 
 ### Community 88 - "boolOpt"
 
-Cohesion: 0.15
-Nodes (12): validate(), router, router, router, router, createPurchaseOrderSchema, createQrMenuConfigSchema, purchaseItemSchema (+4 more)
+Cohesion: 0.20
+Nodes (8): clampedNumber(), createPurchaseOrderSchema, createQrMenuConfigSchema, purchaseItemSchema, updatePurchaseOrderSchema, batchUpdateStatusSchema, createTableSchema, updateTableSchema
 
 ### Community 89 - "useWebSocket.ts"
 
-Cohesion: 0.11
-Nodes (17): 10. Test E2E de Host Header Injection en /api/payments/*, 11. Rate-limit + CAPTCHA en /api/consent, 12. 2FA TOTP para rol ADMIN, 13. Audit log de ARCO + consent, 14. Backup/restore drill de PostgreSQL mensual, 15. Auditoría WCAG 2.2 AA sobre consentimiento + pizza builder, 1. Limpiar el baseline de ESLint (192 errores pre-existentes), 2. Smoke test de CSP en producción (+9 more)
+Cohesion: 0.33
+Nodes (8): connect(), disconnect(), globalListeners, reconnectWS(), scheduleReconnect(), subscribeWS(), WSEvent, WSEventCallback
 
 ### Community 90 - "👥 Clients (CRM)"
 
@@ -487,13 +473,13 @@ Nodes (6): `GET /api/inventory`, `GET /api/inventory/movements`, 📦 Inventory,
 
 ### Community 103 - "campaigns.js"
 
-Cohesion: 0.39
-Nodes (5): router, CAMPAIGN_STATUSES, CAMPAIGN_TYPES, createCampaignSchema, updateCampaignSchema
+Cohesion: 0.47
+Nodes (4): CAMPAIGN_STATUSES, CAMPAIGN_TYPES, createCampaignSchema, updateCampaignSchema
 
 ### Community 104 - "EmpleadosView.tsx"
 
-Cohesion: 0.15
-Nodes (14): app, __dirname, __filename, PORT, initServiceKeys(), serviceKeyMiddleware(), VALID_SERVICES, router (+6 more)
+Cohesion: 0.33
+Nodes (4): emptyForm, FormState, LOCATION_LABELS, ROLE_LABELS
 
 ### Community 105 - "📢 Campaigns / Marketing"
 
@@ -532,8 +518,8 @@ Nodes (3): ALL_CONSOLE_ENTRIES, ALL_NETWORK_FAILURES, ALL_UNHANDLED_REJECTIONS
 
 ### Community 112 - "reviews.js"
 
-Cohesion: 0.20
-Nodes (10): generalRateLimit(), loginAttempts, loginRateLimit(), rateLimit, reviewAttempts, reviewRateLimit(), router, createReviewSchema (+2 more)
+Cohesion: 0.60
+Nodes (3): createReviewSchema, reviewStatusSchema, base
 
 ### Community 113 - "💵 Cash Register"
 
@@ -542,8 +528,8 @@ Nodes (4): 💵 Cash Register, `GET /api/cash-register?locationId=nemocon&status
 
 ### Community 114 - "💰 Tips"
 
-Cohesion: 0.17
-Nodes (12): C1 — DIAN estructura base, 📅 Calendario tentativo, CSP endurecido (sin `unsafe-inline` en `script-src`), ✅ Definition of Done (DoD) global, DIAN firma + CUFE + proveedor, 📋 Plan de Remediación — Juancho's Pizza v2.0.0, ⚠️ Riesgos identificados, 🎯 S0 — Fundaciones (cerrado) (+4 more)
+Cohesion: 0.50
+Nodes (4): `GET /api/tips?locationId=nemocon&desde=2026-01-01`, `GET /api/tips/summary`, `POST /api/tips`, 💰 Tips
 
 ### Community 115 - "Servicios Directos — Opción B"
 
@@ -562,87 +548,17 @@ Nodes (10): DigiturnoTicket, DigiturnoView(), FilterTab, playNotificationSound()
 
 ### Community 118 - "inventory.js"
 
-Cohesion: 0.10
-Nodes (22): authMiddleware(), requireRole(), initDB(), pool, MIGRATIONS, runMigrations(), router, router (+14 more)
-
-### Community 119 - "dianSigner.js"
-
-Cohesion: 0.33
-Nodes (9): calcularCUFE(), canonicalizeSimple(), CERTIFICADO_CONFIG, clearLoadedCertificate(), loadCertificate(), reloadDianCertificate(), sha256Base64(), sha384() (+1 more)
+Cohesion: 0.22
+Nodes (7): strDefault(), createInventoryItemSchema, inventoryMovementSchema, updateInventoryItemSchema, createRecipeSchema, recipeIngredientInput, updateRecipeSchema
 
 ### Community 120 - "🔐 Auth"
 
-Cohesion: 0.27
-Nodes (8): BASE_URL, normalizeResponse(), PROVIDER, sendInvoiceToProvider(), sendToAlegra(), sendToDataico(), sendToMuisca(), sendToNovasoft()
-
-### Community 121 - "extract-inline-styles.js"
-
-Cohesion: 0.20
-Nodes (9): cssPath, html, htmlPath, jsonLdMatch, log, REVERT, root, schemaPath (+1 more)
-
-### Community 122 - "consent-banner.js"
-
-Cohesion: 0.39
-Nodes (7): buildStyles(), decide(), hasAnyDecision(), init(), injectBanner(), saveDecisions(), sendToBackend()
-
-### Community 123 - "consent.js"
-
-Cohesion: 0.38
-Nodes (3): router, consentTypeSchema, postConsentSchema
-
-### Community 124 - "🔷 7. BRECHAS vs CHECKLIST ORIGINAL"
-
-Cohesion: 0.33
-Nodes (6): 7.1 Tier 0 — Bloqueante Técnico, 7.2 Tier 1 — Legal / DIAN, 7.3 Tier 2 — Operación de Salón, 7.4 Tier 3 — Catálogo y Ventas, 7.5 Tier 4 — Avanzado, 🔷 7. BRECHAS vs CHECKLIST ORIGINAL
-
-### Community 125 - "categories.js"
-
-Cohesion: 0.60
-Nodes (3): router, createCategorySchema, updateCategorySchema
-
-### Community 126 - "derechos.js"
-
-Cohesion: 0.50
-Nodes (3): derechoBaseSchema, identifierSchema, tipoSchema
-
-### Community 127 - "🔷 3. SEGURIDAD — Auditoría de Brechas"
-
-Cohesion: 0.50
-Nodes (4): 3.1 Autenticación (server/auth.js), 3.2 Middleware de Seguridad, 3.3 Brechas Detectadas (Histórico — Resueltas), 🔷 3. SEGURIDAD — Auditoría de Brechas
-
-### Community 128 - "🔷 5. DEUDA TÉCNICA DETECTADA"
-
-Cohesion: 0.50
-Nodes (4): 5.1 Deuda Alta (Prioritaria), 5.2 Deuda Media, 5.3 Deuda Baja / Cosmética, 🔷 5. DEUDA TÉCNICA DETECTADA
-
-### Community 129 - "🔷 8. RECOMENDACIONES PRIORIZADAS"
-
-Cohesion: 0.50
-Nodes (4): 🔷 8. RECOMENDACIONES PRIORIZADAS, ✅ Completado — Seguridad y Documentación, 🟡 Corto Plazo (1 semana), 🟢 Mediano Plazo (2-4 semanas)
-
-### Community 130 - "🔷 1. INVENTARIO DE MÓDULOS vs CHECKLIST"
-
 Cohesion: 0.67
-Nodes (3): 1.1 Módulos Backend (Total: 29 archivos de ruta/20 schemas), 1.2 Módulos Frontend (Total: 22 vistas de rol), 🔷 1. INVENTARIO DE MÓDULOS vs CHECKLIST
-
-### Community 131 - "🔷 2. BASE DE DATOS — Auditoría de Tablas"
-
-Cohesion: 0.67
-Nodes (3): 2.1 Inventario Completo (29 tablas), 2.2 Verificación de Celdas Fantasma, 🔷 2. BASE DE DATOS — Auditoría de Tablas
-
-### Community 132 - "🎯 S4 — Performance"
-
-Cohesion: 0.67
-Nodes (3): Compresión HTTP + paginación, Migración UUID, 🎯 S4 — Performance
-
-### Community 133 - "🎯 S1 — Datos y cuentas"
-
-Cohesion: 0.67
-Nodes (3): Habeas Data (Ley 1581/2012), JWT Cookie HttpOnly, 🎯 S1 — Datos y cuentas
+Nodes (3): 🔐 Auth, `POST /api/auth/login`, `POST /api/auth/refresh`
 
 ## Knowledge Gaps
 
-- **627 isolated node(s):** `husky.sh script`, `husky.sh script`, `semi`, `singleQuote`, `trailingComma` (+622 more)
+- **567 isolated node(s):** `husky.sh script`, `husky.sh script`, `semi`, `singleQuote`, `trailingComma` (+562 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **36 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -651,16 +567,16 @@ Nodes (3): Habeas Data (Ley 1581/2012), JWT Cookie HttpOnly, 🎯 S1 — Datos y
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `dependencies` connect `dependencies` to `AdminDashboard.tsx`, `package.json`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._
 - **Why does `@google/generative-ai` connect `AdminDashboard.tsx` to `dependencies`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+  _High betweenness centrality (0.043) - this node is a cross-community bridge._
 - **What connects `husky.sh script`, `husky.sh script`, `semi` to the rest of the system?**
-  _627 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _567 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `index.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.12962962962962962 - nodes in this community are weakly interconnected._
-- **Should `helpers.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.11436170212765957 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05217391304347826 - nodes in this community are weakly interconnected._
 - **Should `MenuDigital.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.07610993657505286 - nodes in this community are weakly interconnected._
 - **Should `App.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.054078014184397165 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0545790934320074 - nodes in this community are weakly interconnected._
+- **Should `dependencies` be split into smaller, more focused modules?**
+  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
