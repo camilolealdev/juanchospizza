@@ -71,7 +71,7 @@ El repo está sincronizado en **dos remotos públicos**:
 
 ```bash
 git remote -v                                                                # debe listar origin + camilo
-git config alias.pushall '!git push origin "$@" && git push camilo "$@"'
+git config alias.pushall '!f() { git push origin "$@" && git push camilo "$@"; }; f'
 git branch --set-upstream-to=origin/<branch> <branch>                        # tracking para git pull
 ```
 

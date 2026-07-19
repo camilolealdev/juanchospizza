@@ -1,10 +1,12 @@
 # Instrucciones para Claude
 
 ## Antes de cualquier cambio
+
 1. Lee `.ai/shared/project-context.md`
 2. Lee `.ai/shared/branding-cleanup.md`
 
 ## Reglas específicas
+
 - Trabaja en fases: diagnóstico → plan → confirmación → ejecución
 - Cero placeholders en el código
 - Cada archivo creado debe estar funcional al 100%
@@ -21,7 +23,7 @@ Setup (idempotente; ya aplicado, pero documentado para réplicas del repo):
 
 ```bash
 git remote -v                                                            # debe listar origin + camilo
-git config alias.pushall '!git push origin "$@" && git push camilo "$@"'
+git config alias.pushall '!f() { git push origin "$@" && git push camilo "$@"; }; f'
 git branch --set-upstream-to=origin/<branch> <branch>                    # tracking para git pull
 ```
 
@@ -47,17 +49,20 @@ git ls-remote --heads camilo <branch>  # SHA en camilo
 ```
 
 ## Reglas de seguridad
+
 - **NUNCA** acceder a `.env` o escribir valores reales
 - **NUNCA** hardcodear secretos, tokens, passwords
 - **SIEMPRE** usar queries parametrizadas (evitar SQL injection)
 
 ## Para Claude Code (CLI)
+
 - Antes de tocar archivos, ejecuta `git status`
 - No hagas commits automáticos sin permiso explícito
 - Si vas a modificar más de 5 archivos, presenta el plan primero
 - Respeta el `.gitignore`
 
 ## Comandos útiles del proyecto
+
 - `npm run dev` — Levantar frontend
 - `npm run server` — Levantar backend
 - `npm run dev:all` — Frontend + Backend
@@ -65,6 +70,7 @@ git ls-remote --heads camilo <branch>  # SHA en camilo
 - `npm run lint` — Linter
 
 ## Stack del proyecto
+
 - React + Vite + Tailwind (frontend)
 - Express.js (backend)
 - Turso libSQL (DB)
