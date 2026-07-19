@@ -11,6 +11,41 @@
 - Si modificas un import, verifica que el archivo destino existe
 - Respetar la estructura actual: frontend en `src/`, backend en `server/`
 
+## Git workflow — dual-upstream
+
+**Propósito:** `origin` (jastigoga/pizzeria) es el repo canónico con PRs y `master` oficial. `camilo` (camilolealdev/juanchospizza) es fork personal / mirror. Las ramas de feature se sincronizan a ambos; `master` solo va a `origin` (deliberadamente).
+
+**OBLIGATORIO** usar `git pushall <ref>` (alias configurado en `.git/config`). **NUNCA** usar `git push` plano: solo subiría a `origin` y los commits divergen entre los 2 remotos.
+
+Setup (idempotente; ya aplicado, pero documentado para réplicas del repo):
+
+```bash
+git remote -v                                                            # debe listar origin + camilo
+git config alias.pushall '!git push origin "$@" && git push camilo "$@"'
+git branch --set-upstream-to=origin/<branch> <branch>                    # tracking para git pull
+```
+
+Usos comunes:
+
+- `git pushall feat/foo` — nueva rama de feature (ambos remotos).
+- `git pushall --tags` — tags sincronizados.
+- `git pushall -f` — solo si reescribís historia. `--force-with-lease` no está expuesto vía alias; correr `git push origin <ref> --force-with-lease && git push camilo <ref> --force-with-lease` manualmente.
+
+**Caveat — `master`:** la rama `master` SOLO va a `origin`. NO usar `git pushall master`:
+
+```bash
+git push origin master                # solo a origin, deliberadamente no a camilo
+```
+
+Diagnóstico rápido cuando los remotos se desincronizan:
+
+```bash
+git ls-remote --heads origin <branch>  # SHA en origin
+git ls-remote --heads camilo <branch>  # SHA en camilo
+# Ambos deben coincidir. Para master, camilo debe NO existir (es branch-only-en-origin por diseño).
+# Si difieren: `git push camilo <branch> --force-with-lease` para resync manual.
+```
+
 ## Reglas de seguridad
 - **NUNCA** acceder a `.env` o escribir valores reales
 - **NUNCA** hardcodear secretos, tokens, passwords

@@ -471,33 +471,37 @@ export const PRODUCTS = [
     image: IMG.churrasco,
   },
 
-  // ── Adicionales (pills sueltos del menú) ────────────────────────
+  // ── Adicionales (sección propia del menú -- ingrediente extra en
+  //    cualquier plato + porciones de papa sueltas) ────────────────
   {
     id: 'add-ingrediente',
     categoryId: 'adicionales',
-    nombre: 'Adicionales',
-    descripcion: 'Adicional por ingrediente extra',
+    nombre: 'Adicional de ingrediente',
+    descripcion: 'Súmale un ingrediente extra a cualquier plato del menú: pizza / hamburguesa / salchipapa / perro caliente',
     basePrice: 3500,
     type: 'entrada',
     image: '',
+    vegetariano: true,
   },
   {
     id: 'add-francesa',
     categoryId: 'adicionales',
     nombre: 'Porción de francesa',
-    descripcion: 'Porción de papa francesa',
+    descripcion: 'Porción de papa francesa sola -- para acompañar o compartir',
     basePrice: 7000,
     type: 'entrada',
-    image: '',
+    image: IMG.salchipapa,
+    vegetariano: true,
   },
   {
     id: 'add-criolla',
     categoryId: 'adicionales',
     nombre: 'Porción de criolla',
-    descripcion: 'Porción de papa criolla',
+    descripcion: 'Porción de papa criolla sola -- para acompañar o compartir',
     basePrice: 7000,
     type: 'entrada',
-    image: '',
+    image: IMG.salchipapa,
+    vegetariano: true,
   },
 
   // ── Bebidas ──────────────────────────────────────────────────────

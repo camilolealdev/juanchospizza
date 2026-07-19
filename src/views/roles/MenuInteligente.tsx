@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { api, MenuVariant, MenuCombo, MenuPromotion } from '../../services/api';
+import { api, MenuVariant, MenuCombo, MenuPromotion, PizzaMenuSize } from '../../services/api';
 import { Product, Category } from '../../types';
 
-type Tab = 'productos' | 'variantes' | 'combos' | 'promociones' | 'menuqr';
+type Tab = 'productos' | 'variantes' | 'tamanos' | 'combos' | 'promociones' | 'menuqr';
 type ModalMode = 'add' | 'edit';
 
 const PROMO_TIPOS = ['Porcentaje', 'Compre y Lleve', 'Fijo'];
@@ -96,6 +96,7 @@ const renderStars = (n: number) =>
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'productos', label: 'Productos', icon: 'fa-pizza-slice' },
   { key: 'variantes', label: 'Variantes', icon: 'fa-ruler-combined' },
+  { key: 'tamanos', label: 'Tamaños de Pizza', icon: 'fa-ruler' },
   { key: 'combos', label: 'Combos', icon: 'fa-box-open' },
   { key: 'promociones', label: 'Promociones', icon: 'fa-tag' },
   { key: 'menuqr', label: 'Menú QR', icon: 'fa-qrcode' },
@@ -192,6 +193,7 @@ const MenuInteligente: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [productos, setProductos] = useState<Product[]>([]);
   const [variantes, setVariantes] = useState<MenuVariant[]>([]);
+  const [tamanos, setTamanos] = useState<PizzaMenuSize[]>([]);
   const [combos, setCombos] = useState<MenuCombo[]>([]);
   const [promociones, setPromociones] = useState<MenuPromotion[]>([]);
 
@@ -217,6 +219,10 @@ const MenuInteligente: React.FC = () => {
   /* ── Variant form ── */
   const [vf, setVf] = useState({ productoId: '', nombre: '', precioModificador: 0, activo: true });
   const [editVariantId, setEditVariantId] = useState<string | null>(null);
+
+  /* ── Pizza size form ── */
+  const [tf, setTf] = useState({ nombre: '', precio: 0, incluidos: 1, porciones: 4, activo: true });
+  const [editTamanoId, setEditTamanoId] = useState<string | null>(null);
 
   /* ── Combo form ── */
   const [cf, setCf] = useState({ nombre: '', descripcion: '', precioTotal: 0, ahorro: 0, itemsText: '' });
@@ -244,16 +250,18 @@ const MenuInteligente: React.FC = () => {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [cats, prods, vars, cbs, promos] = await Promise.all([
+      const [cats, prods, vars, sizes, cbs, promos] = await Promise.all([
         api.getCategories(),
         api.getProducts(),
         api.getMenuVariants(),
+        api.getPizzaSizes(),
         api.getMenuCombos(),
         api.getMenuPromotions(),
       ]);
       setCategories(cats);
       setProductos(prods);
       setVariantes(vars);
+      setTamanos(sizes);
       setCombos(cbs);
       setPromociones(promos);
     } catch (e) {
@@ -280,6 +288,11 @@ const MenuInteligente: React.FC = () => {
       .getMenuVariants()
       .then(setVariantes)
       .catch((e) => showError('Error recargando variantes', e));
+  const reloadTamanos = () =>
+    api
+      .getPizzaSizes()
+      .then(setTamanos)
+      .catch((e) => showError('Error recargando tamaños', e));
   const reloadCombos = () =>
     api
       .getMenuCombos()
@@ -458,6 +471,64 @@ const MenuInteligente: React.FC = () => {
       reloadVariantes();
     } catch (e) {
       showError('Error actualizando variante', e);
+    }
+  };
+
+  /* ── Pizza size CRUD -- Small/Junior/Mediana/Familiar, usados por el menú de
+     sabores fijos Y por el armador "Crea tu pizza" del sitio público. ── */
+  const openAddTamano = () => {
+    setModalMode('add');
+    setModalEntity('tamano');
+    setTf({ nombre: '', precio: 0, incluidos: 1, porciones: 4, activo: true });
+    setEditTamanoId(null);
+    setModalOpen(true);
+  };
+  const openEditTamano = (s: PizzaMenuSize) => {
+    setModalMode('edit');
+    setModalEntity('tamano');
+    setTf({ nombre: s.nombre, precio: s.precio, incluidos: s.incluidos, porciones: s.porciones || 0, activo: s.activo });
+    setEditTamanoId(s.id);
+    setModalOpen(true);
+  };
+  const saveTamano = async () => {
+    if (!tf.nombre.trim()) {
+      showToast('Completa el nombre del tamaño');
+      return;
+    }
+    try {
+      if (modalMode === 'add') {
+        await api.createPizzaSize(tf);
+        showToast(`Tamaño "${tf.nombre}" creado`);
+      } else if (editTamanoId) {
+        await api.updatePizzaSize(editTamanoId, tf);
+        showToast('Tamaño actualizado');
+      }
+      setModalOpen(false);
+      reloadTamanos();
+    } catch (e) {
+      showError('Error guardando tamaño', e);
+    }
+  };
+  const deleteTamano = (id: string) => {
+    setConfirmAction(() => async () => {
+      try {
+        await api.deletePizzaSize(id);
+        showToast('Tamaño eliminado');
+        reloadTamanos();
+      } catch (e) {
+        showError('Error eliminando tamaño', e);
+      } finally {
+        setConfirmOpen(false);
+      }
+    });
+    setConfirmOpen(true);
+  };
+  const toggleTamano = async (s: PizzaMenuSize) => {
+    try {
+      await api.updatePizzaSize(s.id, { activo: !s.activo });
+      reloadTamanos();
+    } catch (e) {
+      showError('Error actualizando tamaño', e);
     }
   };
 
@@ -730,6 +801,73 @@ const MenuInteligente: React.FC = () => {
         </div>
       );
     }
+    if (modalEntity === 'tamano') {
+      return (
+        <div className="space-y-5">
+          <div>
+            <label className="text-[9px] font-black text-stone-500 uppercase tracking-widest mb-2 block">
+              Nombre
+            </label>
+            <input
+              value={tf.nombre}
+              onChange={(e) => setTf((v) => ({ ...v, nombre: e.target.value }))}
+              placeholder="Ej: Familiar"
+              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold outline-none focus:border-orange-600/50 transition-colors"
+            />
+          </div>
+          <div>
+            <label className="text-[9px] font-black text-stone-500 uppercase tracking-widest mb-2 block">
+              Precio ($)
+            </label>
+            <input
+              type="number"
+              value={tf.precio || ''}
+              onChange={(e) => setTf((v) => ({ ...v, precio: parseInt(e.target.value) || 0 }))}
+              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold outline-none focus:border-orange-600/50 transition-colors"
+            />
+          </div>
+          <div>
+            <label className="text-[9px] font-black text-stone-500 uppercase tracking-widest mb-2 block">
+              Ingredientes/sabores incluidos
+            </label>
+            <input
+              type="number"
+              value={tf.incluidos || ''}
+              onChange={(e) => setTf((v) => ({ ...v, incluidos: parseInt(e.target.value) || 0 }))}
+              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold outline-none focus:border-orange-600/50 transition-colors"
+            />
+          </div>
+          <div>
+            <label className="text-[9px] font-black text-stone-500 uppercase tracking-widest mb-2 block">
+              Porciones
+            </label>
+            <input
+              type="number"
+              value={tf.porciones || ''}
+              onChange={(e) => setTf((v) => ({ ...v, porciones: parseInt(e.target.value) || 0 }))}
+              className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold outline-none focus:border-orange-600/50 transition-colors"
+            />
+          </div>
+          <div className="flex items-center justify-between pt-2">
+            <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Activo</label>
+            <button
+              onClick={() => setTf((v) => ({ ...v, activo: !v.activo }))}
+              className={`relative w-12 h-6 rounded-full transition-all ${tf.activo ? 'bg-orange-600' : 'bg-stone-800'}`}
+            >
+              <div
+                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${tf.activo ? 'left-6' : 'left-0.5'}`}
+              ></div>
+            </button>
+          </div>
+          <button
+            onClick={saveTamano}
+            className="w-full mt-6 bg-orange-600 hover:bg-orange-500 py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-xl"
+          >
+            {modalMode === 'add' ? 'Crear Tamaño' : 'Guardar Cambios'}
+          </button>
+        </div>
+      );
+    }
     if (modalEntity === 'combo') {
       return (
         <div className="space-y-5">
@@ -946,6 +1084,7 @@ const MenuInteligente: React.FC = () => {
             onClick={() => {
               if (tab === 'productos') openAddProduct();
               else if (tab === 'variantes') openAddVariant();
+              else if (tab === 'tamanos') openAddTamano();
               else if (tab === 'combos') openAddCombo();
               else if (tab === 'promociones') openAddPromo();
               else showToast('Acción no disponible en esta sección');
@@ -957,11 +1096,13 @@ const MenuInteligente: React.FC = () => {
               ? 'PRODUCTO'
               : tab === 'variantes'
                 ? 'VARIANTE'
-                : tab === 'combos'
-                  ? 'COMBO'
-                  : tab === 'promociones'
-                    ? 'PROMO'
-                    : ''}
+                : tab === 'tamanos'
+                  ? 'TAMAÑO'
+                  : tab === 'combos'
+                    ? 'COMBO'
+                    : tab === 'promociones'
+                      ? 'PROMO'
+                      : ''}
           </button>
         </div>
       </div>
@@ -985,11 +1126,13 @@ const MenuInteligente: React.FC = () => {
                 ? productos.length
                 : t.key === 'variantes'
                   ? variantes.length
-                  : t.key === 'combos'
-                    ? combos.length
-                    : t.key === 'promociones'
-                      ? promociones.length
-                      : ''}
+                  : t.key === 'tamanos'
+                    ? tamanos.length
+                    : t.key === 'combos'
+                      ? combos.length
+                      : t.key === 'promociones'
+                        ? promociones.length
+                        : ''}
             </span>
           </button>
         ))}
@@ -1128,6 +1271,64 @@ const MenuInteligente: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* TAB: Tamaños de Pizza */}
+      {tab === 'tamanos' && (
+        <div className="bg-stone-900/40 rounded-[2.5rem] border border-white/5 shadow-xl">
+          <div className="p-8 border-b border-white/5">
+            <h3 className="font-black text-sm uppercase tracking-widest text-stone-300">
+              <i className="fas fa-ruler text-orange-500 mr-4"></i>
+              Tamaños de Pizza (menú fijo + armador &quot;Crea tu pizza&quot;)
+            </h3>
+          </div>
+          {tamanos.length === 0 && (
+            <div className="p-12 text-center text-stone-600 font-bold text-sm uppercase tracking-widest">
+              No hay tamaños. Crea uno.
+            </div>
+          )}
+          <div className="p-8 space-y-3">
+            {tamanos.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between bg-stone-950/50 px-6 py-4 rounded-2xl border border-white/5 group/tamano"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-3 h-3 rounded-full ${s.activo ? 'bg-green-500' : 'bg-stone-700'}`}></div>
+                  <span className="font-black text-base text-white">{s.nombre}</span>
+                  <span className="text-[9px] text-stone-600 font-bold uppercase tracking-wider bg-stone-950 px-3 py-1 rounded-full border border-white/5">
+                    {s.incluidos} incluido{s.incluidos === 1 ? '' : 's'} · {s.porciones ?? 0} porciones
+                  </span>
+                </div>
+                <div className="flex items-center gap-6">
+                  <span className="font-black text-orange-500">{formatPrice(s.precio)}</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openEditTamano(s)}
+                      className="w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center text-stone-500 hover:text-orange-500 opacity-0 group-hover/tamano:opacity-100 transition-all"
+                    >
+                      <i className="fas fa-pen text-[10px]"></i>
+                    </button>
+                    <button
+                      onClick={() => deleteTamano(s.id)}
+                      className="w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center text-stone-500 hover:text-red-500 opacity-0 group-hover/tamano:opacity-100 transition-all"
+                    >
+                      <i className="fas fa-trash text-[10px]"></i>
+                    </button>
+                    <button
+                      onClick={() => toggleTamano(s)}
+                      className={`relative w-10 h-5 rounded-full transition-all ml-2 ${s.activo ? 'bg-orange-600' : 'bg-stone-800'}`}
+                    >
+                      <div
+                        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${s.activo ? 'left-5' : 'left-0.5'}`}
+                      ></div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

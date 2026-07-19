@@ -12,6 +12,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,700;1,400&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:title" content="Juancho's Pizza y Comidas Rápidas - Nemocón &amp; Zipaquirá">
+    <meta property="og:description" content="Las mejores pizzas artesanales, lasañas y spaguettis de Nemocón y Zipaquirá directamente a tu puerta.">
+    <meta property="og:image" content="https://juanchospizza.com/og-image.jpg">
+    <meta property="og:url" content="https://juanchospizza.com">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="es_CO">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Juancho's Pizza - Nemocón &amp; Zipaquirá">
+    <meta name="twitter:description" content="Las mejores pizzas artesanales de Nemocón y Zipaquirá directamente a tu puerta.">
+    <meta name="twitter:image" content="https://juanchospizza.com/og-image.jpg">
+
     <link rel="stylesheet" href="/styles.css">
 <script type="application/ld+json">
 {
@@ -110,8 +122,9 @@
     </ul>
 </header>
 
-<a href="https://wa.me/573117074843?text=Hola%2C%20quiero%20hacer%20un%20pedido" target="_blank" class="floating-chatbot" title="Chatea con nosotros">
+<a href="https://wa.me/573117074843?text=Hola%2C%20quiero%20hacer%20un%20pedido" target="_blank" class="floating-chatbot" id="floatingWhatsApp" title="Chatea con nosotros">
     <i class="fa-brands fa-whatsapp"></i>
+    <span class="wa-badge" id="waBadge" style="display:none">0</span>
 </a>
 
 <div class="page-container active" data-page="inicio">
@@ -358,30 +371,28 @@
     }
     var MASTER_POSITIONS = generatePizzaPositions(120);
 
-    /* ---- SIZE DATA ---- */
-    var SIZE_DATA = [
-      { id:'small', label:'Small', price:30000, incluidos:1, portions:4, sabores:1 },
-      { id:'junior', label:'Junior', price:42000, incluidos:2, portions:6, sabores:2 },
-      { id:'mediana', label:'Mediana', price:52000, incluidos:2, portions:8, sabores:2 },
-      { id:'familiar', label:'Familiar', price:88000, incluidos:3, portions:10, sabores:3 }
-    ];
+    /* ---- SIZE DATA -- cargado de /api/pizza-sizes en loadMenuData() ---- */
+    var SIZE_DATA = [];
 
-    /* ---- SABORES PREDEFINIDOS ---- */
+    /* ---- SABORES PREDEFINIDOS -- id/nombre/emoji/desc/color son
+       presentación (sin equivalente en la DB, se quedan acá). `ings` se
+       resuelve en loadMenuData() emparejando `desc` contra los ingredientes
+       reales cargados -- así seleccionar "Hawaiana" marca los chips reales
+       Piña + Jamón en vez de ids del catálogo gourmet viejo. ---- */
     var SABORES_PREDEFINIDOS = [
-      { id:'hawaiana', nombre:'Hawaiana', ings:['veg_2','carne_18'], emoji:'🍍', desc:'Piña, Jamón', color:'#e67e22' },
-      { id:'pollo_champ', nombre:'Pollo y Champiñones', ings:['carne_23','veg_7'], emoji:'🍗', desc:'Pollo desmechado, Champiñones', color:'#d35400' },
-      { id:'jamon_champ_pollo', nombre:'Jamón, Champiñón y Pollo', ings:['carne_18','veg_7','carne_23'], emoji:'🥓', desc:'Jamón, Champiñones, Pollo desmechado', color:'#c0392b' },
-      { id:'carnes', nombre:'Carnes', ings:['carne_18','carne_11','carne_19'], emoji:'🥩', desc:'Jamón, Salami, Cabano', color:'#962D22' },
-      { id:'costillitas_bbq', nombre:'Costillitas BBQ', ings:['carne_18','carne_20','veg_11'], emoji:'🦴', desc:'Jamón, Costillas BBQ, Maíz tierno', color:'#d35400' },
-      { id:'criolla', nombre:'Criolla', ings:['carne_21','veg_11'], emoji:'🇨🇴', desc:'Carne desmechada, Maíz tierno', color:'#f39c12' },
-      { id:'mexicana', nombre:'Mexicana', ings:['carne_12','veg_11','veg_1','veg_29','ext_14'], emoji:'🌮', desc:'Carne molida, Maíz tierno, Tomate, Cilantro, Tostacos', color:'#e74c3c' },
-      { id:'ranchera', nombre:'Ranchera', ings:['veg_7','veg_5','veg_11','carne_22'], emoji:'🤠', desc:'Champiñones, Cebolla, Maíz tierno, Chorizo', color:'#8e44ad' },
-      { id:'de_la_casa', nombre:'De la Casa', ings:['veg_7','veg_5','carne_21'], emoji:'🏠', desc:'Champiñones, Cebolla, Carne desmechada', color:'#2c3e50' },
-      { id:'espanola', nombre:'Española', ings:['veg_18','carne_7','veg_11','veg_7'], emoji:'🇪🇸', desc:'Espinaca, Tocineta, Maíz tierno, Champiñón', color:'#c0392b' },
-      { id:'napolitana', nombre:'Napolitana', ings:['veg_1','veg_15'], emoji:'🇮🇹', desc:'Tomate, Orégano', color:'#e74c3c' },
-      { id:'vegetariana', nombre:'Vegetariana', ings:['veg_7','veg_11','veg_5'], emoji:'🥗', desc:'Champiñón, Maíz tierno, Cebolla', color:'#27ae60' },
-      { id:'tropical', nombre:'Tropical', ings:['dul_20','veg_2','dul_21','dul_7'], emoji:'🌴', desc:'Cerezas, Piña, Duraznos, Uvas pasas', color:'#e84393' },
-      { id:'queso_bocadillo', nombre:'Queso y Bocadillo', ings:['ext_4','ext_15'], emoji:'🧀', desc:'Queso y Bocadillo', color:'#f39c12' }
+      { id:'hawaiana', nombre:'Hawaiana', ings:[], emoji:'🍍', desc:'Piña, Jamón', color:'#e67e22' },
+      { id:'pollo_champ', nombre:'Pollo y Champiñones', ings:[], emoji:'🍗', desc:'Jamón, Champiñones, Pollo desmechado', color:'#d35400' },
+      { id:'carnes', nombre:'Carnes', ings:[], emoji:'🥩', desc:'Jamón, Salami, Cabano', color:'#962D22' },
+      { id:'costillitas_bbq', nombre:'Costillitas BBQ', ings:[], emoji:'🦴', desc:'Jamón, Costillas BBQ, Maíz tierno', color:'#d35400' },
+      { id:'criolla', nombre:'Criolla', ings:[], emoji:'🇨🇴', desc:'Carne desmechada, Maíz tierno', color:'#f39c12' },
+      { id:'mexicana', nombre:'Mexicana', ings:[], emoji:'🌮', desc:'Carne molida, Maíz tierno, Tomate, Cilantro, Tostacos', color:'#e74c3c' },
+      { id:'ranchera', nombre:'Ranchera', ings:[], emoji:'🤠', desc:'Champiñones, Cebolla, Maíz tierno, Chorizo', color:'#8e44ad' },
+      { id:'de_la_casa', nombre:'De la Casa', ings:[], emoji:'🏠', desc:'Champiñones, Cebolla, Carne desmechada', color:'#2c3e50' },
+      { id:'espanola', nombre:'Española', ings:[], emoji:'🇪🇸', desc:'Espinaca, Tocineta, Maíz tierno, Champiñones', color:'#c0392b' },
+      { id:'napolitana', nombre:'Napolitana', ings:[], emoji:'🇮🇹', desc:'Tomate, Orégano', color:'#e74c3c' },
+      { id:'vegetariana', nombre:'Vegetariana', ings:[], emoji:'🥗', desc:'Champiñones, Maíz tierno, Cebolla', color:'#27ae60' },
+      { id:'tropical', nombre:'Tropical', ings:[], emoji:'🌴', desc:'Cerezas, Piña, Duraznos, Uvas pasas', color:'#e84393' },
+      { id:'queso_bocadillo', nombre:'Queso y Bocadillo', ings:[], emoji:'🧀', desc:'Queso extra, Bocadillo', color:'#f39c12' }
     ];
 
     /* ---- FORMATO ---- */
@@ -942,10 +953,51 @@
       });
     }
 
+    /* ---- CARGA REAL DE DATOS -- /api/pizza-sizes + /api/ingredients (ver
+       server/seedData/juanchosMenu.js). Reemplaza SIZE_DATA/CTP_INGREDIENTS
+       (antes hardcodeados acá, desincronizados del catálogo real que
+       administra la CRM) y resuelve los ingredientes de cada sabor
+       predefinido emparejando su `desc` contra los nombres reales. ---- */
+    function normalizeText(s) {
+      return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    }
+
+    function loadMenuData() {
+      return Promise.all([
+        fetch('/api/pizza-sizes').then(function(r) { return r.json(); }),
+        fetch('/api/ingredients').then(function(r) { return r.json(); })
+      ]).then(function(results) {
+        var sizes = (results[0] || []).filter(function(s) { return s.activo; }).sort(function(a, b) { return a.precio - b.precio; });
+        var ingredients = (results[1] || []).filter(function(i) { return i.disponible; });
+
+        SIZE_DATA = sizes.map(function(s) {
+          return { id: s.id, label: s.nombre, price: s.precio, incluidos: s.incluidos, portions: s.porciones || 0, sabores: s.incluidos };
+        });
+
+        CTP_INGREDIENTS = { carnes: [], vegetales: [], frutas_dulces: [], extras: [] };
+        ingredients.forEach(function(ing) {
+          var group = CATEGORIA_TO_GROUP[ing.categoria];
+          if (!group) return;
+          CTP_INGREDIENTS[group].push({ id: ing.id, nombre: ing.nombre, icon: CATEGORIA_ICON[ing.categoria] || 'circle', premium: !!ing.premium });
+        });
+
+        var idByName = {};
+        ingredients.forEach(function(ing) { idByName[normalizeText(ing.nombre)] = ing.id; });
+        SABORES_PREDEFINIDOS.forEach(function(sabor) {
+          sabor.ings = sabor.desc.split(',').map(function(piece) { return idByName[normalizeText(piece)]; }).filter(Boolean);
+        });
+      });
+    }
+
     /* ---- INIT ---- */
-    // Restore saved state
-    loadState();
-    renderAll();
+    sizesContainer.innerHTML = '<p style="color:#8fa382;padding:16px 0;">Cargando tamaños…</p>';
+    loadMenuData().then(function() {
+      // Restore saved state
+      loadState();
+      renderAll();
+    }).catch(function() {
+      sizesContainer.innerHTML = '<p style="color:#8fa382;padding:16px 0;">No pudimos cargar el armador. Intenta de nuevo o pide por WhatsApp.</p>';
+    });
   })();
   </script>
 
@@ -1132,6 +1184,55 @@
 </div>
 
 <div id="reviews-mount"></div>
+
+<!-- WhatsApp dinámico: pre-llena el mensaje con los items del carrito -->
+<script>
+(function(){
+  var waBtn = document.getElementById('floatingWhatsApp');
+  var waBadge = document.getElementById('waBadge');
+  if (!waBtn) return;
+
+  function buildWAMessage() {
+    try {
+      var items = JSON.parse(localStorage.getItem('juanchos_cart_items') || '[]');
+      if (items.length === 0) {
+        if (waBadge) waBadge.style.display = 'none';
+        return 'Hola, quiero hacer un pedido';
+      }
+      var count = items.reduce(function(s, i) { return s + (i.quantity || 1); }, 0);
+      if (waBadge) { waBadge.textContent = count; waBadge.style.display = 'flex'; }
+      var lines = [];
+      lines.push('🍕 *Nuevo Pedido Juancho\'s Pizza*');
+      lines.push('');
+      items.forEach(function(item, i) {
+        var name = item.name || 'Producto';
+        var qty = item.quantity || 1;
+        var total = (item.price || 0) * qty;
+        lines.push('*' + (i+1) + '. ' + name + '* x' + qty + ' — $' + total.toLocaleString('es-CO'));
+        if (item.details) lines.push('   _' + item.details + '_');
+      });
+      lines.push('');
+      var granTotal = items.reduce(function(s, i) { return s + (i.price || 0) * (i.quantity || 1); }, 0);
+      lines.push('*Total: $' + granTotal.toLocaleString('es-CO') + '*');
+      lines.push('');
+      lines.push('⏱️ _Tiempo estimado: 25-35 min_');
+      return encodeURIComponent(lines.join('\n'));
+    } catch(e) { return encodeURIComponent('Hola, quiero hacer un pedido'); }
+  }
+
+  function updateWALink() {
+    var msg = buildWAMessage();
+    waBtn.href = 'https://wa.me/573117074843?text=' + msg;
+  }
+
+  // Actualizar al cargar y cada vez que el carrito cambie
+  updateWALink();
+  window.addEventListener('cart-updated', updateWALink);
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'juanchos_cart_items') updateWALink();
+  });
+})();
+</script>
 
 <!-- ===== PREMIUM DIGITAL CARD — Sección final de la web ===== -->
 <section id="premium-card">
