@@ -411,7 +411,10 @@ if (confirmBtn) {
         // Call into CartContext (React) if mounted, otherwise local fallback.
         // Check via named reference instead of arguments.callee (deprecated).
         if (window.__pizzaBuilderAddToCart !== __pizzaBuilderFallback) {
-            window.__pizzaBuilderAddToCart('Pizza Personalizada', details);
+            // currentSize ya es 'Personal'/'Mediana'/'Grande' -- mismos valores
+            // que el enum legacy PizzaSize, así OrderItem.size no cae al
+            // fallback PERSONAL cuando el cliente eligió otro tamaño acá.
+            window.__pizzaBuilderAddToCart('Pizza Personalizada', details, currentSize);
         } else {
             itemsInCart++;
             if (cartCounter) cartCounter.textContent = itemsInCart;

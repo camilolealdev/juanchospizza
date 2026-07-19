@@ -99,14 +99,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const dough = doughEl?.textContent || 'Personalizada';
       const itemDetails = details || `Pizza artesanal · ${dough}`;
       // IMPORTANTE: no defaultear size a 'small' acá (decisión del code-review).
-      // Si `public/pizza-builder.js` renderiza un Familiar de $88k y olvida
-      // pasar size, falsificarlo a 'small' silenciaría el OrderItem.size como
-      // 'small' en cocina (mismatch precio/tamaño). Mejor que item.size quede
-      // undefined y MenuDigital.buildOrderDraft caiga al fallback legacy
-      // (PizzaSize.PERSONAL) — menos mentiroso que mentir sobre el size nuevo.
-      // TODO: actualizar public/pizza-builder.js para que SIEMPRE pase size
-      // cuando llame al bridge acá y este default-relaxation ya no sea
-      // necesario.
+      // public/pizza-builder.js ya pasa siempre currentSize ('Personal'/
+      // 'Mediana'/'Grande') al llamar este puente, pero si algún caller nuevo
+      // lo olvida, mejor que item.size quede undefined y buildOrderDraft caiga
+      // al fallback legacy (PizzaSize.PERSONAL) que mentir con un size falso.
       const itemSize = size;
 
       const id = 'pizza-builder-' + Date.now();
