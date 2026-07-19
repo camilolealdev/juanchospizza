@@ -1197,7 +1197,7 @@
       var items = JSON.parse(localStorage.getItem('juanchos_cart_items') || '[]');
       if (items.length === 0) {
         if (waBadge) waBadge.style.display = 'none';
-        return 'Hola, quiero hacer un pedido';
+        return encodeURIComponent('Hola, quiero hacer un pedido');
       }
       var count = items.reduce(function(s, i) { return s + (i.quantity || 1); }, 0);
       if (waBadge) { waBadge.textContent = count; waBadge.style.display = 'flex'; }
