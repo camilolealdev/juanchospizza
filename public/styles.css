@@ -780,3 +780,398 @@
 .crm-badge-red { background: rgba(192,57,43,.15); color: #e84c35; border: 1px solid rgba(192,57,43,.25); }
 .crm-badge-gold { background: rgba(249,220,92,.12); color: #F9DC5C; border: 1px solid rgba(249,220,92,.2); }
 .crm-badge-green { background: rgba(34,197,94,.12); color: #4ade80; border: 1px solid rgba(34,197,94,.2); }
+
+/* ============================================
+   CREA TU PIZZA (CTP) — Quick Builder Styles
+   ============================================ */
+.ctp-section{
+  --ctp-card-bg: #ffffff;
+  --ctp-line: rgba(139,87,42,.15);
+  --ctp-gold: var(--amarillo-calido, #F9DC5C);
+  --ctp-orange: var(--rrojo-acento, #C0392B);
+  --ctp-cream: var(--bg-general, #F4EFEA);
+  --ctp-sage: #8fa382;
+  --ctp-muted: var(--marron-madera, #8B572A);
+  font-family: var(--font-body, 'Poppins', sans-serif);
+  color: var(--negro-carbon, #1A1A1A);
+  padding: 60px 20px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.ctp-section .ctp-head{ text-align:center; margin-bottom: 40px; }
+.ctp-section .ctp-eyebrow{
+  font-family:var(--font-headings, 'Bitter'), serif; font-size:.72rem; letter-spacing:3px;
+  text-transform:uppercase; color: var(--ctp-orange);
+}
+.ctp-section .ctp-title{
+  font-family:var(--font-headings, 'Bitter'), serif; font-weight:900;
+  font-size: clamp(2rem, 5vw, 2.6rem); color: var(--negro-carbon, #1A1A1A);
+  margin: 6px 0 8px;
+}
+.ctp-section .ctp-desc{ color: var(--ctp-muted); opacity:.6; font-size:.92rem; }
+
+.ctp-section .ctp-grid{
+  display:grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  gap: 22px;
+  align-items:start;
+}
+@media (max-width: 900px){
+  .ctp-section .ctp-grid{ grid-template-columns: 1fr; }
+}
+
+.ctp-section .ctp-card{
+  background: var(--ctp-card-bg);
+  border: 1px solid var(--ctp-line);
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 2px 12px rgba(139,87,42,.06);
+}
+
+.ctp-section .ctp-step{
+  font-family:var(--font-headings, 'Bitter'), serif; font-size:1rem; font-weight:700;
+  color: var(--negro-carbon, #1A1A1A); margin-bottom: 16px;
+}
+
+.ctp-section .ctp-sizes{ display:flex; flex-direction:column; gap:10px; }
+.ctp-section .ctp-size{
+  display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+  background: transparent; border:1px solid var(--ctp-line);
+  border-radius: 10px; padding: 12px 14px; cursor:pointer;
+  color: var(--negro-carbon, #1A1A1A); font-family:inherit; text-align:left;
+  transition: all .18s ease; width:100%;
+}
+.ctp-section .ctp-size:hover{ border-color: var(--ctp-orange); }
+.ctp-section .ctp-size.active{
+  border-color: var(--ctp-orange); background: rgba(192,57,43,0.06);
+}
+.ctp-section .ctp-size-name{ font-family:var(--font-headings, 'Bitter'), serif; font-weight:700; font-size:1.05rem; }
+.ctp-section .ctp-size-info{ font-size:.75rem; color: var(--ctp-muted); opacity:.6; }
+.ctp-section .ctp-size-price{ font-family:var(--font-headings, 'Bitter'), serif; font-weight:700; color: var(--ctp-orange); font-size:.95rem; margin-top:4px; }
+
+.ctp-section .ctp-group{ margin-bottom: 18px; }
+.ctp-section .ctp-group:last-child{ margin-bottom: 0; }
+.ctp-section .ctp-group-title{
+  font-size:.72rem; text-transform:uppercase; letter-spacing:1.5px;
+  color: var(--ctp-orange); margin-bottom: 10px;
+}
+.ctp-section .ctp-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+.ctp-section .ctp-chip{
+  position:relative; display:inline-flex; align-items:center;
+  border:1px solid var(--ctp-line); border-radius: 999px;
+  padding: 7px 14px; font-size:.82rem; color: var(--ctp-muted);
+  cursor:pointer; transition: all .15s ease;
+  background: rgba(244,239,234,.4);
+}
+.ctp-section .ctp-chip input{ position:absolute; opacity:0; width:0; height:0; }
+.ctp-section .ctp-chip:hover{ border-color: var(--ctp-orange); }
+.ctp-section .ctp-chip input:checked + span{ color: #fff; }
+.ctp-section .ctp-chip:has(input:checked){
+  background: var(--ctp-orange); border-color: var(--ctp-orange); color:#fff;
+}
+.ctp-section .ctp-chip:has(input:checked) span{ color: #fff; font-weight:700; }
+
+.ctp-section .ctp-summary-size{
+  font-family:var(--font-headings, 'Bitter'), serif; font-weight:700; color: var(--ctp-orange);
+  margin-bottom: 12px; font-size: .95rem;
+}
+.ctp-section .ctp-summary-list{ list-style:none; padding:0; margin:0 0 16px; display:flex; flex-direction:column; gap:6px; min-height: 40px; }
+.ctp-section .ctp-summary-list li{
+  font-size:.85rem; color: var(--negro-carbon, #1A1A1A);
+  padding: 6px 0; border-bottom: 1px dashed var(--ctp-line);
+}
+.ctp-section .ctp-summary-list li.ctp-empty{ color: var(--ctp-muted); opacity:.5; border-bottom:none; }
+
+.ctp-section .ctp-summary-foot{ border-top: 1px solid var(--ctp-line); padding-top: 12px; }
+.ctp-section .ctp-summary-row{
+  display:flex; justify-content:space-between; font-size:.85rem;
+  color: var(--ctp-muted); padding: 4px 0;
+}
+.ctp-section .ctp-summary-row.ctp-total{
+  font-family:var(--font-headings, 'Bitter'), serif; font-weight:800; font-size:1.15rem;
+  color: var(--ctp-orange); border-top:1px solid var(--ctp-line);
+  margin-top:6px; padding-top:10px;
+}
+
+.ctp-section .ctp-cta{
+  width:100%; margin-top:18px; padding: 13px; border:none;
+  border-radius: 10px; background: var(--ctp-orange); color: #fff;
+  font-family:var(--font-headings, 'Bitter'), serif; font-weight:800; font-size:.95rem;
+  cursor:pointer; transition: opacity .15s ease;
+}
+.ctp-section .ctp-cta:disabled{ opacity:.4; cursor:not-allowed; }
+.ctp-section .ctp-cta:not(:disabled):hover{ opacity:.88; }
+
+/* ===== CTP — Step numbers ===== */
+.ctp-step-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:24px;height:24px;border-radius:8px;
+  background:var(--rrojo-acento,#C0392B);color:#fff;
+  font-size:12px;font-weight:900;margin-right:8px;
+}
+
+/* ===== CTP — Size cards mejorados ===== */
+.ctp-size{
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  background: transparent; border:1px solid var(--ctp-line);
+  border-radius: 12px; padding: 14px; cursor:pointer;
+  color: var(--negro-carbon, #1A1A1A); font-family:inherit; text-align:left;
+  transition: all .2s ease; width:100%;
+  position:relative;overflow:hidden;
+}
+.ctp-size::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,var(--rrojo-acento),var(--rojo-hover));
+  opacity:0;transition:opacity .2s ease;
+}
+.ctp-size:hover{ border-color: var(--rrojo-acento);transform:translateY(-1px);box-shadow:0 4px 12px rgba(192,57,43,.1); }
+.ctp-size.active{ border-color: var(--rrojo-acento);background:rgba(192,57,43,.04);box-shadow:0 2px 8px rgba(192,57,43,.08); }
+.ctp-size.active::before{ opacity:0.03; }
+.ctp-size-name{ font-family:var(--font-headings, 'Bitter'), serif; font-weight:700; font-size:1rem; position:relative;z-index:1; }
+.ctp-size-info{ font-size:.7rem; color: var(--ctp-muted); opacity:.6; position:relative;z-index:1; }
+.ctp-size-meta{
+  display:flex;justify-content:space-between;align-items:center;
+  width:100%;margin-top:6px;padding-top:6px;
+  border-top:1px dashed var(--ctp-line);position:relative;z-index:1;
+}
+.ctp-size-porciones{ font-size:.65rem;color:var(--ctp-muted);opacity:.5; }
+.ctp-size-price{ font-family:var(--font-headings,'Bitter'),serif;font-weight:800;color:var(--rrojo-acento);font-size:.95rem; }
+
+/* ===== CTP — Ingredient chips mejorados con iconos ===== */
+.ctp-group{margin-bottom:16px;}
+.ctp-group:last-child{margin-bottom:0;}
+.ctp-group-title{
+  font-size:.7rem;text-transform:uppercase;letter-spacing:1.5px;
+  color:var(--marron-madera);margin-bottom:10px;display:flex;align-items:center;gap:6px;
+}
+.ctp-group-title i{font-size:12px;color:var(--rrojo-acento);}
+.ctp-group-count{
+  margin-left:auto;font-size:9px;opacity:.5;font-weight:400;
+}
+.ctp-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.ctp-chip{
+  position:relative;display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--ctp-line);border-radius:999px;
+  padding:5px 11px;font-size:.78rem;color:var(--marron-madera);
+  cursor:pointer;transition:all .15s ease;
+  background:rgba(244,239,234,.4);user-select:none;
+}
+.ctp-chip input{position:absolute;opacity:0;width:0;height:0;}
+.ctp-chip:hover{border-color:var(--rrojo-acento);transform:translateY(-1px);box-shadow:0 2px 8px rgba(192,57,43,.06);}
+.ctp-chip.checked{
+  background:var(--rrojo-acento);border-color:var(--rrojo-acento);color:#fff;
+  box-shadow:0 2px 8px rgba(192,57,43,.2);
+}
+.ctp-chip.checked .ctp-chip-icon{color:#fff!important;}
+.ctp-chip-icon{font-size:10px;color:var(--marron-madera);opacity:.5;}
+.ctp-chip.premium{border-color:rgba(249,220,92,.5);background:rgba(249,220,92,.08);}
+.ctp-chip-premium{
+  font-size:6px;font-weight:900;letter-spacing:1px;
+  color:var(--amarillo-calido);background:rgba(0,0,0,.2);
+  padding:0 5px;border-radius:4px;line-height:14px;
+}
+.ctp-chip.checked .ctp-chip-premium{color:#fff;background:rgba(0,0,0,.15);}
+
+/* Toggle "ver más" */
+.ctp-toggle-group{
+  background:transparent;border:1px dashed var(--ctp-line);
+  border-radius:999px;padding:4px 14px;font-size:.7rem;
+  color:var(--marron-madera);opacity:.6;cursor:pointer;
+  font-family:inherit;transition:all .15s ease;
+}
+.ctp-toggle-group:hover{opacity:1;border-color:var(--rrojo-acento);color:var(--rrojo-acento);}
+
+/* Hint de incluidos */
+.ctp-included-hint{
+  margin-top:12px;padding:8px 12px;border-radius:10px;
+  font-size:.72rem;color:var(--marron-madera);opacity:.7;
+  background:rgba(139,87,42,.06);text-align:center;
+}
+.ctp-included-hint-ok{background:rgba(34,197,94,.08);color:#166534;opacity:1;}
+.ctp-included-hint-extra{background:rgba(249,220,92,.12);color:#92400e;opacity:1;}
+
+/* ===== CTP — Pizza visual SVG ===== */
+.ctp-pizza-visual-wrap{
+  position:relative;width:100%;max-width:220px;margin:0 auto 16px;
+  aspect-ratio:1;
+}
+.ctp-pizza-svg{
+  width:100%;height:100%;display:block;
+  filter:drop-shadow(0 4px 16px rgba(139,87,42,.15));
+  transition:all .3s ease;
+}
+.ctp-pizza-svg circle{
+  transition:opacity .3s ease;
+}
+
+/* Legend */
+.ctp-pizza-legend{
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
+  margin-top:8px;min-height:20px;
+}
+.ctp-legend-item{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:9px;color:var(--marron-madera);opacity:.7;
+  background:rgba(244,239,234,.6);padding:2px 8px;border-radius:999px;
+}
+.ctp-legend-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+}
+.ctp-legend-item strong{color:var(--negro-carbon);font-size:10px;}
+
+/* Summary mejorado */
+.ctp-summary-size{
+  font-family:var(--font-headings,'Bitter'),serif;font-weight:700;color:var(--rrojo-acento);
+  margin-bottom:12px;font-size:.9rem;text-align:center;
+}
+.ctp-summary-list{
+  list-style:none;padding:0;margin:0 0 16px;
+  display:flex;flex-direction:column;gap:4px;min-height:36px;
+  max-height:120px;overflow-y:auto;
+}
+.ctp-summary-list li{
+  font-size:.8rem;color:var(--negro-carbon,#1A1A1A);
+  padding:4px 0;border-bottom:1px dashed var(--ctp-line);
+  display:flex;align-items:center;
+}
+.ctp-summary-list li.ctp-empty{
+  color:var(--marron-madera);opacity:.4;border-bottom:none;
+  justify-content:center;font-size:.85rem;font-style:italic;
+}
+
+/* ===== CTP — Responsive ===== */
+@media (max-width: 900px){
+  .ctp-section .ctp-grid{ grid-template-columns: 1fr; gap:16px; }
+  .ctp-pizza-visual-wrap{ max-width:180px; }
+  .ctp-ingredients-card{ order:2; }
+  .ctp-card.ctp-summary{ order:3; }
+  .ctp-chip{ padding:4px 10px;font-size:.75rem; }
+}
+@media (max-width: 480px){
+  .ctp-section .ctp-card{ padding:16px; }
+  .ctp-pizza-visual-wrap{ max-width:160px; }
+  .ctp-size{ padding:10px; }
+  .ctp-size-name{ font-size:.9rem; }
+  .ctp-chips{ gap:4px; }
+  .ctp-chip{ padding:3px 8px;font-size:.72rem; }
+  .ctp-step{ font-size:.9rem!important; }
+}
+
+/* Advanced toggle link */
+.ctp-advanced-link{
+  text-align:center; margin-top: 16px; padding: 12px;
+  color: var(--marron-madera, #8B572A); opacity:.6; font-size:.82rem;
+}
+.ctp-toggle-advanced{
+  background:transparent; border:none; color: var(--rrojo-acento, #C0392B);
+  font-weight:700; font-size:.82rem; cursor:pointer; text-decoration:underline;
+  font-family:inherit;
+}
+.ctp-toggle-advanced:hover{ color: var(--rojo-hover, #962D22); }
+
+/* Clear selection button */
+.ctp-clear-wrap {
+  text-align: center;
+  margin-top: 10px;
+}
+.ctp-clear-btn {
+  background: none;
+  border: 1px dashed var(--ctp-line, rgba(139,87,42,.15));
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-family: 'Poppins', sans-serif;
+  font-size: .75rem;
+  color: var(--ctp-muted, #8B572A);
+  cursor: pointer;
+  transition: all .2s ease;
+  opacity: .6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ctp-clear-btn:hover {
+  opacity: 1;
+  border-color: var(--rrojo-acento, #C0392B);
+  color: var(--rrojo-acento, #C0392B);
+  border-style: solid;
+  background: rgba(192,57,43,.04);
+}
+
+/* ==============================
+   CTP Tooltip — Hover Preview
+   ============================== */
+.ctp-tooltip {
+  position: fixed;
+  z-index: 99999;
+  background: #1a1a1a;
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: .78rem;
+  font-family: 'Poppins', sans-serif;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity .15s ease, transform .15s ease;
+  max-width: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.ctp-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.ctp-tooltip .tip-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ctp-tooltip .tip-icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .85rem;
+  flex-shrink: 0;
+}
+.ctp-tooltip .tip-name {
+  font-weight: 600;
+  font-size: .82rem;
+}
+.ctp-tooltip .tip-category {
+  font-size: .65rem;
+  color: rgba(255,255,255,.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top:2px;
+}
+.ctp-tooltip .tip-premium {
+  display: inline-block;
+  font-size: .55rem;
+  letter-spacing: 1.5px;
+  background: var(--amarillo-calido, #F9DC5C);
+  color: #1a1a1a;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 800;
+  margin-left: 6px;
+}
+
+@media (max-width: 768px) {
+  .ctp-tooltip {
+    max-width: 180px;
+    font-size: .72rem;
+    padding: 8px 12px;
+  }
+  .ctp-tooltip .tip-icon {
+    width: 22px; height: 22px;
+    font-size: .7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .ctp-tooltip { display: none; }
+}

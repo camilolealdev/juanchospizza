@@ -150,15 +150,51 @@ let isProcessing = false;
 let itemsInCart = parseInt(localStorage.getItem('juanchos_cart') || '0') || 0;
 const cartCounter = document.getElementById('cartCounter');
 
+// Advanced builder localStorage persistence
+const ADV_STORAGE_KEY = 'juanchos_advanced_builder';
+function saveAdvancedState() {
+  try {
+    const data = {
+      size: currentSize,
+      side: activeSide,
+      cat: activeCat,
+      selections: selections
+    };
+    localStorage.setItem(ADV_STORAGE_KEY, JSON.stringify(data));
+  } catch(_e) { /* ignore */ }
+}
+function loadAdvancedState() {
+  try {
+    const raw = localStorage.getItem(ADV_STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data) return false;
+    if (data.size && SIZES.includes(data.size)) currentSize = data.size;
+    if (data.side && ['whole','left','right'].includes(data.side)) activeSide = data.side;
+    if (data.cat && ['base','salsa','queso','carne','vegetal','dulce','extra'].includes(data.cat)) activeCat = data.cat;
+    if (data.selections && typeof data.selections === 'object') {
+      selections = {
+        whole: Array.isArray(data.selections.whole) ? data.selections.whole : [],
+        left: Array.isArray(data.selections.left) ? data.selections.left : [],
+        right: Array.isArray(data.selections.right) ? data.selections.right : []
+      };
+    }
+    return true;
+  } catch(_e) { return false; }
+}
+
 // Exponer para que los hooks del bundle React lo usen si está presente.
 // Mantener este script al final del body (cargado con defer) o antes del
 // bundle React asegura que document.getElementById('cartCounter') está.
-window.__pizzaBuilderAddToCart = window.__pizzaBuilderAddToCart || function (_name) {
+// Named fallback function — NO uses arguments.callee (deprecated & breaks strict mode)
+const __pizzaBuilderFallback = function (_name, _details) {
   itemsInCart++;
   if (cartCounter) cartCounter.textContent = itemsInCart;
   localStorage.setItem('juanchos_cart', itemsInCart.toString());
   window.dispatchEvent(new CustomEvent('cart-updated', { detail: itemsInCart }));
 };
+
+window.__pizzaBuilderAddToCart = window.__pizzaBuilderAddToCart || __pizzaBuilderFallback;
 
 // Helpers
 function getIng(id) { return INGREDIENTS.find(i => i.id === id); }
@@ -176,7 +212,7 @@ function calcPrice() {
     return Math.round(total);
 }
 
-// Update UI
+// Update UI — exposed globally for CTP advanced toggle
 function render() {
     renderSizes();
     renderSides();
@@ -185,7 +221,9 @@ function render() {
     renderPizza();
     renderPrice();
     renderConfirm();
+    saveAdvancedState();
 }
+window.__pizzaBuilderRender = render;
 function renderSizes() {
     const el = document.getElementById('sizeSelector');
     if (!el) return;
@@ -361,15 +399,29 @@ if (confirmBtn) {
         if (overlay) overlay.style.display = 'none';
         isProcessing = false;
 
+        // Build ingredient details string from all selections
+        const allSelectedIds = [...selections.whole, ...selections.left, ...selections.right];
+        const selectedNames = allSelectedIds
+          .map(id => { const ing = getIng(id); return ing ? ing.nombre : null; })
+          .filter(Boolean);
+        const details = selectedNames.length > 0
+          ? 'Pizza artesanal · ' + (masa ? masa.nombre + ' · ' : '') + selectedNames.join(', ')
+          : 'Pizza artesanal · ' + (masa ? masa.nombre : 'Personalizada');
+
         // Call into CartContext (React) if mounted, otherwise local fallback.
-        // Both paths end up incrementing cart count if applicable.
-        if (window.__pizzaBuilderAddToCart && window.__pizzaBuilderAddToCart !== arguments.callee) {
-            window.__pizzaBuilderAddToCart('Pizza Personalizada');
+        // Check via named reference instead of arguments.callee (deprecated).
+        if (window.__pizzaBuilderAddToCart !== __pizzaBuilderFallback) {
+            window.__pizzaBuilderAddToCart('Pizza Personalizada', details);
         } else {
             itemsInCart++;
             if (cartCounter) cartCounter.textContent = itemsInCart;
             localStorage.setItem('juanchos_cart', itemsInCart.toString());
         }
+
+        // Also store the ingredients array in localStorage so CTP builder can read them
+        try {
+          localStorage.setItem('juanchos_last_pizza_ingredients', JSON.stringify(selectedNames));
+        } catch(_e) { /* ignore */ }
 
         const scOverlay = document.getElementById('successOverlay');
         if (scOverlay) {
@@ -385,6 +437,8 @@ if (confirmBtn) {
           continueBtn.addEventListener('click', () => {
               scOverlay.style.display = 'none';
               selections = { whole: [], left: [], right: [] };
+              // Clear saved state after successful order
+              try { localStorage.removeItem(ADV_STORAGE_KEY); } catch (_e) { /* noop - error swallowed intentionally */ }
               render();
           });
         }
@@ -467,4 +521,6 @@ window.addEventListener('cart-updated', function(e) {
     showPage(initial || 'inicio', true);
 })();
 if (cartCounter) cartCounter.textContent = itemsInCart;
+// Restore advanced builder state from localStorage
+loadAdvancedState();
 render();

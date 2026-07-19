@@ -190,38 +190,706 @@
 </div>
 
 <div class="page-container" data-page="crea-tu-pizza">
-    <section class="builder-section" id="crea-tu-pizza">
-        <h2 class="section__title">Crea tu Obra Maestra</h2>
-        <p class="section__subtitle">Selecciona ingredientes y personaliza tu pizza artesanal</p>
-        <div class="builder-wrap" id="builderWrap">
-            <div class="builder-inner">
-                <div class="builder-preview">
-                    <div class="size-selector" id="sizeSelector"></div>
-                    <div class="pizza-circle-wrap" id="pizzaContainer">
-                        <div class="pizza-circle no-base" id="pizzaCircle">
-                            <div id="sauceLayer" class="pizza-layer" style="display:none"></div>
-                            <div id="cheeseLayer" class="pizza-layer" style="display:none"></div>
-                            <div class="pizza-toppings" id="toppingsLayer"></div>
-                            <div class="pizza-placeholder" id="pizzaPlaceholder"><p>Selecciona una base para comenzar</p></div>
-                        </div>
-                        <div class="dough-badge"><span id="doughName">Plato Vacío</span></div>
-                    </div>
-                    <div class="price-display">
-                        <h2 id="priceDisplay">$0</h2>
-                        <p>Diseño Personalizado</p>
-                    </div>
-                </div>
-                <div class="builder-controls">
-                    <div class="side-selector" id="sideSelector"></div>
-                    <div class="cat-scroll" id="catScroll"></div>
-                    <div class="ing-grid" id="ingGrid"></div>
-                    <button class="confirm-btn" id="confirmBtn" disabled><i class="fa-solid fa-fire-flame-curved"></i> Selecciona una Masa</button>
-                </div>
-            </div>
-            <div id="builderOverlay" class="builder-overlay" style="display:none"></div>
-            <div id="successOverlay" class="success-overlay" style="display:none"></div>
+  <!-- ===== CREA TU PIZZA — Builder visual con SVG ===== -->
+  <section id="ctp-builder" class="ctp-section">
+    <div class="ctp-head">
+      <p class="ctp-eyebrow">Arma la tuya</p>
+      <h2 class="ctp-title">Crea tu Pizza</h2>
+      <p class="ctp-desc">Elige el tamaño y combina ingredientes. La pizza visual se actualiza en tiempo real.</p>
+    </div>
+
+    <div class="ctp-grid">
+
+      <!-- ========== COLUMNA 1: Tamaño ========== -->
+      <div class="ctp-card">
+        <h3 class="ctp-step"><span class="ctp-step-num">1</span> Elige el tamaño</h3>
+        <div class="ctp-sizes" id="ctpSizes"></div>
+      </div>
+
+      <!-- ========== COLUMNA 2: Ingredientes (dinámicos desde datos) ========== -->
+      <div class="ctp-card ctp-ingredients-card">
+        <h3 class="ctp-step"><span class="ctp-step-num">2</span> Elige tus ingredientes</h3>
+        <div id="ctpIngredientsContainer"></div>
+        <div id="ctpTooltip" class="ctp-tooltip"></div>
+        <div class="ctp-included-hint" id="ctpIncludedHint">Selecciona un tamaño para ver los ingredientes incluidos</div>
+      </div>
+
+      <!-- ========== COLUMNA 3: Pizza visual + Resumen ========== -->
+      <div class="ctp-card ctp-summary">
+        <h3 class="ctp-step"><span class="ctp-step-num">3</span> Tu pizza</h3>
+
+        <!-- Pizza visual SVG -->
+        <div class="ctp-pizza-visual-wrap">
+          <svg class="ctp-pizza-svg" id="ctpPizzaSvg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <!-- Base (masa) -->
+            <circle cx="100" cy="100" r="92" fill="#dcae73" stroke="#a67c52" stroke-width="6"/>
+            <circle cx="100" cy="100" r="82" fill="#e8c48a" opacity="0.5"/>
+            <!-- Borde estilo pepperoni -->
+            <circle cx="100" cy="100" r="90" fill="none" stroke="#c4955a" stroke-width="4" stroke-dasharray="4 3" opacity="0.4"/>
+            <!-- Toppings renderizados aquí -->
+            <g id="ctpToppingsGroup"></g>
+            <!-- Texto placeholder -->
+            <text id="ctpPizzaPlaceholder" x="100" y="105" text-anchor="middle" fill="#8B572A" font-size="8" font-weight="700" letter-spacing="2" opacity="0.5">SELECCIONA INGREDIENTES</text>
+          </svg>
+          <div class="ctp-pizza-legend" id="ctpPizzaLegend"></div>
         </div>
+
+        <p class="ctp-summary-size" id="ctpSummarySize">Elige un tamaño y tus ingredientes favoritos</p>
+        <ul class="ctp-summary-list" id="ctpSummaryList"></ul>
+        <div class="ctp-summary-foot">
+          <div class="ctp-summary-row">
+            <span><i class="fa-solid fa-check-circle" style="color:var(--rrojo-acento);font-size:10px"></i> Incluidos</span>
+            <span id="ctpIncluidos">0</span>
+          </div>
+          <div class="ctp-summary-row">
+            <span><i class="fa-solid fa-plus-circle" style="color:var(--marron-madera);font-size:10px"></i> Adicionales (<span id="ctpExtraCount">0</span> × $3.500)</span>
+            <span id="ctpExtraTotal">$0</span>
+          </div>
+          <div class="ctp-summary-row ctp-total">
+            <span>Total</span>
+            <span id="ctpTotal">$0</span>
+          </div>
+        </div>
+        <div class="ctp-clear-wrap">
+          <button type="button" class="ctp-clear-btn" id="ctpClearBtn"><i class="fa-solid fa-rotate-left"></i> Limpiar selección</button>
+        </div>
+        <button type="button" class="ctp-cta" id="ctpAddBtn" disabled>
+          <i class="fa-solid fa-cart-plus"></i> Agregar al pedido
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== INLINE SCRIPT: CTP Builder completo con SVG visual ===== -->
+  <script>
+  (function(){
+    /* ---- CONFIG ---- */
+    const EXTRA_INGREDIENTE_PRECIO = 3500;
+    const MAX_VISIBLE_CHIPS = 10;
+
+    /* ---- DATOS COMPLETOS de ingredientes (desde pizza-builder.js) ---- */
+    var CTP_INGREDIENTS = {
+      carnes: [
+        { id:'carne_1',  nombre:'Jamón Cocido Premium', icon:'drumstick-bite' },
+        { id:'carne_2',  nombre:'Pepperoni Importado', icon:'drumstick-bite' },
+        { id:'carne_7',  nombre:'Tocineta Ahumada', icon:'bacon' },
+        { id:'carne_8',  nombre:'Pollo BBQ', icon:'drumstick-bite' },
+        { id:'carne_9',  nombre:'Jamón de Pierna', icon:'drumstick-bite' },
+        { id:'carne_11', nombre:'Salami Picante', icon:'hotdog' },
+        { id:'carne_12', nombre:'Carne Molida Sazonada', icon:'burger' },
+        { id:'carne_13', nombre:'Pollo Asado', icon:'drumstick-bite' },
+        { id:'carne_14', nombre:'Salchicha Italiana', icon:'hotdog' },
+        { id:'carne_15', nombre:'Mortadela', icon:'hotdog' },
+        { id:'carne_16', nombre:'Lomo de Cerdo', icon:'drumstick-bite' },
+        { id:'carne_17', nombre:'Atún', icon:'fish' },
+        { id:'carne_18', nombre:'Jamón de York', icon:'drumstick-bite' },
+        { id:'carne_3',  nombre:'Salami Ibérico', icon:'hotdog', premium:true },
+        { id:'carne_4',  nombre:'Chorizo Español', icon:'hotdog', premium:true },
+        { id:'carne_5',  nombre:'Jamón Serrano 24 Meses', icon:'drumstick-bite', premium:true },
+        { id:'carne_10', nombre:'Prosciutto di Parma', icon:'drumstick-bite', premium:true }
+      ],
+      vegetales: [
+        { id:'veg_1',  nombre:'Tomate Fresco', icon:'tomato' },
+        { id:'veg_3',  nombre:'Albahaca Fresca', icon:'leaf' },
+        { id:'veg_5',  nombre:'Cebolla Morada', icon:'onion' },
+        { id:'veg_7',  nombre:'Champiñones Frescos', icon:'mushroom' },
+        { id:'veg_8',  nombre:'Pimientos de Colores', icon:'pepper' },
+        { id:'veg_9',  nombre:'Aceitunas Negras', icon:'olive' },
+        { id:'veg_10', nombre:'Aceitunas Verdes', icon:'olive' },
+        { id:'veg_11', nombre:'Maíz Dulce', icon:'corn' },
+        { id:'veg_12', nombre:'Alcachofas', icon:'leaf' },
+        { id:'veg_13', nombre:'Ajo Asado', icon:'garlic' },
+        { id:'veg_15', nombre:'Orégano', icon:'seedling' },
+        { id:'veg_16', nombre:'Sal de Ajo Colombiana', icon:'shaker' },
+        { id:'veg_18', nombre:'Espinaca', icon:'leaf' },
+        { id:'veg_19', nombre:'Berenjena', icon:'eggplant' },
+        { id:'veg_20', nombre:'Zanahoria', icon:'carrot' },
+        { id:'veg_21', nombre:'Jalapeño', icon:'pepper-hot' },
+        { id:'veg_22', nombre:'Pimiento Rojo', icon:'pepper' },
+        { id:'veg_24', nombre:'Tomate Cherry', icon:'tomato' },
+        { id:'veg_26', nombre:'Apio', icon:'leaf' },
+        { id:'veg_27', nombre:'Cebollín', icon:'seedling' },
+        { id:'veg_28', nombre:'Perejil', icon:'seedling' },
+        { id:'veg_2',  nombre:'Piña Caramelizada', icon:'pineapple' },
+        { id:'veg_4',  nombre:'Rúgula Fresca', icon:'leaf', premium:true },
+        { id:'veg_6',  nombre:'Cebolla Caramelizada', icon:'onion', premium:true },
+        { id:'veg_23', nombre:'Aceitunas Kalamata', icon:'olive', premium:true }
+      ],
+      frutas_dulces: [
+        { id:'dul_1',  nombre:'Fresas Frescas', icon:'strawberry' },
+        { id:'dul_2',  nombre:'Banano Fresco', icon:'banana' },
+        { id:'dul_3',  nombre:'Nueces', icon:'seedling' },
+        { id:'dul_6',  nombre:'Coco Rallado', icon:'coconut' },
+        { id:'dul_7',  nombre:'Pasas', icon:'grape' },
+        { id:'dul_10', nombre:'Arequipe', icon:'jar' },
+        { id:'dul_13', nombre:'Galletas Oreo', icon:'cookie' },
+        { id:'dul_14', nombre:'Chocolate Blanco', icon:'candy' },
+        { id:'dul_15', nombre:'Mango Fresco', icon:'mango' },
+        { id:'dul_16', nombre:'Piña Fresca', icon:'pineapple' },
+        { id:'dul_17', nombre:'Miel', icon:'jar' },
+        { id:'dul_18', nombre:'Merengue', icon:'cake' },
+        { id:'dul_8',  nombre:'Manjar Blanco', icon:'jar' },
+        { id:'dul_9',  nombre:'Tres Leches', icon:'cake' },
+        { id:'dul_4',  nombre:'Queso Fresco Dulce', icon:'cheese', premium:true },
+        { id:'dul_5',  nombre:'Canela', icon:'spoon' },
+        { id:'dul_11', nombre:'Azúcar Glass', icon:'spoon' },
+        { id:'dul_12', nombre:'Mantequilla Dulce', icon:'butter' },
+        { id:'dul_19', nombre:'Azúcar Morena', icon:'spoon' }
+      ],
+      extras: [
+        { id:'ext_1',  nombre:'Huevo Frito', icon:'egg' },
+        { id:'ext_2',  nombre:'Tocineta Extra', icon:'bacon' },
+        { id:'ext_3',  nombre:'Pepperoni Extra', icon:'pizza-slice' },
+        { id:'ext_4',  nombre:'Queso Extra', icon:'cheese' },
+        { id:'ext_5',  nombre:'Jamón Extra', icon:'drumstick-bite' },
+        { id:'ext_6',  nombre:'Champiñones Extra', icon:'mushroom' },
+        { id:'ext_7',  nombre:'Piña Extra', icon:'pineapple' },
+        { id:'ext_8',  nombre:'Aceitunas Extra', icon:'olive' },
+        { id:'ext_9',  nombre:'Cebolla Extra', icon:'onion' },
+        { id:'ext_10', nombre:'Orégano Extra', icon:'seedling' },
+        { id:'ext_11', nombre:'Aceite de Oliva Extra', icon:'oil' },
+        { id:'ext_12', nombre:'Parmesano Extra', icon:'cheese', premium:true },
+        { id:'ext_13', nombre:'Rúgula Extra', icon:'leaf' },
+        { id:'veg_14', nombre:'Aceite Trufado', icon:'oil', premium:true },
+        { id:'veg_17', nombre:'Romero Fresco', icon:'seedling' }
+      ]
+    };
+
+    /* ---- MAPS ---- */
+    var GROUP_LABELS = { carnes:'Carnes', vegetales:'Vegetales', frutas_dulces:'Frutas & Dulces', extras:'Extras' };
+    var GROUP_ICONS = { carnes:'drumstick-bite', vegetales:'carrot', frutas_dulces:'cookie', extras:'plus-circle' };
+    var GROUP_COLORS = { carnes:'#962D22', vegetales:'#6B8E23', frutas_dulces:'#db2777', extras:'#ea580c' };
+    var GROUP_FA_ICONS = { carnes:'fa-drumstick-bite', vegetales:'fa-carrot', frutas_dulces:'fa-cookie', extras:'fa-plus-circle' };
+    // Fallback icons por nombre Font Awesome (algunos son personalizados y usan fa-* genérico)
+    var FA_FALLBACK = {
+      'drumstick-bite':'fa-drumstick-bite', 'bacon':'fa-bacon', 'hotdog':'fa-hotdog',
+      'burger':'fa-burger', 'fish':'fa-fish', 'leaf':'fa-leaf', 'seedling':'fa-seedling',
+      'flask':'fa-flask', 'carrot':'fa-carrot', 'pepper-hot':'fa-pepper-hot',
+      'apple-alt':'fa-apple-alt', 'cookie':'fa-cookie', 'cheese':'fa-cheese',
+      'egg':'fa-egg', 'pizza-slice':'fa-pizza-slice', 'circle':'fa-circle',
+      'cake':'fa-cake', 'canadian-maple-leaf':'fa-canadian-maple-leaf'
+    };
+    // Map ingredient icons to guaranteed free FA icons
+    var ICON_MAP = {
+      'drumstick-bite':'fa-drumstick-bite','bacon':'fa-bacon','hotdog':'fa-hotdog',
+      'burger':'fa-burger','fish':'fa-fish','leaf':'fa-leaf','seedling':'fa-seedling',
+      'flask':'fa-flask','carrot':'fa-carrot','pepper-hot':'fa-pepper-hot',
+      'cookie':'fa-cookie','cheese':'fa-cheese','egg':'fa-egg','pizza-slice':'fa-pizza-slice',
+      'cake':'fa-cake','apple-alt':'fa-apple-alt','circle':'fa-circle'
+    };
+    function getIcon(name) { return ICON_MAP[name] || 'fa-circle'; }
+
+    /* ---- DOM REFS ---- */
+    var root = document.getElementById('ctp-builder');
+    if(!root) return;
+    var sizesContainer = document.getElementById('ctpSizes');
+    var ingredientsContainer = document.getElementById('ctpIngredientsContainer');
+    var pizzaSvg = document.getElementById('ctpPizzaSvg');
+    var toppingsGroup = document.getElementById('ctpToppingsGroup');
+    var pizzaPlaceholder = document.getElementById('ctpPizzaPlaceholder');
+    var pizzaLegend = document.getElementById('ctpPizzaLegend');
+    var summarySize = document.getElementById('ctpSummarySize');
+    var summaryList = document.getElementById('ctpSummaryList');
+    var incluidosEl = document.getElementById('ctpIncluidos');
+    var extraCountEl = document.getElementById('ctpExtraCount');
+    var extraTotalEl = document.getElementById('ctpExtraTotal');
+    var totalEl = document.getElementById('ctpTotal');
+    var addBtn = document.getElementById('ctpAddBtn');
+    var includedHint = document.getElementById('ctpIncludedHint');
+
+    /* ---- STATE ---- */
+    var selectedSize = null;
+    var selectedIngs = {};  // { 'carne_1': true, 'veg_5': true, ... }
+    var collapsedGroups = {}; // { 'carnes': false, ... }
+
+    /* ---- Phyllotaxis para posiciones SVG ---- */
+    function generatePizzaPositions(count, radiusScale) {
+      radiusScale = radiusScale || 0.75;
+      var positions = [];
+      for (var i = 0; i < count; i++) {
+        var r = Math.sqrt((i + 1) / count) * radiusScale;
+        var theta = (i + 1) * 137.508;
+        positions.push({
+          x: 100 + (r * 85) * Math.cos(theta * Math.PI / 180),
+          y: 100 + (r * 85) * Math.sin(theta * Math.PI / 180),
+          size: 3 + (i % 3) * 1.5
+        });
+      }
+      return positions;
+    }
+    var MASTER_POSITIONS = generatePizzaPositions(120);
+
+    /* ---- SIZE DATA ---- */
+    var SIZE_DATA = [
+      { id:'small', label:'Small', price:30000, incluidos:1, portions:4, sabores:1 },
+      { id:'junior', label:'Junior', price:42000, incluidos:2, portions:6, sabores:2 },
+      { id:'mediana', label:'Mediana', price:52000, incluidos:2, portions:8, sabores:2 },
+      { id:'familiar', label:'Familiar', price:88000, incluidos:3, portions:10, sabores:3 }
+    ];
+
+    /* ---- FORMATO ---- */
+    function formatCOP(n){ return '$' + n.toLocaleString('es-CO'); }
+
+    /* ---- INIT: Renderizar tamaños ---- */
+    function renderSizes() {
+      sizesContainer.innerHTML = SIZE_DATA.map(function(s) {
+        var isActive = selectedSize && selectedSize.id === s.id;
+        return '<button type="button" class="ctp-size' + (isActive ? ' active' : '') + '" data-size="' + s.id + '" data-price="' + s.price + '" data-incluidos="' + s.incluidos + '">' +
+          '<span class="ctp-size-name">' + s.label + '</span>' +
+          '<span class="ctp-size-info">' + s.incluidos + ' ingrediente' + (s.incluidos !== 1 ? 's' : '') + ' incluido' + (s.incluidos !== 1 ? 's' : '') + '</span>' +
+          '<div class="ctp-size-meta"><span class="ctp-size-porciones">' + s.portions + ' porc</span><span class="ctp-size-price">' + formatCOP(s.price) + '</span></div>' +
+          '</button>';
+      }).join('');
+      // Bind
+      sizesContainer.querySelectorAll('.ctp-size').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var sizeId = btn.dataset.size;
+          var sizeData = SIZE_DATA.find(function(s) { return s.id === sizeId; });
+          if (!sizeData) return;
+          selectedSize = sizeData;
+          // Auto-check included ingredients
+          autoInclude(sizeData.incluidos);
+          saveState();
+          renderAll();
+        });
+      });
+    }
+
+    /* ---- AUTO-INCLUDE: Marcar los primeros N ingredientes ---- */
+    function autoInclude(count) {
+      // Collect all ingredient IDs in order
+      var allIds = [];
+      ['carnes','vegetales','frutas_dulces','extras'].forEach(function(g) {
+        CTP_INGREDIENTS[g].forEach(function(ing) {
+          if (!allIds.includes(ing.id)) allIds.push(ing.id);
+        });
+      });
+      // Auto-check first `count`
+      selectedIngs = {};
+      for (var i = 0; i < count && i < allIds.length; i++) {
+        selectedIngs[allIds[i]] = true;
+      }
+    }
+
+    /* ---- RENDER: Ingredientes dinámicos ---- */
+    function renderIngredients() {
+      var html = '';
+      var groupKeys = ['carnes','vegetales','frutas_dulces','extras'];
+      var allChecked = [];
+
+      groupKeys.forEach(function(key) {
+        var ings = CTP_INGREDIENTS[key];
+        var label = GROUP_LABELS[key];
+        var icon = GROUP_FA_ICONS[key];
+        var isCollapsed = collapsedGroups[key];
+        var visibleIngs = isCollapsed ? ings : ings.slice(0, MAX_VISIBLE_CHIPS);
+        var hasMore = ings.length > MAX_VISIBLE_CHIPS;
+
+        html += '<div class="ctp-group" data-group="' + key + '">' +
+          '<p class="ctp-group-title"><i class="fas ' + icon + '"></i> ' + label + ' <span class="ctp-group-count" id="ctpCount_' + key + '">0/' + ings.length + '</span></p>' +
+          '<div class="ctp-chips" data-group="' + key + '">';
+
+        visibleIngs.forEach(function(ing) {
+          var isChecked = selectedIngs[ing.id] || false;
+          var faClass = getIcon(ing.icon);
+          if (isChecked) allChecked.push(ing);
+          html += '<label class="ctp-chip' + (isChecked ? ' checked' : '') + (ing.premium ? ' premium' : '') + '" data-id="' + ing.id + '" data-group="' + key + '">' +
+            '<input type="checkbox" ' + (isChecked ? 'checked' : '') + '>' +
+            '<i class="fas ' + faClass + ' ctp-chip-icon"></i>' +
+            '<span>' + ing.nombre + '</span>' +
+            (ing.premium ? '<span class="ctp-chip-premium">PREMIUM</span>' : '') +
+            '</label>';
+        });
+
+        if (hasMore) {
+          html += '<button class="ctp-toggle-group" data-group="' + key + '">' +
+            (isCollapsed ? '▲ Mostrar menos' : '▼ ' + (ings.length - MAX_VISIBLE_CHIPS) + ' más') +
+            '</button>';
+        }
+
+        html += '</div></div>';
+      });
+
+      ingredientsContainer.innerHTML = html;
+
+      // Bind checkbox changes
+      ingredientsContainer.querySelectorAll('.ctp-chip input[type="checkbox"]').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+          var chip = cb.closest('.ctp-chip');
+          var id = chip.dataset.id;
+          if (cb.checked) {
+            selectedIngs[id] = true;
+            chip.classList.add('checked');
+          } else {
+            delete selectedIngs[id];
+            chip.classList.remove('checked');
+          }
+          saveState();
+          updateCounts();
+          renderSummary();
+          renderPizzaSVG();
+        });
+      });
+
+      // Tooltip hover handlers (con debounce 100ms para evitar parpadeo)
+      var tooltipEl = document.getElementById('ctpTooltip');
+      var tooltipTimer = null;
+      var mousemoveTimer = null;
+      if (tooltipEl) {
+        ingredientsContainer.querySelectorAll('.ctp-chip').forEach(function(chip) {
+          chip.addEventListener('mouseenter', function(e) {
+            if (tooltipTimer) clearTimeout(tooltipTimer);
+            tooltipTimer = setTimeout(function() {
+              var id = chip.dataset.id;
+              var groupKey = chip.dataset.group;
+              var ingData = null;
+              if (groupKey && CTP_INGREDIENTS[groupKey]) {
+                CTP_INGREDIENTS[groupKey].forEach(function(ing) {
+                  if (ing.id === id) ingData = ing;
+                });
+              }
+              if (!ingData) return;
+              var faClass = getIcon(ingData.icon);
+              var groupLabel = GROUP_LABELS[groupKey] || '';
+              var groupColor = GROUP_COLORS[groupKey] || '#666';
+              var name = ingData.nombre;
+              var premium = ingData.premium ? '<span class="tip-premium">PREMIUM</span>' : '';
+              var headerBg = chip.classList.contains('checked') ? groupColor : 'rgba(255,255,255,.08)';
+              var headerColor = chip.classList.contains('checked') ? '#fff' : groupColor;
+              tooltipEl.innerHTML = '<div class="tip-header"><span class="tip-icon" style="background:' + headerBg + ';color:' + headerColor + '"><i class="fas ' + faClass + '"></i></span><div><div class="tip-name">' + name + premium + '</div><div class="tip-category">' + groupLabel + '</div></div></div>';
+              tooltipEl.classList.add('visible');
+              positionTooltip(e, tooltipEl);
+            }, 100);
+          });
+          chip.addEventListener('mousemove', function(e) {
+            if (!tooltipEl.classList.contains('visible')) return;
+            if (mousemoveTimer) clearTimeout(mousemoveTimer);
+            mousemoveTimer = setTimeout(function() {
+              if (tooltipEl) positionTooltip(e, tooltipEl);
+            }, 30);
+          });
+          chip.addEventListener('mouseleave', function() {
+            if (tooltipTimer) clearTimeout(tooltipTimer);
+            if (mousemoveTimer) clearTimeout(mousemoveTimer);
+            if (tooltipEl) tooltipEl.classList.remove('visible');
+          });
+        });
+      }
+
+      // Bind toggle buttons
+      ingredientsContainer.querySelectorAll('.ctp-toggle-group').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var g = btn.dataset.group;
+          collapsedGroups[g] = !collapsedGroups[g];
+          saveState();
+          renderIngredients();
+          updateCounts();
+        });
+      });
+
+      updateCounts();
+    }
+
+    /* ---- Tooltip position ---- */
+    function positionTooltip(e, el) {
+      var x = e.clientX + 14;
+      var y = e.clientY - 10;
+      var w = el.offsetWidth;
+      var h = el.offsetHeight;
+      var maxX = window.innerWidth - w - 10;
+      var maxY = window.innerHeight - h - 10;
+      if (x > maxX) x = e.clientX - w - 14;
+      if (y > maxY) y = e.clientY - h - 10;
+      if (y < 10) y = 10;
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+    }
+
+    /* ---- Update group counts ---- */
+    function updateCounts() {
+      Object.keys(CTP_INGREDIENTS).forEach(function(key) {
+        var el = document.getElementById('ctpCount_' + key);
+        if (!el) return;
+        var total = CTP_INGREDIENTS[key].length;
+        var checked = CTP_INGREDIENTS[key].filter(function(ing) { return selectedIngs[ing.id]; }).length;
+        el.textContent = checked + '/' + total;
+      });
+    }
+
+    /* ---- RENDER: Pizza SVG ---- */
+    function renderPizzaSVG() {
+      var checkedIds = Object.keys(selectedIngs).filter(function(id) { return selectedIngs[id]; });
+      if (checkedIds.length === 0) {
+        toppingsGroup.innerHTML = '';
+        if (pizzaPlaceholder) pizzaPlaceholder.style.display = 'block';
+        return;
+      }
+      if (pizzaPlaceholder) pizzaPlaceholder.style.display = 'none';
+
+      // Map each checked ingredient to its group color
+      var ingredientData = [];
+      Object.keys(GROUP_COLORS).forEach(function(groupKey) {
+        CTP_INGREDIENTS[groupKey].forEach(function(ing) {
+          if (selectedIngs[ing.id]) {
+            ingredientData.push({ id: ing.id, color: GROUP_COLORS[groupKey], group: groupKey });
+          }
+        });
+      });
+
+      // Generate SVG circles using phyllotaxis
+      var svgContent = '';
+      ingredientData.forEach(function(data, idx) {
+        var pos = MASTER_POSITIONS[(idx * 7 + 3) % MASTER_POSITIONS.length];
+        var size = 2.5 + (idx % 3) * 1.2;
+        var opacity = 0.7 + (idx % 5) * 0.06;
+        // Inner circle
+        svgContent += '<circle cx="' + pos.x + '" cy="' + pos.y + '" r="' + size + '" fill="' + data.color + '" opacity="' + opacity + '" />';
+        // Glow
+        svgContent += '<circle cx="' + pos.x + '" cy="' + pos.y + '" r="' + (size + 1.5) + '" fill="' + data.color + '" opacity="' + (opacity * 0.15) + '" />';
+      });
+
+      toppingsGroup.innerHTML = svgContent;
+
+      // Update legend
+      renderLegend();
+    }
+
+    /* ---- RENDER: Legend ---- */
+    function renderLegend() {
+      var counts = {};
+      Object.keys(GROUP_COLORS).forEach(function(g) { counts[g] = 0; });
+      Object.keys(selectedIngs).forEach(function(id) {
+        if (!selectedIngs[id]) return;
+        Object.keys(CTP_INGREDIENTS).forEach(function(g) {
+          if (CTP_INGREDIENTS[g].some(function(i) { return i.id === id; })) counts[g]++;
+        });
+      });
+      var hasAny = Object.values(counts).some(function(c) { return c > 0; });
+      if (!hasAny) { pizzaLegend.innerHTML = ''; return; }
+
+      pizzaLegend.innerHTML = Object.keys(GROUP_COLORS).filter(function(g) { return counts[g] > 0; }).map(function(g) {
+        return '<span class="ctp-legend-item"><span class="ctp-legend-dot" style="background:' + GROUP_COLORS[g] + '"></span>' + GROUP_LABELS[g] + ' <strong>' + counts[g] + '</strong></span>';
+      }).join('');
+    }
+
+    /* ---- RENDER: Summary ---- */
+    function renderSummary() {
+      var checked = Object.keys(selectedIngs).filter(function(id) { return selectedIngs[id]; });
+
+      if (!selectedSize) {
+        summarySize.textContent = 'Elige un tamaño y tus ingredientes favoritos';
+        addBtn.disabled = true;
+      } else {
+        summarySize.textContent = selectedSize.label + ' — base ' + formatCOP(selectedSize.price);
+      }
+
+      // Lista de ingredientes
+      var checkedNames = [];
+      Object.keys(selectedIngs).forEach(function(id) {
+        if (!selectedIngs[id]) return;
+        Object.keys(CTP_INGREDIENTS).forEach(function(g) {
+          CTP_INGREDIENTS[g].forEach(function(ing) {
+            if (ing.id === id && !checkedNames.includes(ing.nombre)) checkedNames.push(ing.nombre);
+          });
+        });
+      });
+
+      if (checkedNames.length === 0) {
+        summaryList.innerHTML = '<li class="ctp-empty"><i class="fa-solid fa-pizza-slice"></i> Elige tus ingredientes</li>';
+        addBtn.disabled = true;
+      } else {
+        summaryList.innerHTML = checkedNames.map(function(n) {
+          return '<li><i class="fa-solid fa-circle" style="font-size:6px;color:var(--rrojo-acento);margin-right:6px"></i>' + n + '</li>';
+        }).join('');
+        if (selectedSize) addBtn.disabled = false;
+      }
+
+      var incluidos = selectedSize ? selectedSize.incluidos : 0;
+      var extras = Math.max(0, checkedNames.length - incluidos);
+      var extraTotal = extras * EXTRA_INGREDIENTE_PRECIO;
+      var total = (selectedSize ? selectedSize.price : 0) + extraTotal;
+
+      incluidosEl.textContent = incluidos;
+      extraCountEl.textContent = extras;
+      extraTotalEl.textContent = formatCOP(extraTotal);
+      totalEl.textContent = formatCOP(total);
+
+      // Included hint
+      if (selectedSize && checkedNames.length <= incluidos) {
+        includedHint.textContent = '✓ Todos tus ingredientes están incluidos. ¡Sin costo adicional!';
+        includedHint.className = 'ctp-included-hint ctp-included-hint-ok';
+      } else if (selectedSize && extras > 0) {
+        includedHint.textContent = '⚠️ ' + extras + ' adicional' + (extras !== 1 ? 'es' : '') + ' — $' + (extras * EXTRA_INGREDIENTE_PRECIO).toLocaleString();
+        includedHint.className = 'ctp-included-hint ctp-included-hint-extra';
+      } else if (selectedSize) {
+        includedHint.innerHTML = 'Puedes agregar hasta ' + (selectedSize.incluidos) + ' ingredientes incluidos. Adicionales a $3.500 c/u.';
+        includedHint.className = 'ctp-included-hint';
+      }
+    }
+
+    /* ---- RENDER ALL ---- */
+    function renderAll() {
+      renderSizes();
+      renderIngredients();
+      renderPizzaSVG();
+      renderSummary();
+    }
+
+    /* ---- LOCALSTORAGE PERSISTENCE ---- */
+    var STORAGE_KEY = 'juanchos_ctp_builder';
+
+    function saveState() {
+      try {
+        var data = {
+          sizeId: selectedSize ? selectedSize.id : null,
+          ings: selectedIngs,
+          collapsed: collapsedGroups
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch(e) { /* localStorage no disponible */ }
+    }
+
+    function loadState() {
+      try {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        var data = JSON.parse(raw);
+        if (!data) return false;
+        // Restore ingredients
+        if (data.ings) selectedIngs = data.ings;
+        if (data.collapsed) collapsedGroups = data.collapsed;
+        // Restore size
+        if (data.sizeId) {
+          var sizeData = SIZE_DATA.find(function(s) { return s.id === data.sizeId; });
+          if (sizeData) selectedSize = sizeData;
+        }
+        return true;
+      } catch(e) { return false; }
+    }
+
+    /* ---- Add to Cart ---- */
+    addBtn.addEventListener('click', function() {
+      if (!selectedSize) return;
+      var checkedNames = [];
+      Object.keys(selectedIngs).forEach(function(id) {
+        if (!selectedIngs[id]) return;
+        Object.keys(CTP_INGREDIENTS).forEach(function(g) {
+          CTP_INGREDIENTS[g].forEach(function(ing) {
+            if (ing.id === id && !checkedNames.includes(ing.nombre)) checkedNames.push(ing.nombre);
+          });
+        });
+      });
+
+      var name = selectedSize.label;
+      var incluidos = selectedSize.incluidos;
+      var extras = Math.max(0, checkedNames.length - incluidos);
+      var total = selectedSize.price + extras * EXTRA_INGREDIENTE_PRECIO;
+      var details = name + ' · ' + (checkedNames.length > 0 ? checkedNames.slice(0, 5).join(', ') + (checkedNames.length > 5 ? ' +' + (checkedNames.length - 5) + ' más' : '') : 'sin ingredientes');
+      if (extras > 0) details += ' (+' + extras + ' extra)';
+
+      // Cart bridge
+      if (window.__pizzaBuilderAddToCart && window.__pizzaBuilderAddToCart !== window.__pizzaBuilderFallback) {
+        window.__pizzaBuilderAddToCart('Pizza Personalizada (' + name + ')', details);
+      } else {
+        var count = parseInt(localStorage.getItem('juanchos_cart') || '0', 10) + 1;
+        localStorage.setItem('juanchos_cart', count.toString());
+        var counter = document.getElementById('cartCounter');
+        if (counter) counter.textContent = count;
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: count }));
+      }
+
+      // Flash feedback
+      addBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> ¡Agregada!';
+      addBtn.style.background = 'var(--rojo-hover, #962D22)';
+      addBtn.disabled = true;
+      setTimeout(function(){
+        addBtn.innerHTML = '<i class="fa-solid fa-cart-plus"></i> Agregar al pedido';
+        addBtn.style.background = '';
+        selectedSize = null;
+        selectedIngs = {};
+        try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+        renderAll();
+      }, 1800);
+    });
+
+    /* ---- Clear button ---- */
+    var clearBtn = document.getElementById('ctpClearBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function() {
+        selectedSize = null;
+        selectedIngs = {};
+        collapsedGroups = {};
+        saveState();
+        renderAll();
+      });
+    }
+
+    /* ---- INIT ---- */
+    // Restore saved state
+    loadState();
+    renderAll();
+  })();
+  </script>
+
+  <!-- Link to advanced builder -->
+  <div class="ctp-advanced-link">
+    <p>¿Buscas más opciones? <button class="ctp-toggle-advanced" id="ctpToggleAdvanced">Personalización avanzada <i class="fa-solid fa-chevron-down"></i></button></p>
+  </div>
+
+  <!-- Advanced builder hidden wrapper -->
+  <div id="ctpAdvancedWrap" style="display:none;margin-top:24px">
+    <section class="builder-section">
+      <h2 class="section__title">Personalización Avanzada</h2>
+      <p class="section__subtitle">Selecciona ingredientes premium y personaliza cada detalle</p>
+      <div class="builder-wrap" id="builderWrap">
+        <div class="builder-inner">
+          <div class="builder-preview">
+            <div class="size-selector" id="sizeSelector"></div>
+            <div class="pizza-circle-wrap" id="pizzaContainer">
+              <div class="pizza-circle no-base" id="pizzaCircle">
+                <div id="sauceLayer" class="pizza-layer" style="display:none"></div>
+                <div id="cheeseLayer" class="pizza-layer" style="display:none"></div>
+                <div class="pizza-toppings" id="toppingsLayer"></div>
+                <div class="pizza-placeholder" id="pizzaPlaceholder"><p>Selecciona una base para comenzar</p></div>
+              </div>
+              <div class="dough-badge"><span id="doughName">Plato Vacío</span></div>
+            </div>
+            <div class="price-display">
+              <h2 id="priceDisplay">$0</h2>
+              <p>Diseño Personalizado</p>
+            </div>
+          </div>
+          <div class="builder-controls">
+            <div class="side-selector" id="sideSelector"></div>
+            <div class="cat-scroll" id="catScroll"></div>
+            <div class="ing-grid" id="ingGrid"></div>
+            <button class="confirm-btn" id="confirmBtn" disabled><i class="fa-solid fa-fire-flame-curved"></i> Selecciona una Masa</button>
+          </div>
+        </div>
+        <div id="builderOverlay" class="builder-overlay" style="display:none"></div>
+        <div id="successOverlay" class="success-overlay" style="display:none"></div>
+      </div>
     </section>
+  </div>
+
+  <script>
+  (function(){
+    var toggleBtn = document.getElementById('ctpToggleAdvanced');
+    var advancedWrap = document.getElementById('ctpAdvancedWrap');
+    if (toggleBtn && advancedWrap) {
+      toggleBtn.addEventListener('click', function(){
+        var isHidden = advancedWrap.style.display === 'none';
+        advancedWrap.style.display = isHidden ? 'block' : 'none';
+        toggleBtn.innerHTML = isHidden
+          ? 'Personalización avanzada <i class="fa-solid fa-chevron-up"></i>'
+          : 'Personalización avanzada <i class="fa-solid fa-chevron-down"></i>';
+        if (isHidden && window.__pizzaBuilderRender) {
+          window.__pizzaBuilderRender();
+        }
+      });
+    }
+  })();
+  </script>
 </div>
 
 <div class="page-container" data-page="menu">

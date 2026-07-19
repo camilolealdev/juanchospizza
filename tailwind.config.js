@@ -1,9 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       fontFamily: {
@@ -49,6 +46,32 @@ export default {
           900: '#6e2720',
           950: '#3b110d',
         },
+        wood: {
+          50: '#f5f0ea',
+          100: '#e8dccd',
+          200: '#d4c0a3',
+          300: '#bea078',
+          400: '#a88756',
+          500: '#8B572A',
+          600: '#6b4226',
+          700: '#55341d',
+          800: '#432916',
+          900: '#35200f',
+          950: '#1d1007',
+        },
+        cream: {
+          50: '#fefdfb',
+          100: '#fdfaf5',
+          200: '#fbf5eb',
+          300: '#f7edda',
+          400: '#F4EFEA',
+          500: '#ede0cc',
+          600: '#d4bfa3',
+          700: '#b89a78',
+          800: '#9a7a58',
+          900: '#80634a',
+          950: '#432f23',
+        },
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
@@ -72,4 +95,4 @@ export default {
     },
   },
   plugins: [],
-}
+};
