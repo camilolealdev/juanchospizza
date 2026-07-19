@@ -200,10 +200,16 @@
 
     <div class="ctp-grid">
 
-      <!-- ========== COLUMNA 1: Tamaño ========== -->
+      <!-- ========== COLUMNA 1: Tamaño + Sabores ========== -->
       <div class="ctp-card">
         <h3 class="ctp-step"><span class="ctp-step-num">1</span> Elige el tamaño</h3>
         <div class="ctp-sizes" id="ctpSizes"></div>
+      </div>
+
+      <div class="ctp-card ctp-flavors-card">
+        <h3 class="ctp-step"><span class="ctp-step-num">⚡</span> Sabores Predefinidos</h3>
+        <p class="ctp-flavors-desc">Selecciona un sabor y sus ingredientes se marcarán automáticamente</p>
+        <div class="ctp-flavors-scroll" id="ctpFlavorsContainer"></div>
       </div>
 
       <!-- ========== COLUMNA 2: Ingredientes (dinámicos desde datos) ========== -->
@@ -272,93 +278,19 @@
     const EXTRA_INGREDIENTE_PRECIO = 3500;
     const MAX_VISIBLE_CHIPS = 10;
 
-    /* ---- DATOS COMPLETOS de ingredientes (desde pizza-builder.js) ---- */
-    var CTP_INGREDIENTS = {
-      carnes: [
-        { id:'carne_1',  nombre:'Jamón Cocido Premium', icon:'drumstick-bite' },
-        { id:'carne_2',  nombre:'Pepperoni Importado', icon:'drumstick-bite' },
-        { id:'carne_7',  nombre:'Tocineta Ahumada', icon:'bacon' },
-        { id:'carne_8',  nombre:'Pollo BBQ', icon:'drumstick-bite' },
-        { id:'carne_9',  nombre:'Jamón de Pierna', icon:'drumstick-bite' },
-        { id:'carne_11', nombre:'Salami Picante', icon:'hotdog' },
-        { id:'carne_12', nombre:'Carne Molida Sazonada', icon:'burger' },
-        { id:'carne_13', nombre:'Pollo Asado', icon:'drumstick-bite' },
-        { id:'carne_14', nombre:'Salchicha Italiana', icon:'hotdog' },
-        { id:'carne_15', nombre:'Mortadela', icon:'hotdog' },
-        { id:'carne_16', nombre:'Lomo de Cerdo', icon:'drumstick-bite' },
-        { id:'carne_17', nombre:'Atún', icon:'fish' },
-        { id:'carne_18', nombre:'Jamón de York', icon:'drumstick-bite' },
-        { id:'carne_3',  nombre:'Salami Ibérico', icon:'hotdog', premium:true },
-        { id:'carne_4',  nombre:'Chorizo Español', icon:'hotdog', premium:true },
-        { id:'carne_5',  nombre:'Jamón Serrano 24 Meses', icon:'drumstick-bite', premium:true },
-        { id:'carne_10', nombre:'Prosciutto di Parma', icon:'drumstick-bite', premium:true }
-      ],
-      vegetales: [
-        { id:'veg_1',  nombre:'Tomate Fresco', icon:'tomato' },
-        { id:'veg_3',  nombre:'Albahaca Fresca', icon:'leaf' },
-        { id:'veg_5',  nombre:'Cebolla Morada', icon:'onion' },
-        { id:'veg_7',  nombre:'Champiñones Frescos', icon:'mushroom' },
-        { id:'veg_8',  nombre:'Pimientos de Colores', icon:'pepper' },
-        { id:'veg_9',  nombre:'Aceitunas Negras', icon:'olive' },
-        { id:'veg_10', nombre:'Aceitunas Verdes', icon:'olive' },
-        { id:'veg_11', nombre:'Maíz Dulce', icon:'corn' },
-        { id:'veg_12', nombre:'Alcachofas', icon:'leaf' },
-        { id:'veg_13', nombre:'Ajo Asado', icon:'garlic' },
-        { id:'veg_15', nombre:'Orégano', icon:'seedling' },
-        { id:'veg_16', nombre:'Sal de Ajo Colombiana', icon:'shaker' },
-        { id:'veg_18', nombre:'Espinaca', icon:'leaf' },
-        { id:'veg_19', nombre:'Berenjena', icon:'eggplant' },
-        { id:'veg_20', nombre:'Zanahoria', icon:'carrot' },
-        { id:'veg_21', nombre:'Jalapeño', icon:'pepper-hot' },
-        { id:'veg_22', nombre:'Pimiento Rojo', icon:'pepper' },
-        { id:'veg_24', nombre:'Tomate Cherry', icon:'tomato' },
-        { id:'veg_26', nombre:'Apio', icon:'leaf' },
-        { id:'veg_27', nombre:'Cebollín', icon:'seedling' },
-        { id:'veg_28', nombre:'Perejil', icon:'seedling' },
-        { id:'veg_2',  nombre:'Piña Caramelizada', icon:'pineapple' },
-        { id:'veg_4',  nombre:'Rúgula Fresca', icon:'leaf', premium:true },
-        { id:'veg_6',  nombre:'Cebolla Caramelizada', icon:'onion', premium:true },
-        { id:'veg_23', nombre:'Aceitunas Kalamata', icon:'olive', premium:true }
-      ],
-      frutas_dulces: [
-        { id:'dul_1',  nombre:'Fresas Frescas', icon:'strawberry' },
-        { id:'dul_2',  nombre:'Banano Fresco', icon:'banana' },
-        { id:'dul_3',  nombre:'Nueces', icon:'seedling' },
-        { id:'dul_6',  nombre:'Coco Rallado', icon:'coconut' },
-        { id:'dul_7',  nombre:'Pasas', icon:'grape' },
-        { id:'dul_10', nombre:'Arequipe', icon:'jar' },
-        { id:'dul_13', nombre:'Galletas Oreo', icon:'cookie' },
-        { id:'dul_14', nombre:'Chocolate Blanco', icon:'candy' },
-        { id:'dul_15', nombre:'Mango Fresco', icon:'mango' },
-        { id:'dul_16', nombre:'Piña Fresca', icon:'pineapple' },
-        { id:'dul_17', nombre:'Miel', icon:'jar' },
-        { id:'dul_18', nombre:'Merengue', icon:'cake' },
-        { id:'dul_8',  nombre:'Manjar Blanco', icon:'jar' },
-        { id:'dul_9',  nombre:'Tres Leches', icon:'cake' },
-        { id:'dul_4',  nombre:'Queso Fresco Dulce', icon:'cheese', premium:true },
-        { id:'dul_5',  nombre:'Canela', icon:'spoon' },
-        { id:'dul_11', nombre:'Azúcar Glass', icon:'spoon' },
-        { id:'dul_12', nombre:'Mantequilla Dulce', icon:'butter' },
-        { id:'dul_19', nombre:'Azúcar Morena', icon:'spoon' }
-      ],
-      extras: [
-        { id:'ext_1',  nombre:'Huevo Frito', icon:'egg' },
-        { id:'ext_2',  nombre:'Tocineta Extra', icon:'bacon' },
-        { id:'ext_3',  nombre:'Pepperoni Extra', icon:'pizza-slice' },
-        { id:'ext_4',  nombre:'Queso Extra', icon:'cheese' },
-        { id:'ext_5',  nombre:'Jamón Extra', icon:'drumstick-bite' },
-        { id:'ext_6',  nombre:'Champiñones Extra', icon:'mushroom' },
-        { id:'ext_7',  nombre:'Piña Extra', icon:'pineapple' },
-        { id:'ext_8',  nombre:'Aceitunas Extra', icon:'olive' },
-        { id:'ext_9',  nombre:'Cebolla Extra', icon:'onion' },
-        { id:'ext_10', nombre:'Orégano Extra', icon:'seedling' },
-        { id:'ext_11', nombre:'Aceite de Oliva Extra', icon:'oil' },
-        { id:'ext_12', nombre:'Parmesano Extra', icon:'cheese', premium:true },
-        { id:'ext_13', nombre:'Rúgula Extra', icon:'leaf' },
-        { id:'veg_14', nombre:'Aceite Trufado', icon:'oil', premium:true },
-        { id:'veg_17', nombre:'Romero Fresco', icon:'seedling' }
-      ]
-    };
+    /* ---- Ingredientes reales -- cargados de /api/ingredients (ver
+       server/seedData/juanchosMenu.js), no hardcodeados. Así un cambio de
+       precio/disponibilidad hecho por el admin en la CRM (MenuInteligente.tsx)
+       se refleja acá sin tocar código. Se llena en loadMenuData(). ---- */
+    var CTP_INGREDIENTS = { carnes: [], vegetales: [], frutas_dulces: [], extras: [] };
+
+    // categoria (DB, singular) -> grupo del builder (UI, como ya lo espera
+    // el resto de este script)
+    var CATEGORIA_TO_GROUP = { carne: 'carnes', vegetal: 'vegetales', fruta: 'frutas_dulces', extra: 'extras' };
+    // Un ícono representativo por categoría -- la DB no guarda ícono por
+    // ingrediente, y el menú real no lo necesita (a diferencia del catálogo
+    // gourmet viejo, que sí variaba ícono por ítem).
+    var CATEGORIA_ICON = { carne: 'drumstick-bite', vegetal: 'carrot', fruta: 'apple-alt', extra: 'circle' };
 
     /* ---- MAPS ---- */
     var GROUP_LABELS = { carnes:'Carnes', vegetales:'Vegetales', frutas_dulces:'Frutas & Dulces', extras:'Extras' };
@@ -407,6 +339,7 @@
     var selectedIngs = {};  // { 'carne_1': true, 'veg_5': true, ... }
     var collapsedGroups = {}; // { 'carnes': false, ... }
     var searchQuery = '';
+    var selectedFlavor = null; // Sabor predefinido seleccionado
 
     /* ---- Phyllotaxis para posiciones SVG ---- */
     function generatePizzaPositions(count, radiusScale) {
@@ -433,6 +366,24 @@
       { id:'familiar', label:'Familiar', price:88000, incluidos:3, portions:10, sabores:3 }
     ];
 
+    /* ---- SABORES PREDEFINIDOS ---- */
+    var SABORES_PREDEFINIDOS = [
+      { id:'hawaiana', nombre:'Hawaiana', ings:['veg_2','carne_18'], emoji:'🍍', desc:'Piña, Jamón', color:'#e67e22' },
+      { id:'pollo_champ', nombre:'Pollo y Champiñones', ings:['carne_23','veg_7'], emoji:'🍗', desc:'Pollo desmechado, Champiñones', color:'#d35400' },
+      { id:'jamon_champ_pollo', nombre:'Jamón, Champiñón y Pollo', ings:['carne_18','veg_7','carne_23'], emoji:'🥓', desc:'Jamón, Champiñones, Pollo desmechado', color:'#c0392b' },
+      { id:'carnes', nombre:'Carnes', ings:['carne_18','carne_11','carne_19'], emoji:'🥩', desc:'Jamón, Salami, Cabano', color:'#962D22' },
+      { id:'costillitas_bbq', nombre:'Costillitas BBQ', ings:['carne_18','carne_20','veg_11'], emoji:'🦴', desc:'Jamón, Costillas BBQ, Maíz tierno', color:'#d35400' },
+      { id:'criolla', nombre:'Criolla', ings:['carne_21','veg_11'], emoji:'🇨🇴', desc:'Carne desmechada, Maíz tierno', color:'#f39c12' },
+      { id:'mexicana', nombre:'Mexicana', ings:['carne_12','veg_11','veg_1','veg_29','ext_14'], emoji:'🌮', desc:'Carne molida, Maíz tierno, Tomate, Cilantro, Tostacos', color:'#e74c3c' },
+      { id:'ranchera', nombre:'Ranchera', ings:['veg_7','veg_5','veg_11','carne_22'], emoji:'🤠', desc:'Champiñones, Cebolla, Maíz tierno, Chorizo', color:'#8e44ad' },
+      { id:'de_la_casa', nombre:'De la Casa', ings:['veg_7','veg_5','carne_21'], emoji:'🏠', desc:'Champiñones, Cebolla, Carne desmechada', color:'#2c3e50' },
+      { id:'espanola', nombre:'Española', ings:['veg_18','carne_7','veg_11','veg_7'], emoji:'🇪🇸', desc:'Espinaca, Tocineta, Maíz tierno, Champiñón', color:'#c0392b' },
+      { id:'napolitana', nombre:'Napolitana', ings:['veg_1','veg_15'], emoji:'🇮🇹', desc:'Tomate, Orégano', color:'#e74c3c' },
+      { id:'vegetariana', nombre:'Vegetariana', ings:['veg_7','veg_11','veg_5'], emoji:'🥗', desc:'Champiñón, Maíz tierno, Cebolla', color:'#27ae60' },
+      { id:'tropical', nombre:'Tropical', ings:['dul_20','veg_2','dul_21','dul_7'], emoji:'🌴', desc:'Cerezas, Piña, Duraznos, Uvas pasas', color:'#e84393' },
+      { id:'queso_bocadillo', nombre:'Queso y Bocadillo', ings:['ext_4','ext_15'], emoji:'🧀', desc:'Queso y Bocadillo', color:'#f39c12' }
+    ];
+
     /* ---- FORMATO ---- */
     function formatCOP(n){ return '$' + n.toLocaleString('es-CO'); }
 
@@ -453,6 +404,8 @@
           var sizeData = SIZE_DATA.find(function(s) { return s.id === sizeId; });
           if (!sizeData) return;
           selectedSize = sizeData;
+          // Clear flavor when changing size (autoInclude resets ingredients)
+          selectedFlavor = null;
           // Auto-check included ingredients
           autoInclude(sizeData.incluidos);
           saveState();
@@ -539,8 +492,11 @@
             delete selectedIngs[id];
             chip.classList.remove('checked');
           }
+          // Clear flavor when user manually changes ingredients
+          selectedFlavor = null;
           saveState();
           updateCounts();
+          renderFlavors();
           renderSummary();
           renderPizzaSVG();
         });
@@ -785,9 +741,64 @@
       }
     }
 
+    /* ---- SABORES PREDEFINIDOS: renderizar cards ---- */
+    function renderFlavors() {
+      var container = document.getElementById('ctpFlavorsContainer');
+      if (!container) return;
+      container.innerHTML = SABORES_PREDEFINIDOS.map(function(s) {
+        var isActive = selectedFlavor && selectedFlavor.id === s.id;
+        return '<button type="button" class="ctp-flavor" data-flavor="' + s.id + '" style="' + (isActive ? 'border-color:' + s.color + ';background:rgba(' + hexToRgb(s.color) + ',0.08)' : '') + '">' +
+          '<span class="ctp-flavor-emoji">' + s.emoji + '</span>' +
+          '<div class="ctp-flavor-info">' +
+            '<span class="ctp-flavor-name">' + s.nombre + '</span>' +
+            '<span class="ctp-flavor-desc">' + s.desc + '</span>' +
+          '</div>' +
+          (isActive ? '<span class="ctp-flavor-check"><i class="fas fa-check-circle"></i></span>' : '') +
+          '</button>';
+      }).join('');
+      // Bind click
+      container.querySelectorAll('.ctp-flavor').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          selectSabor(btn.dataset.flavor);
+        });
+      });
+    }
+
+    /* Convert hex color to RGB components for rgba() */
+    function hexToRgb(hex) {
+      hex = hex.replace('#','');
+      if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+      var r = parseInt(hex.substring(0,2), 16);
+      var g = parseInt(hex.substring(2,4), 16);
+      var b = parseInt(hex.substring(4,6), 16);
+      return r + ',' + g + ',' + b;
+    }
+
+    /* ---- SELECT SABOR: auto-seleccionar ingredientes ---- */
+    function selectSabor(saborId) {
+      var sabor = SABORES_PREDEFINIDOS.find(function(s) { return s.id === saborId; });
+      if (!sabor) return;
+      // If same flavor clicked, deselect
+      if (selectedFlavor && selectedFlavor.id === saborId) {
+        selectedFlavor = null;
+        selectedIngs = {};
+      } else {
+        selectedFlavor = sabor;
+        // Set ingredients from flavor recipe
+        selectedIngs = {};
+        sabor.ings.forEach(function(id) { selectedIngs[id] = true; });
+      }
+      saveState();
+      renderFlavors();
+      renderIngredients();
+      renderPizzaSVG();
+      renderSummary();
+    }
+
     /* ---- RENDER ALL ---- */
     function renderAll() {
       renderSizes();
+      renderFlavors();
       renderIngredients();
       renderPizzaSVG();
       renderSummary();
@@ -801,7 +812,8 @@
         var data = {
           sizeId: selectedSize ? selectedSize.id : null,
           ings: selectedIngs,
-          collapsed: collapsedGroups
+          collapsed: collapsedGroups,
+          flavor: selectedFlavor ? selectedFlavor.id : null
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       } catch(e) { /* localStorage no disponible */ }
@@ -820,6 +832,11 @@
         if (data.sizeId) {
           var sizeData = SIZE_DATA.find(function(s) { return s.id === data.sizeId; });
           if (sizeData) selectedSize = sizeData;
+        }
+        // Restore flavor
+        if (data.flavor) {
+          var flavorData = SABORES_PREDEFINIDOS.find(function(s) { return s.id === data.flavor; });
+          if (flavorData) selectedFlavor = flavorData;
         }
         return true;
       } catch(e) { return false; }
@@ -916,6 +933,7 @@
         selectedSize = null;
         selectedIngs = {};
         collapsedGroups = {};
+        selectedFlavor = null;
         searchQuery = '';
         if (searchInput) searchInput.value = '';
         if (searchClear) searchClear.style.display = 'none';
