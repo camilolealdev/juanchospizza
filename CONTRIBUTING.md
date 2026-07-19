@@ -56,6 +56,46 @@ npm run dev:all
 └── index.html              # Landing page (entry point)
 ```
 
+## 🚀 Git workflow
+
+El repo está sincronizado en **dos remotos públicos**:
+
+- `origin` → `jastigoga/pizzeria` (canónico, con PRs y `master` oficial)
+- `camilo` → `camilolealdev/juanchospizza` (fork personal / mirror)
+
+**Regla principal:** usar `git pushall <branch>` para ramas de feature (sincroniza ambos). **NO usar `git push` plano** — solo subiría a `origin` y los commits divergen con el tiempo entre los dos remotos.
+
+**La rama `master` SOLO va a `origin`** (deliberadamente — `camilo` no lleva `master` por diseño, los PRs viven solo allí).
+
+### Setup inicial (idempotente; aplicar después del primer clone)
+
+```bash
+git remote -v                                                                # debe listar origin + camilo
+git config alias.pushall '!git push origin "$@" && git push camilo "$@"'
+git branch --set-upstream-to=origin/<branch> <branch>                        # tracking para git pull
+```
+
+### Workflow diario
+
+```bash
+git pushall feat/foo                       # sincroniza ambos remotos (caso normal)
+git pushall --tags                         # tags también sincronizados
+git push origin master                     # SOLO a origin, después del merge del PR
+```
+
+### Enforcement local automático
+
+Hay un hook `pre-push` en `.husky/pre-push` que valida cada push:
+
+- **Bloquea** pushes de `master` a `camilo` (operación unsafe por diseño).
+- **Avisa** cuando estás pusheando una feature a `origin` y `camilo` está detrás, sugiriendo `git pushall`.
+
+Para bypass temporal del hook: `git push --no-verify`.
+
+Para reescritura de historia (rebase viejo, cherry-pick), `pushall` no expone `--force-with-lease`: hacerlo manual con `git push <remote> <ref> --force-with-lease && git push <remote> <ref> --force-with-lease`.
+
+Más detalle (rationale, edge cases, diagnóstico de desincronización) en `.ai/claude/CLAUDE.md`.
+
 ## 🔧 Convenciones de Código
 
 ### Naming
