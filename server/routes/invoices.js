@@ -6,14 +6,19 @@ import { authMiddleware, requireRole } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import { createInvoiceSchema, updateInvoiceSchema, createCreditNoteSchema } from '../schemas/invoices.js';
 import { generateInvoiceXml, generateDianRequestPayload, DIAN_CONFIG } from '../services/dianXml.js';
-import { broadcast } from '../websocket.js';
+import { notifyAuthorized } from '../websocket.js';
 
 const router = express.Router();
 
 // Helper: notificar WebSocket
-function notifyInvoiceUpdate(invoiceId, action) {
+// Restringido al rol ADMIN — antes se hacía con `broadcast()` y la señal
+// llegaba también al socket `public` del digiturno, exponiendo la existencia
+// de operaciones de facturación a clientes anónimos. Ahora además se
+// filtra por sede: si la factura lleva `locationId`, sólo los ADMINs de
+// esa sede (o ADMINs sin sede asignada, que son globales) reciben el evento.
+function notifyInvoiceUpdate(invoiceId, action, locationId) {
   try {
-    broadcast('invoice:update', { invoiceId, action });
+    notifyAuthorized(['ADMIN'], { locationId }, 'invoice:update', { invoiceId, action });
   } catch (e) {
     console.error('[WS] Error notificando invoice:', e.message);
   }
@@ -160,7 +165,7 @@ router.post('/api/invoices', authMiddleware, requireRole('ADMIN'), validate(crea
     );
 
     const created = await pool.query('SELECT * FROM invoices WHERE id = $1', [id]); // Notificar WebSocket
-    setImmediate(() => notifyInvoiceUpdate(id, 'created'));
+    setImmediate(() => notifyInvoiceUpdate(id, 'created', locationId));
 
     res.status(201).json(created.rows[0]);
   } catch (_e) {
@@ -203,7 +208,7 @@ router.post('/api/invoices/:id/send', authMiddleware, requireRole('ADMIN'), asyn
     const updated = await pool.query('SELECT * FROM invoices WHERE id = $1', [invoice.id]);
 
     // Notificar WebSocket
-    setImmediate(() => notifyInvoiceUpdate(invoice.id, 'sent'));
+    setImmediate(() => notifyInvoiceUpdate(invoice.id, 'sent', invoice.locationId));
 
     res.json({
       message: 'Factura preparada para envío a DIAN',
@@ -286,8 +291,15 @@ router.put(
 
       const updated = await pool.query('SELECT * FROM invoices WHERE id = $1', [req.params.id]);
 
-      // Notificar WebSocket
-      setImmediate(() => notifyInvoiceUpdate(req.params.id, 'updated'));
+      // Notificar WebSocket SOLO si la fila existe. Antes usábamos
+      // `updated.rows[0]?.locationId`, que cae a undefined cuando el WHERE
+      // del UPDATE no impactó ninguna fila — y eso se filtraba como null en
+      // notifyAuthorized, enviando un `invoice:updated` fantasma a admins
+      // de TODAS las sedes (cross-sede leak). Saltamos el notify para que
+      // el broadcast refleje la realidad de la DB.
+      if (updated.rows[0]) {
+        setImmediate(() => notifyInvoiceUpdate(req.params.id, 'updated', updated.rows[0].locationId));
+      }
 
       res.json(updated.rows[0]);
     } catch (_e) {
@@ -319,7 +331,7 @@ router.post('/api/invoices/:id/resend', authMiddleware, requireRole('ADMIN'), as
     ]);
 
     const updated = await pool.query('SELECT * FROM invoices WHERE id = $1', [inv.id]);
-    setImmediate(() => notifyInvoiceUpdate(inv.id, 'resent'));
+    setImmediate(() => notifyInvoiceUpdate(inv.id, 'resent', inv.locationId));
 
     res.json(updated.rows[0]);
   } catch (_e) {

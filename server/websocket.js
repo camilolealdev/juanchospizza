@@ -91,6 +91,42 @@ export function broadcastToLocation(locationId, event, data) {
   }
 }
 
+/**
+ * Enviar un evento SOLO a conexiones que estén en uno de los `allowedRoles`
+ * y, opcionalmente, limitadas a una sede. Diseñado para payloads que NO
+ * deben filtrarse a clientes anónimos (digiturno público) ni entre roles
+ * no relacionados.
+ *
+ * Reglas de filtrado (en orden):
+ *   1. La conexión debe estar OPEN (ws.readyState === 1).
+ *   2. Su rol debe estar en allowedRoles (string o array).
+ *   3. Si `options.locationId` está definido Y la conexión tiene
+ *      `ws.locationId`, deben coincidir. Si la conexión no tiene
+ *      locationId (ADMIN global), recibe el evento aunque esté filtrado
+ *      por sede — así no le "ciegan" la operación a un admin multi-sede.
+ *   4. Si `options.locationId` es null/undefined, no se filtra por sede
+ *      (la restricción solo aplica al rol).
+ *
+ * Caso típico: `notifyAuthorized(['ADMIN'], { locationId }, 'invoice:update', …)`
+ * impide que el socket público del digiturno reciba señales de facturación.
+ */
+export function notifyAuthorized(allowedRoles, options, event, data) {
+  if (!wss) return;
+  const roleList = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+  const targetLocationId = options?.locationId ?? null;
+  const message = JSON.stringify({
+    type: event,
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+  for (const ws of allConnections) {
+    if (ws.readyState !== 1) continue;
+    if (!roleList.includes(ws.role)) continue;
+    if (targetLocationId && ws.locationId && ws.locationId !== targetLocationId) continue;
+    ws.send(message);
+  }
+}
+
 // Funciones helper para eventos comunes
 export function notifyNewOrder(order) {
   broadcast('order:new', { order });
