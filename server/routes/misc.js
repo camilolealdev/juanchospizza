@@ -1,6 +1,7 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
+import { CATEGORIES, PRODUCTS, PIZZA_SIZES, INGREDIENTS } from '../seedData/juanchosMenu.js';
 
 const router = express.Router();
 
@@ -9,35 +10,105 @@ router.get('/api/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  } catch (e) {
+  } catch (_e) {
     res.status(503).json({ status: 'error', timestamp: new Date().toISOString() });
   }
 });
 
-// Seed data endpoint
+// Seed data endpoint -- carga/actualiza la carta real (categorías, productos,
+// tamaños de pizza, ingredientes del armador) desde server/seedData/juanchosMenu.js.
+// Idempotente vía ON CONFLICT DO UPDATE: re-correrlo actualiza precios/textos
+// existentes en vez de solo insertar una vez, así sirve tanto para el primer
+// deploy como para publicar cambios de carta.
 router.post('/api/seed', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
-    const categories = [
-      { id: '1', name: 'PROMOS FLASH', icon: 'bolt', color: 'text-yellow-500' },
-      { id: '2', name: 'PIZZAS TRADICIONALES', icon: 'pizza-slice', color: 'text-orange-500' },
-      { id: '3', name: 'PIZZAS PREMIUM', icon: 'crown', color: 'text-purple-500' },
-      { id: '4', name: 'PIZZAS DULCES', icon: 'cookie', color: 'text-pink-400' },
-      { id: '5', name: 'ENTRADAS', icon: 'bread-slice', color: 'text-amber-500' },
-      { id: '6', name: 'COMBOS', icon: 'box-open', color: 'text-green-500' },
-      { id: '7', name: 'BEBIDAS', icon: 'wine-glass', color: 'text-cyan-500' },
-      { id: '8', name: 'POSTRES', icon: 'ice-cream', color: 'text-pink-500' },
-      { id: '9', name: 'SALSAS PARA MOJAR', icon: 'droplet', color: 'text-red-500' },
-    ];
-
-    for (const cat of categories) {
+    for (const cat of CATEGORIES) {
       await pool.query(
-        `INSERT INTO categories (id, name, icon, color) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING`,
+        `INSERT INTO categories (id, name, icon, color) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (id) DO UPDATE SET name = $2, icon = $3, color = $4`,
         [cat.id, cat.name, cat.icon, cat.color]
       );
     }
 
-    res.json({ message: 'Seed completed' });
-  } catch (e) {
+    for (const p of PRODUCTS) {
+      await pool.query(
+        `INSERT INTO products (id, "categoryId", nombre, descripcion, "basePrice", type, image, tiempo, popularidad, vegetariano, "isPremium", exclusiva, subcategory)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+         ON CONFLICT (id) DO UPDATE SET
+           "categoryId" = $2, nombre = $3, descripcion = $4, "basePrice" = $5, type = $6,
+           image = $7, tiempo = $8, popularidad = $9, vegetariano = $10, "isPremium" = $11,
+           exclusiva = $12, subcategory = $13`,
+        [
+          p.id,
+          p.categoryId,
+          p.nombre,
+          p.descripcion,
+          p.basePrice,
+          p.type,
+          p.image || '',
+          p.tiempo || 20,
+          p.popularidad || 0,
+          !!p.vegetariano,
+          !!p.isPremium,
+          !!p.exclusiva,
+          p.subcategory || null,
+        ]
+      );
+
+      // Precio de combo (hamburguesas/perros) -- se modela como una
+      // menu_variant "Combo" cuyo delta es comboPrice - basePrice, mismo
+      // patrón que MenuInteligente.tsx ya renderiza ("+$X").
+      if (p.comboPrice) {
+        const variantId = `mva_${p.id}_combo`;
+        await pool.query(
+          `INSERT INTO menu_variants (id, "productoId", nombre, "precioModificador", activo)
+           VALUES ($1,$2,'Combo',$3,true)
+           ON CONFLICT (id) DO UPDATE SET "precioModificador" = $3`,
+          [variantId, p.id, p.comboPrice - p.basePrice]
+        );
+      }
+    }
+
+    for (const s of PIZZA_SIZES) {
+      await pool.query(
+        `INSERT INTO pizza_sizes (id, nombre, precio, incluidos, porciones, activo)
+         VALUES ($1,$2,$3,$4,$5,true)
+         ON CONFLICT (id) DO UPDATE SET nombre = $2, precio = $3, incluidos = $4, porciones = $5`,
+        [s.id, s.nombre, s.precio, s.incluidos, s.porciones]
+      );
+    }
+
+    for (const i of INGREDIENTS) {
+      await pool.query(
+        `INSERT INTO ingredients (id, nombre, descripcion, precio_extra, categoria, vegetariano, vegano, premium, dulce, disponible, "defaultIng")
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         ON CONFLICT (id) DO UPDATE SET
+           nombre = $2, descripcion = $3, precio_extra = $4, categoria = $5, vegetariano = $6,
+           vegano = $7, premium = $8, dulce = $9, disponible = $10, "defaultIng" = $11`,
+        [
+          i.id,
+          i.nombre,
+          i.descripcion,
+          i.precio_extra,
+          i.categoria,
+          i.vegetariano,
+          i.vegano,
+          i.premium,
+          i.dulce,
+          i.disponible,
+          i.defaultIng,
+        ]
+      );
+    }
+
+    res.json({
+      message: 'Seed completed',
+      categories: CATEGORIES.length,
+      products: PRODUCTS.length,
+      pizzaSizes: PIZZA_SIZES.length,
+      ingredients: INGREDIENTS.length,
+    });
+  } catch (_e) {
     res.status(500).json({ error: 'Error seeding data' });
   }
 });

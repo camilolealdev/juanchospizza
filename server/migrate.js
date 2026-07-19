@@ -219,6 +219,30 @@ const MIGRATIONS = [
       await pool.query('CREATE INDEX IF NOT EXISTS idx_derechos_created ON derechos_solicitudes(created_at)');
     },
   },
+
+  // ── 006: Menú real (carta actualizada) ──────────────────────────
+  // subcategory agrupa productos dentro de una misma categoría (ej. las 3
+  // cartas de hamburguesa "A la plancha/Apanadas/De la casa", o las
+  // subsecciones de bebidas) sin inventar una jerarquía de categorías nueva.
+  // pizza_sizes es tabla nueva -- en instalaciones nuevas initDB ya la crea,
+  // acá queda como no-op idempotente.
+  {
+    id: 6,
+    name: 'Add subcategory to products, create pizza_sizes table',
+    up: async (pool) => {
+      await pool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS subcategory TEXT');
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS pizza_sizes (
+          id TEXT PRIMARY KEY,
+          nombre TEXT NOT NULL,
+          precio INTEGER NOT NULL,
+          incluidos INTEGER NOT NULL,
+          porciones INTEGER,
+          activo BOOLEAN DEFAULT TRUE
+        )
+      `);
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────

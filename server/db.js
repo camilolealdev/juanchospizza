@@ -35,7 +35,25 @@ export async function initDB() {
         popularidad INTEGER,
         vegetariano BOOLEAN,
         "isPremium" BOOLEAN,
-        exclusiva BOOLEAN
+        exclusiva BOOLEAN,
+        subcategory TEXT
+      )
+    `);
+
+    // Tamaños de pizza -- usados tanto por el menú fijo (sabores completos,
+    // sección "Pizza") como por el armador "Crea tu pizza" (base + N
+    // ingredientes incluidos, extras a precio_extra por ingrediente). precio
+    // es el precio ABSOLUTO del tamaño, no un delta -- distinto de
+    // menu_variants (que sí es delta) porque acá no hay "producto base" del
+    // cual partir, el tamaño ES el precio.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS pizza_sizes (
+        id TEXT PRIMARY KEY,
+        nombre TEXT NOT NULL,
+        precio INTEGER NOT NULL,
+        incluidos INTEGER NOT NULL,
+        porciones INTEGER,
+        activo BOOLEAN DEFAULT TRUE
       )
     `);
 
@@ -270,7 +288,8 @@ export async function initDB() {
         usado INTEGER DEFAULT 0,
         limite INTEGER DEFAULT 100
       )
-    `);    await pool.query(`CREATE TABLE IF NOT EXISTS reviews (
+    `);
+    await pool.query(`CREATE TABLE IF NOT EXISTS reviews (
         id TEXT PRIMARY KEY,
         "orderId" TEXT REFERENCES orders(id),
         "clientPhone" TEXT,
@@ -520,7 +539,7 @@ export async function initDB() {
     await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS notes TEXT');
     await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "fechaVencimiento" TIMESTAMPTZ');
     await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "tipoOperacion" TEXT DEFAULT \'10\'');
-    await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS moneda TEXT DEFAULT \'COP\'');
+    await pool.query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS moneda TEXT DEFAULT 'COP'");
 
     await pool.query('CREATE INDEX IF NOT EXISTS idx_invoices_orderId ON invoices("orderId")');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)');
@@ -586,13 +605,17 @@ export async function initDB() {
       )
     `);
     await pool.query('CREATE INDEX IF NOT EXISTS idx_digiturno_status ON digiturno_tickets(status)');
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_digiturno_locationId_status ON digiturno_tickets("locationId", status)');
+    await pool.query(
+      'CREATE INDEX IF NOT EXISTS idx_digiturno_locationId_status ON digiturno_tickets("locationId", status)'
+    );
     await pool.query('CREATE INDEX IF NOT EXISTS idx_digiturno_createdAt ON digiturno_tickets("createdAt")');
     // UNIQUE constraint para evitar race condition en números secuenciales.
     // Si dos POSTs simultáneos calculan el mismo MAX+1, el segundo INSERT
     // falla con unique_violation (código 23505) y el retry loop en la ruta
     // lo reintenta automáticamente con el siguiente número disponible.
-    await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_digiturno_number_location ON digiturno_tickets("locationId", "ticketNumber")');
+    await pool.query(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_digiturno_number_location ON digiturno_tickets("locationId", "ticketNumber")'
+    );
 
     // === TIPS ===
     await pool.query(`
