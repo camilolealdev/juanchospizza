@@ -29,14 +29,18 @@ if (REVERT) {
   // Revert: public/styles.css → <style>; public/schema.json → <script type="application/ld+json">
   if (fs.existsSync(cssPath)) {
     const css = fs.readFileSync(cssPath, 'utf-8');
-    html = html.replace(/<link\s+rel=["']stylesheet["']\s+href=["']\/styles\.css["']\s*\/?>/i,
-      `<style>\n${css}\n</style>`);
+    html = html.replace(
+      /<link\s+rel=["']stylesheet["']\s+href=["']\/styles\.css["']\s*\/?>/i,
+      `<style>\n${css}\n</style>`
+    );
     log.push('REVERT styles.css → <style>');
   }
   if (fs.existsSync(schemaPath)) {
     const json = fs.readFileSync(schemaPath, 'utf-8');
-    html = html.replace(/<script\s+type=["']application\/ld\+json["']\s+src=["']\/schema\.json["']>\s*<\/script>/i,
-      `<script type="application/ld+json">\n${json}\n</script>`);
+    html = html.replace(
+      /<script\s+type=["']application\/ld\+json["']\s+src=["']\/schema\.json["']>\s*<\/script>/i,
+      `<script type="application/ld+json">\n${json}\n</script>`
+    );
     log.push('REVERT schema.json → <script type="application/ld+json">');
   }
   fs.writeFileSync(htmlPath, html);
@@ -66,7 +70,7 @@ if (styleBlocks.length > 0) {
 
   // Dedup: FIRST <style> → <link>, subsequent → removed entirely.
   let replacedFirst = false;
-  html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, (match) => {
+  html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, () => {
     if (!replacedFirst) {
       replacedFirst = true;
       return '<link rel="stylesheet" href="/styles.css">';
@@ -104,8 +108,7 @@ if (jsonLdMatch) {
     fs.writeFileSync(htmlPath, html);
     process.exit(1);
   }
-  html = html.replace(jsonLdRe,
-    '<script type="application/ld+json" src="/schema.json"></script>');
+  html = html.replace(jsonLdRe, '<script type="application/ld+json" src="/schema.json"></script>');
   log.push('REPLACED JSON-LD inline with <script src="/schema.json">');
 } else if (!fs.existsSync(schemaPath)) {
   log.push('NO_JSON_LD_TO_EXTRACT (and no schema.json yet)');
