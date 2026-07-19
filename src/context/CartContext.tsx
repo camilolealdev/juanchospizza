@@ -33,7 +33,7 @@ export const useCart = () => useContext(CartContext);
 
 declare global {
   interface Window {
-    __pizzaBuilderAddToCart?: (name: string) => void;
+    __pizzaBuilderAddToCart?: (name: string, details?: string) => void;
   }
 }
 
@@ -65,44 +65,46 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addToCart = useCallback((item: Omit<CartItem, 'id'>) => {
     const id = item.productId + '-' + Date.now();
-    setCart(prev => [...prev, { ...item, id }]);
+    setCart((prev) => [...prev, { ...item, id }]);
   }, []);
 
   const removeFromCart = useCallback((id: string) => {
-    setCart(prev => prev.filter(i => i.id !== id));
+    setCart((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
   const updateQuantity = useCallback((id: string, delta: number) => {
-    setCart(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i));
+    setCart((prev) => prev.map((i) => (i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i)));
   }, []);
 
   const clearCart = useCallback(() => {
     setCart([]);
   }, []);
 
-  // Expose global bridge for vanilla pizza builder
+  // Expose global bridge for vanilla pizza builder (accepts optional details/ingredients)
   useEffect(() => {
-    window.__pizzaBuilderAddToCart = (name: string) => {
+    window.__pizzaBuilderAddToCart = (name: string, details?: string) => {
       // Read actual price from the DOM (set by vanilla pizza builder)
       const priceEl = document.getElementById('priceDisplay');
       const priceText = priceEl?.textContent || '$0';
       const price = parseInt(priceText.replace(/[^0-9]/g, '')) || 30000;
 
-      // Read dough name for richer details
+      // Use passed details (which now includes ingredients) or fall back to dough name
       const doughEl = document.getElementById('doughName');
       const dough = doughEl?.textContent || 'Personalizada';
-      const details = `Pizza artesanal · ${dough}`;
+      const itemDetails = details || `Pizza artesanal · ${dough}`;
 
       const id = 'pizza-builder-' + Date.now();
-      setCart(prev => {
-        const next = [...prev, { id, productId: 'pizza-builder', name, price, quantity: 1, details }];
+      setCart((prev) => {
+        const next = [...prev, { id, productId: 'pizza-builder', name, price, quantity: 1, details: itemDetails }];
         const count = next.reduce((s, i) => s + i.quantity, 0);
         localStorage.setItem('juanchos_cart', count.toString());
         window.dispatchEvent(new CustomEvent('cart-updated', { detail: count }));
         return next;
       });
     };
-    return () => { delete window.__pizzaBuilderAddToCart; };
+    return () => {
+      delete window.__pizzaBuilderAddToCart;
+    };
   }, []);
 
   return (

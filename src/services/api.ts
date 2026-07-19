@@ -27,6 +27,19 @@ export type EmployeeUpdatePayload = Partial<Pick<Employee, 'nombre' | 'role' | '
 type LoyaltyRewardPayload = Partial<LoyaltyReward>;
 type ProductPayload = Partial<Product>;
 
+// precio ABSOLUTO (no delta como MenuVariant.precioModificador) -- no hay
+// "producto base" del cual partir, el tamaño ES el precio. incluidos cubre
+// tanto "# sabores fijos" (menú) como "# ingredientes libres" (armador).
+export interface PizzaMenuSize {
+  id: string;
+  nombre: string;
+  precio: number;
+  incluidos: number;
+  porciones: number | null;
+  activo: boolean;
+}
+type PizzaMenuSizePayload = Partial<PizzaMenuSize>;
+
 export interface MenuVariant {
   id: string;
   productoId: string | null;
@@ -398,6 +411,32 @@ export const api = {
   async getIngredients(category?: string) {
     const path = category ? `/api/ingredients?category=${category}` : '/api/ingredients';
     return apiFetch(path);
+  },
+
+  // Pizza sizes (Small/Junior/Mediana/Familiar) -- menú de sabores fijos +
+  // armador "Crea tu pizza"
+  async getPizzaSizes(): Promise<PizzaMenuSize[]> {
+    return apiFetch('/api/pizza-sizes');
+  },
+
+  async createPizzaSize(size: PizzaMenuSizePayload) {
+    return apiFetch('/api/pizza-sizes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(size),
+    });
+  },
+
+  async updatePizzaSize(id: string, data: PizzaMenuSizePayload) {
+    return apiFetch(`/api/pizza-sizes/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deletePizzaSize(id: string) {
+    return apiFetch(`/api/pizza-sizes/${id}`, { method: 'DELETE' });
   },
 
   // Order tracking (guest, público, requiere teléfono)

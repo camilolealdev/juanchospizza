@@ -24,7 +24,7 @@ export interface Ingredient {
   nombre: string;
   descripcion: string;
   precio_extra: number;
-  categoria: 'base' | 'salsa' | 'queso' | 'carne' | 'vegetal' | 'dulce' | 'extra' | 'especia';
+  categoria: 'base' | 'salsa' | 'queso' | 'carne' | 'vegetal' | 'fruta' | 'dulce' | 'extra' | 'especia';
   vegetariano?: boolean;
   vegano?: boolean;
   premium?: boolean;
@@ -36,6 +36,7 @@ export interface Ingredient {
 export interface Product {
   id: string;
   categoryId: string;
+  subcategory?: string;
   nombre: string;
   descripcion: string;
   basePrice: number;
