@@ -46,14 +46,12 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: pizzeria-master/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: 📦 Install (npm ci, reproducible)
-        working-directory: pizzeria-master
         run: npm ci --no-audit --no-fund
 
       - name: 🔍 Lint (eslint)
-        working-directory: pizzeria-master
         # TOLERA el baseline (~192 `no-unused-vars` en catch blocks de
         # archivos preexistentes en server/routes/*, server/schemas/* y
         # server/services/*). El --quiet sólo imprime errores (no warnings),
@@ -71,19 +69,15 @@ jobs:
         continue-on-error: true
 
       - name: 🔷 Typecheck (tsc)
-        working-directory: pizzeria-master
         run: npx tsc --noEmit
 
       - name: 🏗️ Build (vite build)
-        working-directory: pizzeria-master
         run: npx vite build
 
       - name: 🧪 Test (vitest run)
-        working-directory: pizzeria-master
         run: npx vitest run --reporter=default
 
       - name: 🛡️ Dependency audit (high+ severity, non-blocking)
-        working-directory: pizzeria-master
         # Solo falla el pipeline si hay vulnerabilidades HIGH o CRITICAL.
         # Las MEDIUM se reportan en los logs para seguimiento.
         continue-on-error: true
@@ -94,5 +88,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: vitest-coverage
-          path: pizzeria-master/coverage
+          path: coverage/
           if-no-files-found: ignore

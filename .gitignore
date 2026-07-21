@@ -81,3 +81,6 @@ nginx.conf
 # Si añadís secrets locales o scripts one-off, ponelos en .github/_local/
 # (excluido a continuación) o en un .gitignore_global/.git/info/exclude.
 .github/_local/
+
+# Certificados TLS locales autofirmados (nginx, dev/testing) -- nunca reales
+certs/
