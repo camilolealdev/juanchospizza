@@ -11,7 +11,15 @@ import type {
   LocationId,
 } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// '' (no VITE_API_URL en build time) -> fetch('' + '/api/...') = URL relativa,
+// resuelve contra el origin real del visitante. El fallback anterior horneaba
+// 'http://localhost:3001' en TODO build de producción (Vite inlinea
+// import.meta.env.* al buildear, no es configurable en runtime) -- cada
+// visitante real intentaba pegarle a SU PROPIO localhost:3001, no al server.
+// Docker/nginx nunca setean VITE_API_URL, así que el 404/red-error era
+// silencioso: la shell cargaba, todo lo que dependía de la API quedaba
+// muerto. Dev local no se ve afectado: .env fija VITE_API_URL explícito.
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 type OrderPayload = Partial<Order>;
 type ClientPayload = Partial<Client>;

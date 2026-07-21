@@ -55,6 +55,10 @@ RUN npm run build 2>&1
 FROM node:${NODE_VERSION} AS runtime
 WORKDIR /app
 
+# ARGs no cruzan a un nuevo stage automáticamente -- sin esta línea BUILD_PORT
+# quedaba vacío acá (solo existía en el stage de antes del primer FROM).
+ARG BUILD_PORT=3001
+
 ENV NODE_ENV=production \
     NODE_OPTIONS="--max-old-space-size=512" \
     PORT=${BUILD_PORT} \
@@ -76,7 +80,13 @@ COPY --chown=appuser:appgroup --from=build /app/dist ./dist
 USER appuser
 EXPOSE ${BUILD_PORT}
 
+# HEALTHCHECK CMD corre en el contenedor en RUNTIME, no en build time -- ARGs
+# (como BUILD_PORT) nunca persisten hasta ahí, solo ENV sí. Por eso acá se usa
+# ${PORT} (seteado arriba vía ENV PORT=${BUILD_PORT}), no ${BUILD_PORT}
+# directo -- referenciarlo mal dejaba el healthcheck pegándole a
+# "http://localhost:/api/health" (puerto vacío) siempre, incluso con el
+# server sirviendo tráfico real sin problema.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD wget -q --spider http://localhost:${BUILD_PORT}/api/health || exit 1
+  CMD wget -q --spider http://localhost:${PORT}/api/health || exit 1
 
 CMD ["node", "server/index.js"]
