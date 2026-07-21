@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juancho's Pizza y Comidas Rápidas - Nemocón & Zipaquirá</title>
+    <meta name="description" content="Juancho's Pizza con sedes en Nemocón y Zipaquirá. Pizzas artesanales, lasañas y spaguettis. Domicilios rápidos. Pizzería en Nemocón y Zipaquirá, Cundinamarca.">
+    <meta name="keywords" content="Juancho's Pizza Nemocón, Juancho's Pizza Zipaquirá, Pizzería en Nemocón, Pizzería en Zipaquirá, Domicilios en Nemocón, Domicilios en Zipaquirá, pizza artesanal Cundinamarca">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,700;1,400&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:title" content="Juancho's Pizza y Comidas Rápidas - Nemocón &amp; Zipaquirá">
+    <meta property="og:description" content="Las mejores pizzas artesanales, lasañas y spaguettis de Nemocón y Zipaquirá directamente a tu puerta.">
+    <meta property="og:image" content="/og-image.jpg">
+    <meta property="og:url" content="https://juanchospizza.com">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="es_CO">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Juancho's Pizza - Nemocón &amp; Zipaquirá">
+    <meta name="twitter:description" content="Las mejores pizzas artesanales de Nemocón y Zipaquirá directamente a tu puerta.">
+    <meta name="twitter:image" content="https://juanchospizza.com/og-image.jpg">
+
+    <link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FoodEstablishment",
+  "name": "Juancho's Pizza y Comidas Rápidas",
+  "description": "Pizzas artesanales, lasañas y spaguettis con sedes en Nemocón y Zipaquirá, Cundinamarca.",
+  "url": "https://juanchospizza.com",
+  "telephone": "+57-311-707-4843",
+  "servesCuisine": "Pizza, Comida Rápida, Italiana",
+  "areaServed": [
+    "Nemocón",
+    "Zipaquirá",
+    "Cundinamarca"
+  ],
+  "hasMenu": "https://juanchospizza.com",
+  "sameAs": [
+    "https://www.instagram.com/juanchospizzanemocon/",
+    "https://www.facebook.com/juanchospizzanemocon",
+    "https://www.tiktok.com/@juanchospizzanemocon"
+  ],
+  "department": [
+    {
+      "@type": "FoodEstablishment",
+      "name": "Juancho's Pizza Nemocón",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Cra 6 No. 5-40, Vía Principal",
+        "addressLocality": "Nemocón",
+        "addressRegion": "Cundinamarca",
+        "addressCountry": "CO"
+      },
+      "telephone": "+57-311-707-4843",
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        "opens": "16:00",
+        "closes": "23:00"
+      }
+    },
+    {
+      "@type": "FoodEstablishment",
+      "name": "Juancho's Pizza Zipaquirá",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Diagonal 4 #29-10, Barrio Las Villas",
+        "addressLocality": "Zipaquirá",
+        "addressRegion": "Cundinamarca",
+        "addressCountry": "CO"
+      },
+      "telephone": "+57-311-707-4843",
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        "opens": "16:00",
+        "closes": "23:00"
+      }
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header>
+    <a href="#" class="logo" data-nav-page="inicio"><img src="/logo.png" alt="Juancho's Pizza" class="logo-img"> Juancho's Pizza</a>
+    <div class="hamburger" id="navToggle"><i class="fa-solid fa-bars"></i></div>
+    <ul class="nav-links" id="navMenu">
+        <li><a href="#" data-nav-page="inicio">Inicio</a></li>
+        <li><a href="#" data-nav-page="crea-tu-pizza">Crea tu Pizza</a></li>
+        <li><a href="#" data-nav-page="menu">Menú</a></li>
+        <li><a href="#" data-nav-page="domicilios">Domicilios</a></li>
+        <li><a href="#" data-nav-page="carrito">Carrito</a></li>
+        <li class="nav-actions">
+            <a href="#" id="navCartBtn" class="nav-cart" title="Carrito" data-nav-page="carrito">
+                <i class="fa-solid fa-basket-shopping"></i>
+                <span class="cart-count" id="cartCounter">0</span>
+            </a>
+        </li>
+    </ul>
+</header>
+
+<a href="https://wa.me/573117074843?text=Hola%2C%20quiero%20hacer%20un%20pedido" target="_blank" class="floating-chatbot" id="floatingWhatsApp" title="Chatea con nosotros">
+    <i class="fa-brands fa-whatsapp"></i>
+    <span class="wa-badge" id="waBadge" style="display:none">0</span>
+</a>
+
+<div class="page-container active" data-page="inicio">
+    <section id="inicio">
+        <video class="hero-bg-video" autoplay loop muted playsinline src="/pizza-logo.mp4"></video>
+        <div class="hero-overlay"></div>
+        <div class="hero-content container-max">
+            <h1>En Sabor y Calidad, No Hay Igual</h1>
+            <p>Las mejores pizzas, lasañas y spaguettis de Nemocón y Zipaquirá directamente a tu puerta.</p>
+            <a href="#" class="btn-primary" data-nav-page="menu">VER MENÚ Y ORDENAR <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+    </section>
+
+    <div class="divider-banner">
+        <h2>Nuestros Destacados</h2>
+        <p>Navega hasta <strong>Menú</strong> para ver nuestro menú completo</p>
+    </div>
+    <main id="destacados">
+        <section class="product-section">
+            <div class="product-visual"><img src="https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=800&q=80" alt="Pizza Especial Juanchos"></div>
+            <div class="product-info">
+                <h2>Pizza Especial Juancho's</h2>
+                <ul class="ingredients-list">
+                    <li>Salsa de tomate casera secreta</li>
+                    <li>Queso mozzarella fundido premium</li>
+                    <li>Pepperoni curado madurado</li>
+                    <li>Champiñones frescos seleccionados, aceitunas y pimentón</li>
+                </ul>
+                <p class="product-description">"La insignia de la casa. Un balance perfecto entre crujido y suavidad artesanal."</p>
+                <span class="price-tag">$24.900</span>
+            </div>
+        </section>
+        <section class="product-section type-b">
+            <div class="product-visual"><img src="https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&w=800&q=80" alt="Lasaña Super Mixta"></div>
+            <div class="product-info">
+                <h2>Lasaña Súper Mixta</h2>
+                <ul class="ingredients-list">
+                    <li>Capas de pasta artesanal al huevo</li>
+                    <li>Carne boloñesa madurada a fuego lento</li>
+                    <li>Pollo desmechado jugoso</li>
+                    <li>Salsa bechamel tradicional y mucho queso gratinado</li>
+                </ul>
+                <p class="product-description">"Dorada a la perfección con una capa crujiente de queso parmesano por encima."</p>
+                <span class="price-tag">$18.500</span>
+            </div>
+        </section>
+        <section class="product-section">
+            <div class="product-visual"><img src="https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=800&q=80" alt="Spaguetti a la Boloñesa"></div>
+            <div class="product-info">
+                <h2>Spaguetti a la Boloñesa Casera</h2>
+                <ul class="ingredients-list">
+                    <li>Pasta italiana al dente</li>
+                    <li>Salsa de carne receta original de la casa</li>
+                    <li>Especias aromáticas y albahaca</li>
+                    <li>Lluvia abundante de queso parmesano</li>
+                </ul>
+                <p class="product-description">"El verdadero confort food de barrio. Sabor denso, casero y entrañable."</p>
+                <span class="price-tag">$15.900</span>
+            </div>
+        </section>
+        <section class="product-section type-b">
+            <div class="product-visual"><img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80" alt="Hamburguesa de la Casa"></div>
+            <div class="product-info">
+                <h2>Hamburguesa de la Casa</h2>
+                <ul class="ingredients-list">
+                    <li>Carne artesanal de res (150g) seleccionada</li>
+                    <li>Queso cheddar fundido doble</li>
+                    <li>Vegetales frescos de la huerta local</li>
+                    <li>Salsas especiales de la casa y pan brioche</li>
+                </ul>
+                <p class="product-description">"Grande, jugosa y pecaminosa. Hecha con fuego, pasión y mística urbana."</p>
+                <span class="price-tag">$13.500</span>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div class="page-container" data-page="crea-tu-pizza">
+  <!-- ===== CREA TU PIZZA — Builder visual con SVG ===== -->
+  <section id="ctp-builder" class="ctp-section">
+    <div class="ctp-head">
+      <p class="ctp-eyebrow">Arma la tuya</p>
+      <h2 class="ctp-title">Crea tu Pizza</h2>
+      <p class="ctp-desc">Elige el tamaño y combina ingredientes. La pizza visual se actualiza en tiempo real.</p>
+    </div>
+
+    <div class="ctp-grid">
+
+      <!-- ========== COLUMNA 1: Tamaño + Sabores ========== -->
+      <div class="ctp-card">
+        <h3 class="ctp-step"><span class="ctp-step-num">1</span> Elige el tamaño</h3>
+        <div class="ctp-sizes" id="ctpSizes"></div>
+      </div>
+
+      <div class="ctp-card ctp-flavors-card">
+        <h3 class="ctp-step"><span class="ctp-step-num">⚡</span> Sabores Predefinidos</h3>
+        <p class="ctp-flavors-desc">Selecciona un sabor y sus ingredientes se marcarán automáticamente</p>
+        <div class="ctp-flavors-scroll" id="ctpFlavorsContainer"></div>
+      </div>
+
+      <!-- ========== COLUMNA 2: Ingredientes (dinámicos desde datos) ========== -->
+      <div class="ctp-card ctp-ingredients-card">
+        <h3 class="ctp-step"><span class="ctp-step-num">2</span> Elige tus ingredientes</h3>
+        <div class="ctp-search-wrap">
+          <i class="fas fa-search ctp-search-icon"></i>
+          <input type="text" class="ctp-search-input" id="ctpSearchInput" placeholder="Buscar ingredientes..." autocomplete="off">
+          <button class="ctp-search-clear" id="ctpSearchClear" style="display:none"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="ctpIngredientsContainer"></div>
+        <div id="ctpTooltip" class="ctp-tooltip"></div>
+        <div class="ctp-included-hint" id="ctpIncludedHint">Selecciona un tamaño para ver los ingredientes incluidos</div>
+      </div>
+
+      <!-- ========== COLUMNA 3: Pizza visual + Resumen ========== -->
+      <div class="ctp-card ctp-summary">
+        <h3 class="ctp-step"><span class="ctp-step-num">3</span> Tu pizza</h3>
+
+        <!-- Pizza visual SVG -->
+        <div class="ctp-pizza-visual-wrap">
+          <svg class="ctp-pizza-svg" id="ctpPizzaSvg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <!-- Base (masa) -->
+            <circle cx="100" cy="100" r="92" fill="#dcae73" stroke="#a67c52" stroke-width="6"/>
+            <circle cx="100" cy="100" r="82" fill="#e8c48a" opacity="0.5"/>
+            <!-- Borde estilo pepperoni -->
+            <circle cx="100" cy="100" r="90" fill="none" stroke="#c4955a" stroke-width="4" stroke-dasharray="4 3" opacity="0.4"/>
+            <!-- Toppings renderizados aquí -->
+            <g id="ctpToppingsGroup"></g>
+            <!-- Texto placeholder -->
+            <text id="ctpPizzaPlaceholder" x="100" y="105" text-anchor="middle" fill="#8B572A" font-size="8" font-weight="700" letter-spacing="2" opacity="0.5">SELECCIONA INGREDIENTES</text>
+          </svg>
+          <div class="ctp-pizza-legend" id="ctpPizzaLegend"></div>
+        </div>
+
+        <p class="ctp-summary-size" id="ctpSummarySize">Elige un tamaño y tus ingredientes favoritos</p>
+        <ul class="ctp-summary-list" id="ctpSummaryList"></ul>
+        <div class="ctp-summary-foot">
+          <div class="ctp-summary-row">
+            <span><i class="fa-solid fa-check-circle" style="color:var(--rrojo-acento);font-size:10px"></i> Incluidos</span>
+            <span id="ctpIncluidos">0</span>
+          </div>
+          <div class="ctp-summary-row">
+            <span><i class="fa-solid fa-plus-circle" style="color:var(--marron-madera);font-size:10px"></i> Adicionales (<span id="ctpExtraCount">0</span> × $3.500)</span>
+            <span id="ctpExtraTotal">$0</span>
+          </div>
+          <div class="ctp-summary-row ctp-total">
+            <span>Total</span>
+            <span id="ctpTotal">$0</span>
+          </div>
+        </div>
+        <div class="ctp-clear-wrap">
+          <button type="button" class="ctp-clear-btn" id="ctpClearBtn"><i class="fa-solid fa-rotate-left"></i> Limpiar selección</button>
+        </div>
+        <button type="button" class="ctp-cta" id="ctpAddBtn" disabled>
+          <i class="fa-solid fa-cart-plus"></i> Agregar al pedido
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== INLINE SCRIPT: CTP Builder completo con SVG visual ===== -->
+  <script>
+  (function(){
+    /* ---- CONFIG ---- */
+    const EXTRA_INGREDIENTE_PRECIO = 3500;
+    const MAX_VISIBLE_CHIPS = 10;
+
+    /* ---- Ingredientes reales -- cargados de /api/ingredients (ver
+       server/seedData/juanchosMenu.js), no hardcodeados. Así un cambio de
+       precio/disponibilidad hecho por el admin en la CRM (MenuInteligente.tsx)
+       se refleja acá sin tocar código. Se llena en loadMenuData(). ---- */
+    var CTP_INGREDIENTS = { carnes: [], vegetales: [], frutas_dulces: [], extras: [] };
+
+    // categoria (DB, singular) -> grupo del builder (UI, como ya lo espera
+    // el resto de este script)
+    var CATEGORIA_TO_GROUP = { carne: 'carnes', vegetal: 'vegetales', fruta: 'frutas_dulces', extra: 'extras' };
+    // Un ícono representativo por categoría -- la DB no guarda ícono por
+    // ingrediente, y el menú real no lo necesita (a diferencia del catálogo
+    // gourmet viejo, que sí variaba ícono por ítem).
+    var CATEGORIA_ICON = { carne: 'drumstick-bite', vegetal: 'carrot', fruta: 'apple-alt', extra: 'circle' };
+
+    /* ---- MAPS ---- */
+    var GROUP_LABELS = { carnes:'Carnes', vegetales:'Vegetales', frutas_dulces:'Frutas & Dulces', extras:'Extras' };
+    var GROUP_ICONS = { carnes:'drumstick-bite', vegetales:'carrot', frutas_dulces:'cookie', extras:'plus-circle' };
+    var GROUP_COLORS = { carnes:'#962D22', vegetales:'#6B8E23', frutas_dulces:'#db2777', extras:'#ea580c' };
+    var GROUP_FA_ICONS = { carnes:'fa-drumstick-bite', vegetales:'fa-carrot', frutas_dulces:'fa-cookie', extras:'fa-plus-circle' };
+    // Fallback icons por nombre Font Awesome (algunos son personalizados y usan fa-* genérico)
+    var FA_FALLBACK = {
+      'drumstick-bite':'fa-drumstick-bite', 'bacon':'fa-bacon', 'hotdog':'fa-hotdog',
+      'burger':'fa-burger', 'fish':'fa-fish', 'leaf':'fa-leaf', 'seedling':'fa-seedling',
+      'flask':'fa-flask', 'carrot':'fa-carrot', 'pepper-hot':'fa-pepper-hot',
+      'apple-alt':'fa-apple-alt', 'cookie':'fa-cookie', 'cheese':'fa-cheese',
+      'egg':'fa-egg', 'pizza-slice':'fa-pizza-slice', 'circle':'fa-circle',
+      'cake':'fa-cake', 'canadian-maple-leaf':'fa-canadian-maple-leaf'
+    };
+    // Map ingredient icons to guaranteed free FA icons
+    var ICON_MAP = {
+      'drumstick-bite':'fa-drumstick-bite','bacon':'fa-bacon','hotdog':'fa-hotdog',
+      'burger':'fa-burger','fish':'fa-fish','leaf':'fa-leaf','seedling':'fa-seedling',
+      'flask':'fa-flask','carrot':'fa-carrot','pepper-hot':'fa-pepper-hot',
+      'cookie':'fa-cookie','cheese':'fa-cheese','egg':'fa-egg','pizza-slice':'fa-pizza-slice',
+      'cake':'fa-cake','apple-alt':'fa-apple-alt','circle':'fa-circle'
+    };
+    function getIcon(name) { return ICON_MAP[name] || 'fa-circle'; }
+
+    /* ---- DOM REFS ---- */
+    var root = document.getElementById('ctp-builder');
+    if(!root) return;
+    var sizesContainer = document.getElementById('ctpSizes');
+    var ingredientsContainer = document.getElementById('ctpIngredientsContainer');
+    var pizzaSvg = document.getElementById('ctpPizzaSvg');
+    var toppingsGroup = document.getElementById('ctpToppingsGroup');
+    var pizzaPlaceholder = document.getElementById('ctpPizzaPlaceholder');
+    var pizzaLegend = document.getElementById('ctpPizzaLegend');
+    var summarySize = document.getElementById('ctpSummarySize');
+    var summaryList = document.getElementById('ctpSummaryList');
+    var incluidosEl = document.getElementById('ctpIncluidos');
+    var extraCountEl = document.getElementById('ctpExtraCount');
+    var extraTotalEl = document.getElementById('ctpExtraTotal');
+    var totalEl = document.getElementById('ctpTotal');
+    var addBtn = document.getElementById('ctpAddBtn');
+    var includedHint = document.getElementById('ctpIncludedHint');
+
+    /* ---- STATE ---- */
+    var selectedSize = null;
+    var selectedIngs = {};  // { 'carne_1': true, 'veg_5': true, ... }
+    var collapsedGroups = {}; // { 'carnes': false, ... }
+    var searchQuery = '';
+    var selectedFlavor = null; // Sabor predefinido seleccionado
+
+    /* ---- Phyllotaxis para posiciones SVG ---- */
+    function generatePizzaPositions(count, radiusScale) {
+      radiusScale = radiusScale || 0.75;
+      var positions = [];
+      for (var i = 0; i < count; i++) {
+        var r = Math.sqrt((i + 1) / count) * radiusScale;
+        var theta = (i + 1) * 137.508;
+        positions.push({
+          x: 100 + (r * 85) * Math.cos(theta * Math.PI / 180),
+          y: 100 + (r * 85) * Math.sin(theta * Math.PI / 180),
+          size: 3 + (i % 3) * 1.5
+        });
+      }
+      return positions;
+    }
+    var MASTER_POSITIONS = generatePizzaPositions(120);
+
+    /* ---- SIZE DATA -- cargado de /api/pizza-sizes en loadMenuData() ---- */
+    var SIZE_DATA = [];
+
+    /* ---- SABORES PREDEFINIDOS -- id/nombre/emoji/desc/color son
+       presentación (sin equivalente en la DB, se quedan acá). `ings` se
+       resuelve en loadMenuData() emparejando `desc` contra los ingredientes
+       reales cargados -- así seleccionar "Hawaiana" marca los chips reales
+       Piña + Jamón en vez de ids del catálogo gourmet viejo. ---- */
+    var SABORES_PREDEFINIDOS = [
+      { id:'hawaiana', nombre:'Hawaiana', ings:[], emoji:'🍍', desc:'Piña, Jamón', color:'#e67e22' },
+      { id:'pollo_champ', nombre:'Pollo y Champiñones', ings:[], emoji:'🍗', desc:'Jamón, Champiñones, Pollo desmechado', color:'#d35400' },
+      { id:'carnes', nombre:'Carnes', ings:[], emoji:'🥩', desc:'Jamón, Salami, Cabano', color:'#962D22' },
+      { id:'costillitas_bbq', nombre:'Costillitas BBQ', ings:[], emoji:'🦴', desc:'Jamón, Costillas BBQ, Maíz tierno', color:'#d35400' },
+      { id:'criolla', nombre:'Criolla', ings:[], emoji:'🇨🇴', desc:'Carne desmechada, Maíz tierno', color:'#f39c12' },
+      { id:'mexicana', nombre:'Mexicana', ings:[], emoji:'🌮', desc:'Carne molida, Maíz tierno, Tomate, Cilantro, Tostacos', color:'#e74c3c' },
+      { id:'ranchera', nombre:'Ranchera', ings:[], emoji:'🤠', desc:'Champiñones, Cebolla, Maíz tierno, Chorizo', color:'#8e44ad' },
+      { id:'de_la_casa', nombre:'De la Casa', ings:[], emoji:'🏠', desc:'Champiñones, Cebolla, Carne desmechada', color:'#2c3e50' },
+      { id:'espanola', nombre:'Española', ings:[], emoji:'🇪🇸', desc:'Espinaca, Tocineta, Maíz tierno, Champiñones', color:'#c0392b' },
+      { id:'napolitana', nombre:'Napolitana', ings:[], emoji:'🇮🇹', desc:'Tomate, Orégano', color:'#e74c3c' },
+      { id:'vegetariana', nombre:'Vegetariana', ings:[], emoji:'🥗', desc:'Champiñones, Maíz tierno, Cebolla', color:'#27ae60' },
+      { id:'tropical', nombre:'Tropical', ings:[], emoji:'🌴', desc:'Cerezas, Piña, Duraznos, Uvas pasas', color:'#e84393' },
+      { id:'queso_bocadillo', nombre:'Queso y Bocadillo', ings:[], emoji:'🧀', desc:'Queso extra, Bocadillo', color:'#f39c12' }
+    ];
+
+    /* ---- FORMATO ---- */
+    function formatCOP(n){ return '$' + n.toLocaleString('es-CO'); }
+
+    /* ---- INIT: Renderizar tamaños ---- */
+    function renderSizes() {
+      sizesContainer.innerHTML = SIZE_DATA.map(function(s) {
+        var isActive = selectedSize && selectedSize.id === s.id;
+        return '<button type="button" class="ctp-size' + (isActive ? ' active' : '') + '" data-size="' + s.id + '" data-price="' + s.price + '" data-incluidos="' + s.incluidos + '">' +
+          '<span class="ctp-size-name">' + escapeHtml(s.label) + '</span>' +
+          '<span class="ctp-size-info">' + s.incluidos + ' ingrediente' + (s.incluidos !== 1 ? 's' : '') + ' incluido' + (s.incluidos !== 1 ? 's' : '') + '</span>' +
+          '<div class="ctp-size-meta"><span class="ctp-size-porciones">' + s.portions + ' porc</span><span class="ctp-size-price">' + formatCOP(s.price) + '</span></div>' +
+          '</button>';
+      }).join('');
+      // Bind
+      sizesContainer.querySelectorAll('.ctp-size').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var sizeId = btn.dataset.size;
+          var sizeData = SIZE_DATA.find(function(s) { return s.id === sizeId; });
+          if (!sizeData) return;
+          selectedSize = sizeData;
+          // Clear flavor when changing size (autoInclude resets ingredients)
+          selectedFlavor = null;
+          // Auto-check included ingredients
+          autoInclude(sizeData.incluidos);
+          saveState();
+          renderAll();
+        });
+      });
+    }
+
+    /* ---- AUTO-INCLUDE: Marcar los primeros N ingredientes ---- */
+    function autoInclude(count) {
+      // Collect all ingredient IDs in order
+      var allIds = [];
+      ['carnes','vegetales','frutas_dulces','extras'].forEach(function(g) {
+        CTP_INGREDIENTS[g].forEach(function(ing) {
+          if (!allIds.includes(ing.id)) allIds.push(ing.id);
+        });
+      });
+      // Auto-check first `count`
+      selectedIngs = {};
+      for (var i = 0; i < count && i < allIds.length; i++) {
+        selectedIngs[allIds[i]] = true;
+      }
+    }
+
+    /* ---- RENDER: Ingredientes dinámicos ---- */
+    function renderIngredients() {
+      var html = '';
+      var groupKeys = ['carnes','vegetales','frutas_dulces','extras'];
+      var allChecked = [];
+      var isSearching = searchQuery.trim().length > 0;
+
+      groupKeys.forEach(function(key) {
+        var ings = CTP_INGREDIENTS[key];
+        // Filtrar por búsqueda si hay query activa
+        if (isSearching) {
+          var q = searchQuery.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          ings = ings.filter(function(ing) {
+            return ing.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').indexOf(q) !== -1;
+          });
+          if (ings.length === 0) return; // Saltar grupos sin coincidencias
+        }
+        var label = GROUP_LABELS[key];
+        var icon = GROUP_FA_ICONS[key];
+        var isCollapsed = collapsedGroups[key];
+        var visibleIngs = isSearching ? ings : (isCollapsed ? ings : ings.slice(0, MAX_VISIBLE_CHIPS));
+        var hasMore = !isSearching && ings.length > MAX_VISIBLE_CHIPS;
+
+        html += '<div class="ctp-group" data-group="' + key + '">' +
+          '<p class="ctp-group-title"><i class="fas ' + icon + '"></i> ' + label + ' <span class="ctp-group-count" id="ctpCount_' + key + '">0/' + ings.length + '</span></p>' +
+          '<div class="ctp-chips" data-group="' + key + '">';
+
+        visibleIngs.forEach(function(ing) {
+          var isChecked = selectedIngs[ing.id] || false;
+          var faClass = getIcon(ing.icon);
+          if (isChecked) allChecked.push(ing);
+          html += '<label class="ctp-chip' + (isChecked ? ' checked' : '') + (ing.premium ? ' premium' : '') + '" data-id="' + ing.id + '" data-group="' + key + '">' +
+            '<input type="checkbox" ' + (isChecked ? 'checked' : '') + '>' +
+            '<i class="fas ' + faClass + ' ctp-chip-icon"></i>' +
+            '<span>' + escapeHtml(ing.nombre) + '</span>' +
+            (ing.premium ? '<span class="ctp-chip-premium">PREMIUM</span>' : '') +
+            '</label>';
+        });
+
+        if (hasMore) {
+          html += '<button class="ctp-toggle-group" data-group="' + key + '">' +
+            (isCollapsed ? '▲ Mostrar menos' : '▼ ' + (ings.length - MAX_VISIBLE_CHIPS) + ' más') +
+            '</button>';
+        }
+
+        html += '</div></div>';
+      });
+
+      ingredientsContainer.innerHTML = html;
+
+      // Bind checkbox changes
+      ingredientsContainer.querySelectorAll('.ctp-chip input[type="checkbox"]').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+          var chip = cb.closest('.ctp-chip');
+          var id = chip.dataset.id;
+          if (cb.checked) {
+            selectedIngs[id] = true;
+            chip.classList.add('checked');
+          } else {
+            delete selectedIngs[id];
+            chip.classList.remove('checked');
+          }
+          // Clear flavor when user manually changes ingredients
+          selectedFlavor = null;
+          saveState();
+          updateCounts();
+          renderFlavors();
+          renderSummary();
+          renderPizzaSVG();
+        });
+      });
+
+      // Tooltip hover handlers (con debounce 100ms para evitar parpadeo)
+      var tooltipEl = document.getElementById('ctpTooltip');
+      var tooltipTimer = null;
+      var mousemoveTimer = null;
+      if (tooltipEl) {
+        ingredientsContainer.querySelectorAll('.ctp-chip').forEach(function(chip) {
+          chip.addEventListener('mouseenter', function(e) {
+            if (tooltipTimer) clearTimeout(tooltipTimer);
+            tooltipTimer = setTimeout(function() {
+              var id = chip.dataset.id;
+              var groupKey = chip.dataset.group;
+              var ingData = null;
+              if (groupKey && CTP_INGREDIENTS[groupKey]) {
+                CTP_INGREDIENTS[groupKey].forEach(function(ing) {
+                  if (ing.id === id) ingData = ing;
+                });
+              }
+              if (!ingData) return;
+              var faClass = getIcon(ingData.icon);
+              var groupLabel = GROUP_LABELS[groupKey] || '';
+              var groupColor = GROUP_COLORS[groupKey] || '#666';
+              var name = escapeHtml(ingData.nombre);
+              var premium = ingData.premium ? '<span class="tip-premium">PREMIUM</span>' : '';
+              var headerBg = chip.classList.contains('checked') ? groupColor : 'rgba(255,255,255,.08)';
+              var headerColor = chip.classList.contains('checked') ? '#fff' : groupColor;
+              tooltipEl.innerHTML = '<div class="tip-header"><span class="tip-icon" style="background:' + headerBg + ';color:' + headerColor + '"><i class="fas ' + faClass + '"></i></span><div><div class="tip-name">' + name + premium + '</div><div class="tip-category">' + escapeHtml(groupLabel) + '</div></div></div>';
+              tooltipEl.classList.add('visible');
+              positionTooltip(e, tooltipEl);
+            }, 100);
+          });
+          chip.addEventListener('mousemove', function(e) {
+            if (!tooltipEl.classList.contains('visible')) return;
+            if (mousemoveTimer) clearTimeout(mousemoveTimer);
+            mousemoveTimer = setTimeout(function() {
+              if (tooltipEl) positionTooltip(e, tooltipEl);
+            }, 30);
+          });
+          chip.addEventListener('mouseleave', function() {
+            if (tooltipTimer) clearTimeout(tooltipTimer);
+            if (mousemoveTimer) clearTimeout(mousemoveTimer);
+            if (tooltipEl) tooltipEl.classList.remove('visible');
+          });
+        });
+      }
+
+      // Bind toggle buttons
+      ingredientsContainer.querySelectorAll('.ctp-toggle-group').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var g = btn.dataset.group;
+          collapsedGroups[g] = !collapsedGroups[g];
+          saveState();
+          renderIngredients();
+          updateCounts();
+        });
+      });
+
+      updateCounts();
+    }
+
+    /* ---- Tooltip position ---- */
+    function positionTooltip(e, el) {
+      var x = e.clientX + 14;
+      var y = e.clientY - 10;
+      var w = el.offsetWidth;
+      var h = el.offsetHeight;
+      var maxX = window.innerWidth - w - 10;
+      var maxY = window.innerHeight - h - 10;
+      if (x > maxX) x = e.clientX - w - 14;
+      if (y > maxY) y = e.clientY - h - 10;
+      if (y < 10) y = 10;
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+    }
+
+    /* ---- Update group counts ---- */
+    function updateCounts() {
+      Object.keys(CTP_INGREDIENTS).forEach(function(key) {
+        var el = document.getElementById('ctpCount_' + key);
+        if (!el) return;
+        var total = CTP_INGREDIENTS[key].length;
+        var checked = CTP_INGREDIENTS[key].filter(function(ing) { return selectedIngs[ing.id]; }).length;
+        el.textContent = checked + '/' + total;
+      });
+    }
+
+    /* ---- SVG Shape Generators by Category ---- */
+    function svgShape_circle(cx, cy, r, color, opacity) {
+      return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + color + '" opacity="' + opacity + '" />';
+    }
+    function svgShape_meat(cx, cy, r, color, opacity) {
+      return '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r * 0.6) + '" fill="' + color + '" opacity="' + opacity + '" />' +
+        '<circle cx="' + (cx - r * 0.15) + '" cy="' + (cy - r * 0.15) + '" r="' + (r * 0.2) + '" fill="rgba(0,0,0,0.15)" />' +
+        '<circle cx="' + (cx + r * 0.2) + '" cy="' + (cy + r * 0.1) + '" r="' + (r * 0.15) + '" fill="rgba(0,0,0,0.12)" />';
+    }
+    function svgShape_veggie(cx, cy, r, color, opacity) {
+      var s = r * 0.35;
+      return '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + (s * 1.5) + '" ry="' + (s * 0.8) + '" fill="' + color + '" opacity="' + opacity + '" transform="rotate(' + ((cx + cy) % 360) + ', ' + cx + ', ' + cy + ')" />';
+    }
+    function svgShape_fruit(cx, cy, r, color, opacity) {
+      var s = r * 0.3;
+      var star = '';
+      for (var i = 0; i < 5; i++) {
+        var a1 = (i * 72 - 90) * Math.PI / 180;
+        var a2 = (i * 72 + 36 - 90) * Math.PI / 180;
+        var x1 = cx + s * Math.cos(a1);
+        var y1 = cy + s * Math.sin(a1);
+        var x2 = cx + s * 0.45 * Math.cos(a2);
+        var y2 = cy + s * 0.45 * Math.sin(a2);
+        if (i === 0) star += 'M' + x1 + ',' + y1 + ' L' + x2 + ',' + y2;
+        else star += ' L' + x1 + ',' + y1 + ' L' + x2 + ',' + y2;
+      }
+      star += ' Z';
+      return '<path d="' + star + '" fill="' + color + '" opacity="' + opacity + '" />';
+    }
+    function svgShape_extra(cx, cy, r, color, opacity) {
+      var s = r * 0.4;
+      var points = (cx - s) + ',' + cy + ' ' + cx + ',' + (cy - s) + ' ' + (cx + s) + ',' + cy + ' ' + cx + ',' + (cy + s);
+      return '<polygon points="' + points + '" fill="' + color + '" opacity="' + opacity + '" />';
+    }
+
+    var SHAPE_FUNCS = {
+      carnes: svgShape_meat,
+      vegetales: svgShape_veggie,
+      frutas_dulces: svgShape_fruit,
+      extras: svgShape_extra
+    };
+
+    /* ---- RENDER: Pizza SVG con formas variadas ---- */
+    function renderPizzaSVG() {
+      var checkedIds = Object.keys(selectedIngs).filter(function(id) { return selectedIngs[id]; });
+      if (checkedIds.length === 0) {
+        toppingsGroup.innerHTML = '';
+        if (pizzaPlaceholder) pizzaPlaceholder.style.display = 'block';
+        return;
+      }
+      if (pizzaPlaceholder) pizzaPlaceholder.style.display = 'none';
+
+      // Map each checked ingredient to its group color
+      var ingredientData = [];
+      Object.keys(GROUP_COLORS).forEach(function(groupKey) {
+        CTP_INGREDIENTS[groupKey].forEach(function(ing) {
+          if (selectedIngs[ing.id]) {
+            ingredientData.push({ id: ing.id, color: GROUP_COLORS[groupKey], group: groupKey });
+          }
+        });
+      });
+
+      // Generate SVG with varied shapes using phyllotaxis
+      var svgContent = '';
+      ingredientData.forEach(function(data, idx) {
+        var pos = MASTER_POSITIONS[(idx * 7 + 3) % MASTER_POSITIONS.length];
+        var size = 2.5 + (idx % 3) * 1.2;
+        var opacity = 0.7 + (idx % 5) * 0.06;
+        var shapeFn = SHAPE_FUNCS[data.group] || svgShape_circle;
+        // Glow
+        svgContent += '<circle cx="' + pos.x + '" cy="' + pos.y + '" r="' + (size + 1.5) + '" fill="' + data.color + '" opacity="' + (opacity * 0.12) + '" />';
+        // Shape
+        svgContent += shapeFn(pos.x, pos.y, size * 1.3, data.color, opacity);
+      });
+
+      toppingsGroup.innerHTML = svgContent;
+
+      // Update legend
+      renderLegend();
+    }
+
+    /* ---- RENDER: Legend ---- */
+    function renderLegend() {
+      var counts = {};
+      Object.keys(GROUP_COLORS).forEach(function(g) { counts[g] = 0; });
+      Object.keys(selectedIngs).forEach(function(id) {
+        if (!selectedIngs[id]) return;
+        Object.keys(CTP_INGREDIENTS).forEach(function(g) {
+          if (CTP_INGREDIENTS[g].some(function(i) { return i.id === id; })) counts[g]++;
+        });
+      });
+      var hasAny = Object.values(counts).some(function(c) { return c > 0; });
+      if (!hasAny) { pizzaLegend.innerHTML = ''; return; }
+
+      pizzaLegend.innerHTML = Object.keys(GROUP_COLORS).filter(function(g) { return counts[g] > 0; }).map(function(g) {
+        return '<span class="ctp-legend-item"><span class="ctp-legend-dot" style="background:' + GROUP_COLORS[g] + '"></span>' + GROUP_LABELS[g] + ' <strong>' + counts[g] + '</strong></span>';
+      }).join('');
+    }
+
+    /* ---- RENDER: Summary ---- */
+    function renderSummary() {
+      var checked = Object.keys(selectedIngs).filter(function(id) { return selectedIngs[id]; });
+
+      if (!selectedSize) {
+        summarySize.textContent = 'Elige un tamaño y tus ingredientes favoritos';
+        addBtn.disabled = true;
+      } else {
+        summarySize.textContent = selectedSize.label + ' — base ' + formatCOP(selectedSize.price);
+      }
+
+      // Lista de ingredientes
+      var checkedNames = [];
+      Object.keys(selectedIngs).forEach(function(id) {
+        if (!selectedIngs[id]) return;
+        Object.keys(CTP_INGREDIENTS).forEach(function(g) {
+          CTP_INGREDIENTS[g].forEach(function(ing) {
+            if (ing.id === id && !checkedNames.includes(ing.nombre)) checkedNames.push(ing.nombre);
+          });
+        });
+      });
+
+      if (checkedNames.length === 0) {
+        summaryList.innerHTML = '<li class="ctp-empty"><i class="fa-solid fa-pizza-slice"></i> Elige tus ingredientes</li>';
+        addBtn.disabled = true;
+      } else {
+        summaryList.innerHTML = checkedNames.map(function(n) {
+          return '<li><i class="fa-solid fa-circle" style="font-size:6px;color:var(--rrojo-acento);margin-right:6px"></i>' + escapeHtml(n) + '</li>';
+        }).join('');
+        if (selectedSize) addBtn.disabled = false;
+      }
+
+      var incluidos = selectedSize ? selectedSize.incluidos : 0;
+      var extras = Math.max(0, checkedNames.length - incluidos);
+      var extraTotal = extras * EXTRA_INGREDIENTE_PRECIO;
+      var total = (selectedSize ? selectedSize.price : 0) + extraTotal;
+
+      incluidosEl.textContent = incluidos;
+      extraCountEl.textContent = extras;
+      extraTotalEl.textContent = formatCOP(extraTotal);
+      totalEl.textContent = formatCOP(total);
+
+      // Included hint
+      if (selectedSize && checkedNames.length <= incluidos) {
+        includedHint.textContent = '✓ Todos tus ingredientes están incluidos. ¡Sin costo adicional!';
+        includedHint.className = 'ctp-included-hint ctp-included-hint-ok';
+      } else if (selectedSize && extras > 0) {
+        includedHint.textContent = '⚠️ ' + extras + ' adicional' + (extras !== 1 ? 'es' : '') + ' — $' + (extras * EXTRA_INGREDIENTE_PRECIO).toLocaleString();
+        includedHint.className = 'ctp-included-hint ctp-included-hint-extra';
+      } else if (selectedSize) {
+        includedHint.innerHTML = 'Puedes agregar hasta ' + (selectedSize.incluidos) + ' ingredientes incluidos. Adicionales a $3.500 c/u.';
+        includedHint.className = 'ctp-included-hint';
+      }
+    }
+
+    /* ---- SABORES PREDEFINIDOS: renderizar cards ---- */
+    function renderFlavors() {
+      var container = document.getElementById('ctpFlavorsContainer');
+      if (!container) return;
+      container.innerHTML = SABORES_PREDEFINIDOS.map(function(s) {
+        var isActive = selectedFlavor && selectedFlavor.id === s.id;
+        return '<button type="button" class="ctp-flavor" data-flavor="' + s.id + '" style="' + (isActive ? 'border-color:' + s.color + ';background:rgba(' + hexToRgb(s.color) + ',0.08)' : '') + '">' +
+          '<span class="ctp-flavor-emoji">' + s.emoji + '</span>' +
+          '<div class="ctp-flavor-info">' +
+            '<span class="ctp-flavor-name">' + escapeHtml(s.nombre) + '</span>' +
+            '<span class="ctp-flavor-desc">' + escapeHtml(s.desc) + '</span>' +
+          '</div>' +
+          (isActive ? '<span class="ctp-flavor-check"><i class="fas fa-check-circle"></i></span>' : '') +
+          '</button>';
+      }).join('');
+      // Bind click
+      container.querySelectorAll('.ctp-flavor').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          selectSabor(btn.dataset.flavor);
+        });
+      });
+    }
+
+    /* Convert hex color to RGB components for rgba() */
+    function hexToRgb(hex) {
+      hex = hex.replace('#','');
+      if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+      var r = parseInt(hex.substring(0,2), 16);
+      var g = parseInt(hex.substring(2,4), 16);
+      var b = parseInt(hex.substring(4,6), 16);
+      return r + ',' + g + ',' + b;
+    }
+
+    /* ---- SELECT SABOR: auto-seleccionar ingredientes ---- */
+    function selectSabor(saborId) {
+      var sabor = SABORES_PREDEFINIDOS.find(function(s) { return s.id === saborId; });
+      if (!sabor) return;
+      // If same flavor clicked, deselect
+      if (selectedFlavor && selectedFlavor.id === saborId) {
+        selectedFlavor = null;
+        selectedIngs = {};
+      } else {
+        selectedFlavor = sabor;
+        // Set ingredients from flavor recipe
+        selectedIngs = {};
+        sabor.ings.forEach(function(id) { selectedIngs[id] = true; });
+      }
+      saveState();
+      renderFlavors();
+      renderIngredients();
+      renderPizzaSVG();
+      renderSummary();
+    }
+
+    /* ---- RENDER ALL ---- */
+    function renderAll() {
+      renderSizes();
+      renderFlavors();
+      renderIngredients();
+      renderPizzaSVG();
+      renderSummary();
+    }
+
+    /* ---- LOCALSTORAGE PERSISTENCE ---- */
+    var STORAGE_KEY = 'juanchos_ctp_builder';
+
+    function saveState() {
+      try {
+        var data = {
+          sizeId: selectedSize ? selectedSize.id : null,
+          ings: selectedIngs,
+          collapsed: collapsedGroups,
+          flavor: selectedFlavor ? selectedFlavor.id : null
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch(e) { /* localStorage no disponible */ }
+    }
+
+    function loadState() {
+      try {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        var data = JSON.parse(raw);
+        if (!data) return false;
+        // Restore ingredients
+        if (data.ings) selectedIngs = data.ings;
+        if (data.collapsed) collapsedGroups = data.collapsed;
+        // Restore size
+        if (data.sizeId) {
+          var sizeData = SIZE_DATA.find(function(s) { return s.id === data.sizeId; });
+          if (sizeData) selectedSize = sizeData;
+        }
+        // Restore flavor
+        if (data.flavor) {
+          var flavorData = SABORES_PREDEFINIDOS.find(function(s) { return s.id === data.flavor; });
+          if (flavorData) selectedFlavor = flavorData;
+        }
+        return true;
+      } catch(e) { return false; }
+    }
+
+    /* ---- Add to Cart ---- */
+    addBtn.addEventListener('click', function() {
+      if (!selectedSize) return;
+      var checkedNames = [];
+      Object.keys(selectedIngs).forEach(function(id) {
+        if (!selectedIngs[id]) return;
+        Object.keys(CTP_INGREDIENTS).forEach(function(g) {
+          CTP_INGREDIENTS[g].forEach(function(ing) {
+            if (ing.id === id && !checkedNames.includes(ing.nombre)) checkedNames.push(ing.nombre);
+          });
+        });
+      });
+
+      var name = selectedSize.label;
+      var incluidos = selectedSize.incluidos;
+      var extras = Math.max(0, checkedNames.length - incluidos);
+      var total = selectedSize.price + extras * EXTRA_INGREDIENTE_PRECIO;
+      var details = name + ' · ' + (checkedNames.length > 0 ? checkedNames.slice(0, 5).join(', ') + (checkedNames.length > 5 ? ' +' + (checkedNames.length - 5) + ' más' : '') : 'sin ingredientes');
+      if (extras > 0) details += ' (+' + extras + ' extra)';
+
+      // Builder sync bridge: compartir selección con advanced builder
+      try {
+        var bridgeData = {
+          size: selectedSize.label,
+          ingredientIds: Object.keys(selectedIngs).filter(function(id) { return selectedIngs[id]; }),
+          ingredientNames: checkedNames,
+          timestamp: Date.now(),
+          source: 'ctp'
+        };
+        localStorage.setItem('juanchos_builder_bridge', JSON.stringify(bridgeData));
+      } catch(e) { /* ignore */ }
+
+      // Cart bridge
+      if (window.__pizzaBuilderAddToCart && window.__pizzaBuilderAddToCart !== window.__pizzaBuilderFallback) {
+        window.__pizzaBuilderAddToCart('Pizza Personalizada (' + name + ')', details);
+      } else {
+        var count = parseInt(localStorage.getItem('juanchos_cart') || '0', 10) + 1;
+        localStorage.setItem('juanchos_cart', count.toString());
+        var counter = document.getElementById('cartCounter');
+        if (counter) counter.textContent = count;
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: count }));
+      }
+
+      // Flash feedback
+      addBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> ¡Agregada!';
+      addBtn.style.background = 'var(--rojo-hover, #962D22)';
+      addBtn.disabled = true;
+      setTimeout(function(){
+        addBtn.innerHTML = '<i class="fa-solid fa-cart-plus"></i> Agregar al pedido';
+        addBtn.style.background = '';
+        selectedSize = null;
+        selectedIngs = {};
+        try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+        renderAll();
+      }, 1800);
+    });
+
+    /* ---- Search input ---- */
+    var searchInput = document.getElementById('ctpSearchInput');
+    var searchClear = document.getElementById('ctpSearchClear');
+    var searchTimer = null;
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(function() {
+          searchQuery = searchInput.value;
+          if (searchClear) searchClear.style.display = searchQuery.length > 0 ? 'flex' : 'none';
+          renderIngredients();
+          renderPizzaSVG();
+          renderSummary();
+        }, 150);
+      });
+    }
+    if (searchClear) {
+      searchClear.addEventListener('click', function() {
+        searchQuery = '';
+        searchInput.value = '';
+        searchClear.style.display = 'none';
+        renderIngredients();
+        renderPizzaSVG();
+        renderSummary();
+      });
+    }
+
+    /* ---- Clear button ---- */
+    var clearBtn = document.getElementById('ctpClearBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function() {
+        selectedSize = null;
+        selectedIngs = {};
+        collapsedGroups = {};
+        selectedFlavor = null;
+        searchQuery = '';
+        if (searchInput) searchInput.value = '';
+        if (searchClear) searchClear.style.display = 'none';
+        saveState();
+        renderAll();
+      });
+    }
+
+    /* ---- CARGA REAL DE DATOS -- /api/pizza-sizes + /api/ingredients (ver
+       server/seedData/juanchosMenu.js). Reemplaza SIZE_DATA/CTP_INGREDIENTS
+       (antes hardcodeados acá, desincronizados del catálogo real que
+       administra la CRM) y resuelve los ingredientes de cada sabor
+       predefinido emparejando su `desc` contra los nombres reales. ---- */
+    function normalizeText(s) {
+      return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    }
+
+    // nombre/descripcion de tamaños e ingredientes vienen de la DB (editables
+    // por ADMIN/MARKETING vía la CRM) y se insertan acá con concatenación de
+    // string + innerHTML -- sin esto, un nombre con "<script>" o
+    // '"><img onerror=' ejecutaría en el navegador de cualquier visitante.
+    function escapeHtml(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function loadMenuData() {
+      return Promise.all([
+        fetch('/api/pizza-sizes').then(function(r) { return r.json(); }),
+        fetch('/api/ingredients').then(function(r) { return r.json(); })
+      ]).then(function(results) {
+        var sizes = (results[0] || []).filter(function(s) { return s.activo; }).sort(function(a, b) { return a.precio - b.precio; });
+        var ingredients = (results[1] || []).filter(function(i) { return i.disponible; });
+
+        SIZE_DATA = sizes.map(function(s) {
+          return { id: s.id, label: s.nombre, price: s.precio, incluidos: s.incluidos, portions: s.porciones || 0, sabores: s.incluidos };
+        });
+
+        CTP_INGREDIENTS = { carnes: [], vegetales: [], frutas_dulces: [], extras: [] };
+        ingredients.forEach(function(ing) {
+          var group = CATEGORIA_TO_GROUP[ing.categoria];
+          if (!group) return;
+          CTP_INGREDIENTS[group].push({ id: ing.id, nombre: ing.nombre, icon: CATEGORIA_ICON[ing.categoria] || 'circle', premium: !!ing.premium });
+        });
+
+        var idByName = {};
+        ingredients.forEach(function(ing) { idByName[normalizeText(ing.nombre)] = ing.id; });
+        SABORES_PREDEFINIDOS.forEach(function(sabor) {
+          sabor.ings = sabor.desc.split(',').map(function(piece) { return idByName[normalizeText(piece)]; }).filter(Boolean);
+        });
+      });
+    }
+
+    /* ---- INIT ---- */
+    sizesContainer.innerHTML = '<p style="color:#8fa382;padding:16px 0;">Cargando tamaños…</p>';
+    loadMenuData().then(function() {
+      // Restore saved state
+      loadState();
+      renderAll();
+    }).catch(function() {
+      sizesContainer.innerHTML = '<p style="color:#8fa382;padding:16px 0;">No pudimos cargar el armador. Intenta de nuevo o pide por WhatsApp.</p>';
+    });
+  })();
+  </script>
+
+  <!-- Link to advanced builder -->
+  <div class="ctp-advanced-link">
+    <p>¿Buscas más opciones? <button class="ctp-toggle-advanced" id="ctpToggleAdvanced">Personalización avanzada <i class="fa-solid fa-chevron-down"></i></button></p>
+  </div>
+
+  <!-- Advanced builder hidden wrapper -->
+  <div id="ctpAdvancedWrap" style="display:none;margin-top:24px">
+    <section class="builder-section">
+      <h2 class="section__title">Personalización Avanzada</h2>
+      <p class="section__subtitle">Selecciona ingredientes premium y personaliza cada detalle</p>
+      <div class="builder-wrap" id="builderWrap">
+        <div class="builder-inner">
+          <div class="builder-preview">
+            <div class="size-selector" id="sizeSelector"></div>
+            <div class="pizza-circle-wrap" id="pizzaContainer">
+              <div class="pizza-circle no-base" id="pizzaCircle">
+                <div id="sauceLayer" class="pizza-layer" style="display:none"></div>
+                <div id="cheeseLayer" class="pizza-layer" style="display:none"></div>
+                <div class="pizza-toppings" id="toppingsLayer"></div>
+                <div class="pizza-placeholder" id="pizzaPlaceholder"><p>Selecciona una base para comenzar</p></div>
+              </div>
+              <div class="dough-badge"><span id="doughName">Plato Vacío</span></div>
+            </div>
+            <div class="price-display">
+              <h2 id="priceDisplay">$0</h2>
+              <p>Diseño Personalizado</p>
+            </div>
+          </div>
+          <div class="builder-controls">
+            <div class="side-selector" id="sideSelector"></div>
+            <div class="cat-scroll" id="catScroll"></div>
+            <div class="ing-grid" id="ingGrid"></div>
+            <button class="confirm-btn" id="confirmBtn" disabled><i class="fa-solid fa-fire-flame-curved"></i> Selecciona una Masa</button>
+          </div>
+        </div>
+        <div id="builderOverlay" class="builder-overlay" style="display:none"></div>
+        <div id="successOverlay" class="success-overlay" style="display:none"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+  (function(){
+    var toggleBtn = document.getElementById('ctpToggleAdvanced');
+    var advancedWrap = document.getElementById('ctpAdvancedWrap');
+    if (toggleBtn && advancedWrap) {
+      toggleBtn.addEventListener('click', function(){
+        var isHidden = advancedWrap.style.display === 'none';
+        advancedWrap.style.display = isHidden ? 'block' : 'none';
+        toggleBtn.innerHTML = isHidden
+          ? 'Personalización avanzada <i class="fa-solid fa-chevron-up"></i>'
+          : 'Personalización avanzada <i class="fa-solid fa-chevron-down"></i>';
+        if (isHidden && window.__pizzaBuilderRender) {
+          // Try to import CTP selections into advanced builder before render
+          if (window.__tryImportFromCTP) window.__tryImportFromCTP();
+          window.__pizzaBuilderRender();
+        }
+      });
+    }
+  })();
+  </script>
+</div>
+
+<div class="page-container" data-page="menu">
+    <section id="menu" style="pointer-events:auto;min-height:100vh;background:#F4EFEA;padding:0;">
+        <div id="menu-mount"></div>
+    </section>
+</div>
+
+<div class="page-container" data-page="domicilios">
+<section id="domicilios">
+    <div class="dlv-hero">
+        <h2>Pide Sin Moverte de Casa</h2>
+        <p>Llevamos el sabor de Juancho's directamente a tu puerta en Nemocón y Zipaquirá.</p>
+        <div class="dlv-badge-row">
+            <span class="dlv-badge"><i class="fa-solid fa-motorcycle"></i> Domicilios Rápidos</span>
+            <span class="dlv-badge"><i class="fa-solid fa-clock"></i> 4:00 PM — 10:00 PM</span>
+            <span class="dlv-badge"><i class="fa-solid fa-gift"></i> Envío Gratis</span>
+        </div>
+    </div>
+
+    <div class="dlv-body">
+        <div class="dlv-sedes-title">
+            <h3>Nuestras Sedes</h3>
+            <p>Elige la sede más cercana y te llevamos tu pedido</p>
+        </div>
+
+        <div class="dlv-sedes-grid">
+            <div class="dlv-sede-card">
+                <div class="sede-emoji">🏡</div>
+                <h4>Sede Nemocón</h4>
+                <p class="sede-sub">Vía Principal</p>
+                <div class="sede-detail">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <p>Cra 6 No. 5-40, Nemocón, Cundinamarca</p>
+                </div>
+                <div class="sede-detail">
+                    <i class="fa-solid fa-phone"></i>
+                    <p><a href="tel:+573117074843">311 707 4843</a></p>
+                </div>
+                <div class="sede-detail">
+                    <i class="fa-solid fa-clock"></i>
+                    <p>Lunes a Domingo — 4:00 PM a 10:00 PM</p>
+                </div>
+                <span class="sede-tag">📍 Domicilio en Nemocón y veredas</span>
+            </div>
+
+            <div class="dlv-sede-card">
+                <div class="sede-emoji">🏙️</div>
+                <h4>Sede Zipaquirá</h4>
+                <p class="sede-sub">Barrio Las Villas</p>
+                <div class="sede-detail">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <p>Diagonal 4 #29-10, Zipaquirá, Cundinamarca</p>
+                </div>
+                <div class="sede-detail">
+                    <i class="fa-solid fa-phone"></i>
+                    <p><a href="tel:+573227699056">322 769 9056</a></p>
+                </div>
+                <div class="sede-detail">
+                    <i class="fa-solid fa-clock"></i>
+                    <p>Lunes a Domingo — 4:00 PM a 10:00 PM</p>
+                </div>
+                <span class="sede-tag">📍 Domicilio en Zipaquirá urbano</span>
+            </div>
+        </div>
+
+        <div class="dlv-cta-strip">
+            <div class="cta-text">
+                <h4>🍕 ¿Listo para ordenar?</h4>
+                <p>Haz tu pedido por WhatsApp y recíbelo en la comodidad de tu hogar</p>
+            </div>
+            <a href="https://wa.me/573117074843?text=Hola%2C%20quiero%20hacer%20un%20pedido%20a%20domicilio" target="_blank" class="cta-btn"><i class="fa-brands fa-whatsapp"></i> Pedir Domicilio</a>
+        </div>
+
+        <div class="dlv-maps-title">
+            <h3>Encuéntranos en el Mapa</h3>
+            <p>Dos sedes para servirte mejor</p>
+        </div>
+        <div class="dlv-maps">
+            <div class="dlv-map">
+                <div class="dlv-map-label">📍 Nemocón</div>
+                <iframe title="Mapa Google Maps - Sede Juancho's Pizza en Nemocón (Cra 6 No. 5-40)" src="https://www.google.com/maps?q=Cra+6+No.+5-40+Nemoc%C3%B3n+Cundinamarca+Colombia&output=embed" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+            <div class="dlv-map">
+                <div class="dlv-map-label">📍 Zipaquirá</div>
+                <iframe title="Mapa Google Maps - Sede Juancho's Pizza en Zipaquirá (Diagonal 4 #29-10)" src="https://www.google.com/maps?q=Diagonal+4+%2329-10+Zipaquir%C3%A1+Cundinamarca+Colombia&output=embed" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+        </div>
+
+        <div class="dlv-bottom-row">
+            <div class="dlv-info-card">
+                <i class="fa-solid fa-bolt"></i>
+                <h5>Entrega Rápida</h5>
+                <p>Tu pedido llega caliente y en el menor tiempo posible. Nos tomamos la puntualidad muy en serio.</p>
+            </div>
+            <div class="dlv-info-card">
+                <i class="fa-solid fa-credit-card"></i>
+                <h5>Medios de Pago</h5>
+                <div class="payments">
+                    <span>Efectivo</span>
+                    <span>Nequi</span>
+                    <span>Daviplata</span>
+                    <span>Tarjeta</span>
+                </div>
+            </div>
+            <div class="dlv-info-card">
+                <i class="fa-solid fa-shield-halved"></i>
+                <h5>Garantía Juancho's</h5>
+                <p>Si algo no está perfecto, lo arreglamos. Tu satisfacción es nuestra prioridad.</p>
+            </div>
+        </div>
+    </div>
+</section>
+</div>
+
+<div class="page-container" data-page="carrito">
+    <section id="carrito" style="pointer-events:auto;">
+        <div id="cart-mount"></div>
+    </section>
+</div>
+
+<div id="reviews-mount"></div>
+
+<!-- WhatsApp dinámico: pre-llena el mensaje con los items del carrito -->
+<script>
+(function(){
+  var waBtn = document.getElementById('floatingWhatsApp');
+  var waBadge = document.getElementById('waBadge');
+  if (!waBtn) return;
+
+  function buildWAMessage() {
+    try {
+      var items = JSON.parse(localStorage.getItem('juanchos_cart_items') || '[]');
+      if (items.length === 0) {
+        if (waBadge) waBadge.style.display = 'none';
+        return encodeURIComponent('Hola, quiero hacer un pedido');
+      }
+      var count = items.reduce(function(s, i) { return s + (i.quantity || 1); }, 0);
+      if (waBadge) { waBadge.textContent = count; waBadge.style.display = 'flex'; }
+      var lines = [];
+      lines.push('🍕 *Nuevo Pedido Juancho\'s Pizza*');
+      lines.push('');
+      items.forEach(function(item, i) {
+        var name = item.name || 'Producto';
+        var qty = item.quantity || 1;
+        var total = (item.price || 0) * qty;
+        lines.push('*' + (i+1) + '. ' + name + '* x' + qty + ' — $' + total.toLocaleString('es-CO'));
+        if (item.details) lines.push('   _' + item.details + '_');
+      });
+      lines.push('');
+      var granTotal = items.reduce(function(s, i) { return s + (i.price || 0) * (i.quantity || 1); }, 0);
+      lines.push('*Total: $' + granTotal.toLocaleString('es-CO') + '*');
+      lines.push('');
+      lines.push('⏱️ _Tiempo estimado: 25-35 min_');
+      return encodeURIComponent(lines.join('\n'));
+    } catch(e) { return encodeURIComponent('Hola, quiero hacer un pedido'); }
+  }
+
+  function updateWALink() {
+    var msg = buildWAMessage();
+    waBtn.href = 'https://wa.me/573117074843?text=' + msg;
+  }
+
+  // Actualizar al cargar y cada vez que el carrito cambie
+  updateWALink();
+  window.addEventListener('cart-updated', updateWALink);
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'juanchos_cart_items') updateWALink();
+  });
+})();
+</script>
+
+<!-- ===== PREMIUM DIGITAL CARD — Sección final de la web ===== -->
+<section id="premium-card">
+  <div class="premium-texture"></div>
+  <div class="premium-mist"></div>
+  <div class="premium-container">
+
+    <!-- Main grid: Brand Left + Info Right -->
+    <div class="premium-grid">
+      <!-- LEFT — Brand identity -->
+      <div class="premium-brand">
+        <div class="premium-logo-block">
+          <div class="premium-logo-icon"><span>🍕</span></div>
+          <h2 class="premium-logo-h2">JUANCHO'S</h2>
+          <span class="premium-logo-sub">PIZZA &amp; COMIDAS RÁPIDAS</span>
+        </div>
+        <p class="premium-slogan">“En sabor y calidad no hay igual”</p>
+        <p class="premium-desc">Más que una pizzería, una experiencia gastronómica para compartir.</p>
+        <div class="premium-food-icons">
+          <span class="pfi">🍕</span><span class="pfi">🍔</span><span class="pfi">🌭</span>
+          <span class="pfi">🥔</span><span class="pfi">🍝</span><span class="pfi">🥤</span>
+        </div>
+      </div>
+
+      <!-- RIGHT — Info cards -->
+      <div class="premium-info-grid">
+        <div class="premium-icard">
+          <div class="premium-icard-icon ic-brown">📍</div>
+          <div class="premium-icard-text">
+            <h4>Sede Nemocón</h4>
+            <p>Vía Principal — Cra 6 No. 5-40</p>
+          </div>
+        </div>
+        <div class="premium-icard">
+          <div class="premium-icard-icon ic-brown">📍</div>
+          <div class="premium-icard-text">
+            <h4>Sede Zipaquirá</h4>
+            <p>Diagonal 4 #29-10 — Barrio Las Villas</p>
+          </div>
+        </div>
+        <div class="premium-icard">
+          <div class="premium-icard-icon ic-red">☎</div>
+          <div class="premium-icard-text">
+            <h4>Pedidos</h4>
+            <p>311 707 4843</p>
+            <p>322 769 9056</p>
+          </div>
+        </div>
+        <div class="premium-icard">
+          <div class="premium-icard-icon ic-gold">🕒</div>
+          <div class="premium-icard-text">
+            <h4>Horarios</h4>
+            <p>Lun – Dom</p>
+            <p>4:00 PM – 11:00 PM</p>
+          </div>
+        </div>
+        <div class="premium-icard">
+          <div class="premium-icard-icon ic-green">🚚</div>
+          <div class="premium-icard-text">
+            <h4>Domicilios</h4>
+            <p>Nemocón y Zipaquirá</p>
+            <p>¡Tu comida bien caliente!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Social media band — floating mini cards -->
+    <div class="premium-social">
+      <span class="premium-social-label">CONÉCTATE CON NOSOTROS</span>
+      <div class="premium-social-cards">
+        <a href="https://www.instagram.com/juanchospizzanemocon/" target="_blank" rel="noopener" class="psc" data-brand="#E4405F"><i class="fa-brands fa-instagram"></i><span>Instagram</span></a>
+        <a href="https://www.facebook.com/juanchospizzanemocon" target="_blank" rel="noopener" class="psc" data-brand="#1877F2"><i class="fa-brands fa-facebook-f"></i><span>Facebook</span></a>
+        <a href="https://www.tiktok.com/@juanchospizzanemocon" target="_blank" rel="noopener" class="psc" data-brand="#000000"><i class="fa-brands fa-tiktok"></i><span>TikTok</span></a>
+        <a href="https://wa.me/573117074843?text=Hola%2C%20quiero%20hacer%20un%20pedido" target="_blank" rel="noopener" class="psc" data-brand="#25D366"><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a>
+      </div>
+    </div>
+
+
+  </div>
+</section>
+
+<!-- ===== FOOTER SIMPLE ===== -->
+<footer id="site-footer">
+  <div class="footer-inner">
+    <p>&copy; 2026 Juancho's Pizza y Comidas Rápidas — Nemocón &amp; Zipaquirá</p>
+  </div>
+</footer>
+
+
+
+<script src="/consent-banner.js" defer></script>
+<script src="/pizza-builder.js" defer></script>
+<div id="root"></div>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

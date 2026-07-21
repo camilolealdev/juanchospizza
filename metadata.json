@@ -1,0 +1,8 @@
+{
+  "name": "Juancho's Pizza y Comidas Rápidas — Nemocón & Zipaquirá",
+  "description": "Plataforma unificada multi-rol para Juancho's Pizza. Gestión de pedidos, menú inteligente, constructor visual de pizzas y CRM gastronómico. Sedes en Nemocón y Zipaquirá, Cundinamarca.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ]
+}

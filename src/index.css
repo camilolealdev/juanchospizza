@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', sans-serif;
+    scroll-padding-top: 80px;
+  }
+
+  body {
+    @apply bg-stone-950 text-stone-100 antialiased;
+    touch-action: manipulation;
+  }
+
+  ::selection {
+    @apply bg-orange-600 text-white;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #111;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-stone-700 rounded-full;
+  }
+}
+
+@layer components {
+  .font-brand {
+    font-family: 'Playfair Display', serif;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #444 #111;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .pizza-texture {
+    background-image:
+      radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 20%),
+      radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 15%);
+  }
+}
+
+.animate-in {
+  animation-duration: 300ms;
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fadeIn;
+}
+
+.slide-in-from-bottom-2 {
+  --tw-enter-translate-y: 0.5rem;
+}
+
+.slide-in-from-bottom-5 {
+  --tw-enter-translate-y: 1.25rem;
+}
+
+.zoom-in {
+  animation-name: zoomIn;
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* === Accessibility overrides 2026-07-21 (P0 #4 y #5 del audit) === */
+
+/* WCAG 2.4.7 Focus visible.
+   Tailwind preflight resetea `outline: none` por compatibilidad con
+   utilidades de ring, pero el codebase tiene 22+ ocurrencias de
+   `outline-none` sin reemplazo (Especialmente MenuDigital.tsx:350,
+   ClientesView.tsx:498/510, App.tsx:394/417/433, etc.). Esta regla
+   cocina un ring consistente que cuando el browser detecta foco por
+   teclado muestra un aro de marca; los mouse clicks no lo activan
+   (`:focus-visible` solo). `border-radius` se respeta para que el
+   ring siga la curvatura del botón/input. */
+@layer utilities {
+  *:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px #c0392b,
+      0 0 0 4px rgba(192, 57, 43, 0.35);
+    border-radius: 6px;
+  }
+}
+
+/* WCAG 2.3.3 Animation from interactions — prefers-reduced-motion.
+   Apaga animaciones decorativas y respeta la preferencia del usuario
+   a nivel OS. Las animaciones puramente informativas (toast entrando
+   con fade) sí se shellean — la información sigue comunicándose. Pero
+   `animate-pulse`, `animate-spin`, `animate-ping`, `animate-bounce`,
+   `pulseGlow`, `pfiFloat`, `spin`, `ping`, `bounce`, `slideUp` etc.
+   se cancelan.
+   Si en el futuro hace falta una distinción más fina (mantener fade-in
+   pero apagar bounce), mover a clases nombradas tipo `.motion-safe-*`
+   y respetar condicionalmente. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-pulse,
+  .animate-spin,
+  .animate-ping,
+  .animate-bounce,
+  .animate-fade-in,
+  .animate-zoom-in,
+  .animate-in,
+  .pulse-glow,
+  .pfi-float {
+    animation: none !important;
+  }
+}
+
+/* WCAG 2.4.1 Bypass Blocks — sr-only utility accesible vía teclado.
+   Tailwind ya trae `.sr-only` pero acá lo declaramos explícito para
+   que los inputs del cart que recién agregamos (con aria-labelledby
+   apuntando a labels sr-only) tengan respaldo sin depender de versión
+   particular de Tailwind. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

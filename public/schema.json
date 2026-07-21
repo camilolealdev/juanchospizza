@@ -1,0 +1,74 @@
+{
+  "@context": "https://schema.org",
+  "@type": "FoodEstablishment",
+  "name": "Juancho's Pizza y Comidas Rápidas",
+  "description": "Pizzas artesanales, lasañas y spaguettis con sedes en Nemocón y Zipaquirá, Cundinamarca.",
+  "url": "https://juanchospizza.com",
+  "telephone": "+57-311-707-4843",
+  "servesCuisine": "Pizza, Comida Rápida, Italiana",
+  "areaServed": [
+    "Nemocón",
+    "Zipaquirá",
+    "Cundinamarca"
+  ],
+  "hasMenu": "https://juanchospizza.com",
+  "sameAs": [
+    "https://www.instagram.com/juanchospizzanemocon/",
+    "https://www.facebook.com/juanchospizzanemocon",
+    "https://www.tiktok.com/@juanchospizzanemocon"
+  ],
+  "department": [
+    {
+      "@type": "FoodEstablishment",
+      "name": "Juancho's Pizza Nemocón",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Cra 6 No. 5-40, Vía Principal",
+        "addressLocality": "Nemocón",
+        "addressRegion": "Cundinamarca",
+        "addressCountry": "CO"
+      },
+      "telephone": "+57-311-707-4843",
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        "opens": "16:00",
+        "closes": "23:00"
+      }
+    },
+    {
+      "@type": "FoodEstablishment",
+      "name": "Juancho's Pizza Zipaquirá",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Diagonal 4 #29-10, Barrio Las Villas",
+        "addressLocality": "Zipaquirá",
+        "addressRegion": "Cundinamarca",
+        "addressCountry": "CO"
+      },
+      "telephone": "+57-311-707-4843",
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        "opens": "16:00",
+        "closes": "23:00"
+      }
+    }
+  ]
+}

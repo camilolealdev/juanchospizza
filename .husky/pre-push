@@ -1,0 +1,72 @@
+#!/usr/bin/env sh
+# .husky/pre-push — dual-upstream sync enforcement
+# ─────────────────────────────────────────────────────────────────────
+# Reglas (evaluadas por cada refspec que git intenta pushear):
+#   1. CI activo (env CI=true)            → salta el hook.
+#   2. master → camilo                   → BLOQUEADO (master es origin-only).
+#   3. feature → origin                  → AVISA si camilo diverged/ausente.
+#   4. feature → camilo                  → no-op (2da invocación del pushall).
+#
+# Filosofía: prefiere WARN sobre BLOCK para no romper pushes válidos;
+# solo bloquea la operación unsafe (master → camilo). Bypass vía:
+#     git push --no-verify
+#
+# Docs detalle:
+#   - .ai/claude/CLAUDE.md  → sección "Git workflow — dual-upstream"
+#   - CONTRIBUTING.md       → sección "🚀 Git workflow"
+
+remote="$1"
+
+# 1. Skip en CI (GitHub Actions sets CI=true; los checkout no
+#    inicializan husky por defecto, pero por defensa explícita).
+[ -n "$CI" ] && exit 0
+
+# Lee refspecs desde stdin. Formato git:
+#   <local_ref> <local_sha> <remote_ref> <remote_sha>\n  (una línea por ref)
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Saltar líneas vacías (git las puede emitir entre refspecs).
+  [ -z "$local_ref" ] && continue
+
+  branch=$(echo "$remote_ref" | sed 's|refs/heads/||')
+
+  # 2. Bloquea master → camilo.
+  if [ "$branch" = "master" ] && [ "$remote" = "camilo" ]; then
+    cat >&2 <<'ERR'
+❌ pre-push: master NO debe ir a camilo.
+
+   Regla: master va SOLO a origin (jastigoga/pizzeria). El fork
+   camilolealdev/juanchospizza NO lleva master por diseño deliberado
+   (los PRs y la línea oficial viven solo en origin).
+
+   Comando correcto:
+       git push origin master
+ERR
+    exit 1
+  fi
+
+  # 3. Avisa si pusheás feature a origin pero camilo diverged o no la tiene.
+  if [ "$branch" != "master" ] && [ "$remote" = "origin" ]; then
+    camilo_sha=$(git ls-remote --heads camilo "$branch" 2>/dev/null | cut -f1)
+    if [ -z "$camilo_sha" ]; then
+      cat >&2 <<WARN
+⚠️  pre-push: camilo no tiene la rama '$branch'.
+   Después de este push a origin corré uno de estos:
+       git pushall $branch         # recomendado: sincroniza ambos
+       git push camilo $branch     # alternativa manual
+WARN
+    elif [ "$camilo_sha" != "$local_sha" ]; then
+      camilo_short=$(echo "$camilo_sha" | cut -c1-7)
+      local_short=$(echo "$local_sha" | cut -c1-7)
+      cat >&2 <<WARN
+⚠️  pre-push: camilo/$branch está ($camilo_short) detrás de tu local ($local_short).
+   Sincronizá ambos remotos con:
+       git pushall $branch
+   El push a origin continúa — aborta con Ctrl+C si preferís sincronizar primero.
+WARN
+    fi
+  fi
+
+  # 4. feature → camilo: no-op (segunda invocación del alias pushall).
+done
+
+exit 0
