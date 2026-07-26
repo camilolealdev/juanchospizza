@@ -12,7 +12,7 @@ const initAI = async () => {
   if (isInitialized) return;
   try {
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
       console.warn('Gemini API key not configured. Skipping AI init.');
       return;

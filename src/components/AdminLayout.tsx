@@ -98,7 +98,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       {/* Mobile Overlay */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 md:hidden"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-overlay md:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -106,7 +106,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       {/* Sidebar */}
       <aside
         className={[
-          'fixed md:sticky top-0 left-0 z-40 h-screen',
+          'fixed md:sticky top-0 left-0 z-sidebar h-screen',
           'w-[280px] flex flex-col',
           'bg-gradient-to-b from-brand-950 via-[#0f0807] to-[#0a0403]',
           'border-r border-brand-900/30',
@@ -201,7 +201,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       </div>
 
       {/* Floating Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 md:left-[280px] pointer-events-none">
+      <div className="fixed top-0 left-0 right-0 z-topbar md:left-[280px] pointer-events-none">
         <div className="flex items-center justify-between px-6 md:px-10 h-16 pointer-events-auto bg-white/[0.005] backdrop-blur-2xl border-b border-white/[0.03] shadow-2xl shadow-black/10">
           {/* Left: hamburger + title */}
           <div className="flex items-center gap-3">

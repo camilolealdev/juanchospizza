@@ -3,6 +3,15 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      zIndex: {
+        sticky: '10',
+        header: '20',
+        overlay: '30',
+        sidebar: '40',
+        topbar: '50',
+        toast: '60',
+        'overlay-max': '9995',
+      },
       fontFamily: {
         brand: ['Playfair Display', 'serif'],
         sans: ['Inter', 'sans-serif'],

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import BoldCheckoutButton from './payments/BoldCheckoutButton';
 import TrackOrderModal from './TrackOrderModal';
+import { api } from '../services/api';
 import type { OrderDraft } from '../services/payments/paymentService';
 import { PizzaSize, OrderItem } from '../types';
 import { generateOrderNumber } from '../utils/orderNumber';
@@ -56,10 +57,21 @@ const CartSection: React.FC = () => {
     setTimeout(() => setToast(''), 2500);
   };
 
-  const handleWhatsApp = () => {
-    if (!customerName || !customerAddress) {
-      showToast('Completa nombre y dirección');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleWhatsApp = async () => {
+    if (!customerName || !customerAddress || !customerPhone) {
+      showToast('Completa todos los datos del pedido');
       return;
+    }
+    setIsProcessing(true);
+    try {
+      await api.createOrder({ ...buildOrderDraft(), paymentMethod: 'whatsapp' });
+      showToast('Pedido registrado ✓');
+    } catch {
+      showToast('Error al registrar, pero puedes pedir por WhatsApp');
+    } finally {
+      setIsProcessing(false);
     }
     let msg = `🍕 *Nuevo Pedido Juancho's Pizza*\n\n*Cliente:* ${customerName}\n*Dirección:* ${customerAddress}\n\n`;
     cart.forEach((item, i) => {
@@ -69,7 +81,6 @@ const CartSection: React.FC = () => {
     msg += `\n*Total: $${cartTotal.toLocaleString()}*\n\n⏱️ _Tiempo estimado: 25-35 min_`;
     const url = `https://wa.me/573117074843?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
-    showToast('Pedido enviado a WhatsApp ✓');
   };
 
   return (
@@ -353,14 +364,14 @@ const CartSection: React.FC = () => {
                     />
                     <button
                       onClick={handleWhatsApp}
-                      disabled={!customerName || !customerAddress}
+                      disabled={!canCheckout || isProcessing}
                       className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all"
                       style={{
                         border: 'none',
-                        background: !customerName || !customerAddress ? '#ccc' : '#25D366',
+                        background: !canCheckout || isProcessing ? '#ccc' : '#25D366',
                         color: 'white',
-                        cursor: !customerName || !customerAddress ? 'not-allowed' : 'pointer',
-                        boxShadow: !customerName || !customerAddress ? 'none' : '0 4px 20px rgba(37,211,102,.3)',
+                        cursor: !canCheckout || isProcessing ? 'not-allowed' : 'pointer',
+                        boxShadow: !canCheckout || isProcessing ? 'none' : '0 4px 20px rgba(37,211,102,.3)',
                       }}
                       onMouseOver={(e) => {
                         if (customerName && customerAddress) {
@@ -423,7 +434,7 @@ const CartSection: React.FC = () => {
               borderRadius: '16px',
               fontSize: '13px',
               fontWeight: '600',
-              zIndex: 9999,
+              zIndex: 100,
               boxShadow: '0 8px 32px rgba(0,0,0,.2)',
             }}
           >

@@ -8,6 +8,7 @@ import { api } from '../services/api';
 import type { Product, Category } from '../types';
 import { generateOrderNumber } from '../utils/orderNumber';
 import { lockBodyScroll, unlockBodyScroll } from '../utils/useBodyScrollLock';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface MenuProduct {
   id: string;
@@ -75,6 +76,9 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
   const [activeFilter, setActiveFilter] = useState('todos');
   const [showCart, setShowCart] = useState(false);
   const [showPizzaBuilder, setShowPizzaBuilder] = useState<string | null>(null);
+
+  useFocusTrap(!!showPizzaBuilder, () => setShowPizzaBuilder(null));
+  useFocusTrap(showCart, () => setShowCart(false), '#md-cart-title');
   const [selectedSize, setSelectedSize] = useState(EMPTY_SIZE);
   const [selectedSabores, setSelectedSabores] = useState<string[]>([]);
   const [showSuccess, setShowSuccess] = useState('');
@@ -235,11 +239,6 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
     return `Hola Juanchos Pizza! 🍕\n\nQuiero realizar el siguiente pedido:\n\n${items}\n\n━━━━━━━━━━━━━\n💵 Total estimado: $${cartTotal.toLocaleString()}\n\n👤 Nombre: ${customerName || '________'}\n📍 Dirección: ${customerAddress || '________'}\n\n¡Gracias! 🎉`;
   }, [cart, cartTotal, customerName, customerAddress]);
 
-  const handleWhatsApp = useCallback(() => {
-    const url = `https://wa.me/573117074843?text=${encodeURIComponent(whatsappMessage)}`;
-    window.open(url, '_blank');
-  }, [whatsappMessage]);
-
   const canCheckoutWithBold = !!customerName && !!customerAddress && !!customerPhone;
 
   const buildOrderDraft = useCallback((): OrderDraft => {
@@ -272,6 +271,16 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
       estimatedTime: 30,
     };
   }, [cart, customerName, customerPhone, customerAddress, cartTotal]);
+
+  const handleWhatsApp = useCallback(async () => {
+    try {
+      await api.createOrder({ ...buildOrderDraft(), paymentMethod: 'whatsapp' });
+    } catch {
+      // WhatsApp se abre igual aunque falle el registro
+    }
+    const url = `https://wa.me/573117074843?text=${encodeURIComponent(whatsappMessage)}`;
+    window.open(url, '_blank');
+  }, [whatsappMessage, buildOrderDraft]);
 
   const scrollTab = useCallback((dir: number) => {
     if (tabsRef.current) tabsRef.current.scrollBy({ left: dir * 200, behavior: 'smooth' });
@@ -313,14 +322,14 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
       {...(isOverlay ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } } : {})}
       className={
         isOverlay
-          ? 'fixed inset-0 z-[9995] bg-[#F4EFEA] overflow-y-auto overscroll-behavior-contain'
+          ? 'fixed inset-0 z-overlay-max bg-[#F4EFEA] overflow-y-auto overscroll-behavior-contain'
           : 'bg-[#F4EFEA] min-h-screen scroll-mt-16 animate-fade-in'
       }
       id={isOverlay ? undefined : 'menu'}
       style={{ fontFamily: "'Poppins', sans-serif" }}
     >
       {/* Top Bar */}
-      <div className="sticky top-0 z-20 bg-[#F4EFEA]/95 backdrop-blur-xl border-b border-[#8B572A]/10">
+      <div className="sticky top-0 z-header bg-[#F4EFEA]/95 backdrop-blur-xl border-b border-[#8B572A]/10">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {isOverlay && (
@@ -346,14 +355,8 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
             aria-label={`Ver pedido (${cartCount} producto${cartCount !== 1 ? 's' : ''})`}
           >
             <i className="fas fa-basket-shopping text-sm" aria-hidden="true"></i>
-            {/* [2026-07-21] A11y: aria-live para que screen readers anuncien
-                el cambio de cart count cuando el usuario agrega productos. */}
             {cartCount > 0 && (
-              <span
-                aria-live="polite"
-                aria-atomic="true"
-                className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[#F9DC5C] text-[#1A1A1A] flex items-center justify-center text-[10px] font-black shadow-lg"
-              >
+              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[#F9DC5C] text-[#1A1A1A] flex items-center justify-center text-[10px] font-black shadow-lg">
                 {cartCount}
               </span>
             )}
@@ -386,7 +389,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
         <div className="relative mb-6">
           <button
             onClick={() => scrollTab(-1)}
-            className="absolute left-0 top-0 bottom-0 z-10 w-8 bg-gradient-to-r from-[#F4EFEA] to-transparent flex items-center justify-start md:hidden"
+            className="absolute left-0 top-0 bottom-0 z-sticky w-8 bg-gradient-to-r from-[#F4EFEA] to-transparent flex items-center justify-start md:hidden"
           >
             <i className="fas fa-chevron-left text-[10px] text-[#8B572A]/50"></i>
           </button>
@@ -415,7 +418,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
           </div>
           <button
             onClick={() => scrollTab(1)}
-            className="absolute right-0 top-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[#F4EFEA] to-transparent flex items-center justify-end md:hidden"
+            className="absolute right-0 top-0 bottom-0 z-sticky w-8 bg-gradient-to-l from-[#F4EFEA] to-transparent flex items-center justify-end md:hidden"
           >
             <i className="fas fa-chevron-right text-[10px] text-[#8B572A]/50"></i>
           </button>
@@ -543,7 +546,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
       </div>
 
       {/* Pizza Builder Modal */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {showPizzaBuilder &&
           (() => {
             const product = products.find((p) => p.id === showPizzaBuilder);
@@ -553,7 +556,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                className="fixed inset-0 z-overlay bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
                 onClick={() => setShowPizzaBuilder(null)}
               >
                 <motion.div
@@ -572,11 +575,11 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
                     <button
                       onClick={() => setShowPizzaBuilder(null)}
                       aria-label="Cerrar personalización"
-                      className="absolute top-4 right-4 z-10 w-9 h-9 rounded-xl bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-all"
+                      className="absolute top-4 right-4 z-sticky w-9 h-9 rounded-xl bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-all"
                     >
                       <i className="fas fa-times text-xs" aria-hidden="true"></i>
                     </button>
-                    <div className="absolute bottom-4 left-4 z-10">
+                    <div className="absolute bottom-4 left-4 z-sticky">
                       <h2
                         id="md-pizza-builder-title"
                         className="text-2xl font-black text-white drop-shadow-lg"
@@ -677,7 +680,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
       </AnimatePresence>
 
       {/* Cart Sidebar */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {' '}
         {showCart && (
           // [2026-07-21] A11y P1: role="dialog" + aria-modal="true" +
@@ -687,7 +690,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-overlay bg-black/50 backdrop-blur-sm"
             onClick={() => setShowCart(false)}
           >
             <motion.div
@@ -863,13 +866,13 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
       </AnimatePresence>
 
       {/* Toast Success */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {showSuccess && (
           <motion.div
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
-            className="fixed bottom-24 right-6 z-40 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3"
+            className="fixed bottom-24 right-6 z-toast bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3"
           >
             <i className="fas fa-check-circle"></i>
             <span className="text-sm font-bold">{showSuccess} agregado</span>
@@ -878,13 +881,13 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
       </AnimatePresence>
 
       {/* Cross-sell Toast */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {showCrossSell && (
           <motion.div
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
-            className="fixed bottom-44 right-6 z-40 bg-white border border-[#8B572A]/10 rounded-2xl shadow-2xl p-4 max-w-xs"
+            className="fixed bottom-44 right-6 z-toast bg-white border border-[#8B572A]/10 rounded-2xl shadow-2xl p-4 max-w-xs"
           >
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B572A]/60 mb-3">
               Complementa tu pedido
