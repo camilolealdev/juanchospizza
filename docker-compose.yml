@@ -112,6 +112,7 @@ services:
         max-file: "3"
     networks:
       - app-network
+      - edge
 
   postgres:
     image: postgres:17-alpine
@@ -182,6 +183,14 @@ volumes:
   redis_data:
 
 networks:
+  # app-network: internal:true -- app/postgres/redis nunca son alcanzables
+  # directamente desde fuera del host, solo entre sí y desde nginx (que
+  # también está en `edge`).
   app-network:
     driver: bridge
     internal: true
+  # edge: red NO interna, solo nginx la usa -- es la única forma de que
+  # Docker publique realmente los puertos 80/443 (`ports:` no funciona en
+  # una red internal:true, ver auditoría 2026-07-26).
+  edge:
+    driver: bridge

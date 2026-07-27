@@ -74,7 +74,11 @@ _legacy/
 deploy.sh
 docker-compose.ci.yml
 docker-compose.override.yml
-nginx.conf
+# nginx.conf SI se trackea (auditoría 2026-07-26): docker-compose.yml lo monta
+# como bind mount de solo lectura y el flujo de deploy documentado es
+# git clone/pull en el VPS -- si no está en el repo, nunca llega ahí. No
+# contiene secretos (server_name genérico, certs se montan aparte desde
+# ./certs/, que sigue gitignored más abajo).
 
 # .github/ SI se trackea — contiene /workflows/ci.yml necesario para
 # que GitHub Actions encuentre el pipeline de lint/tsc/build/test/audit.
