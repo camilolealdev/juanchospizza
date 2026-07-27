@@ -4,13 +4,15 @@ import logger from './services/logger.js';
 
 const { Pool } = pg;
 
-// SSL condicional: en producción (o si PGSSLMODE=require) se activa SSL
-// con rejectUnauthorized=false para compatibilidad con Neon/Railway/RDS.
-// En desarrollo local (sin DATABASE_URL que contenga 'ssl' o 'neon') se
-// deja desactivado porque Postgres local no requiere SSL.
-const isProduction = process.env.NODE_ENV === 'production';
+// SSL condicional: se activa SOLO si se pide explícitamente (PGSSLMODE=require
+// o sslmode=require en DATABASE_URL), para compatibilidad con Neon/Railway/RDS.
+// NO se activa solo por NODE_ENV=production -- el postgres:17-alpine que trae
+// el propio docker-compose.yml (host `postgres`) no tiene SSL configurado, y
+// forzarlo ahí rompía la conexión app->DB en cualquier deploy real vía Docker
+// Compose (auditoría 2026-07-26). Un Postgres gestionado externo debe pedir
+// SSL explícitamente con una de las dos vars de abajo, no heredarlo del entorno.
 const pgSslMode = process.env.PGSSLMODE || '';
-const needsSsl = isProduction || pgSslMode === 'require' || (process.env.DATABASE_URL || '').includes('sslmode=require');
+const needsSsl = pgSslMode === 'require' || (process.env.DATABASE_URL || '').includes('sslmode=require');
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL || '',
