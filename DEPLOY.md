@@ -46,7 +46,7 @@ sudo systemctl enable --now docker
 ### 2. Clonar y configurar
 
 ```bash
-git clone https://github.com/jastigoga/pizzeria.git /opt/guido-pizza
+git clone https://github.com/camilolealdev/juanchospizza.git /opt/guido-pizza
 cd /opt/guido-pizza
 
 # Crear .env.production con todas las variables
@@ -69,15 +69,33 @@ curl http://localhost:3001/api/health
 
 ### 4. Configurar Nginx + SSL
 
+`nginx.conf` ya viene en el repo (auditoría 2026-07-26) — no hace falta crearlo, pero
+**sí revisar `server_name` y descomentar HSTS una vez que SSL funcione**.
+
+⚠️ **`certbot --nginx` NO sirve acá** — ese plugin espera un nginx instalado
+directamente en el host (systemd), pero en este proyecto nginx corre *dentro*
+de un contenedor Docker. Usar el flujo `standalone` (para el primer certificado,
+con el contenedor nginx parado) o `webroot` (sin downtime, usando el
+`location /.well-known/acme-challenge/` que `nginx.conf` ya expone):
+
 ```bash
-# Instalar certbot para SSL
-sudo apt install -y certbot python3-certbot-nginx
+# Instalar certbot (SIN el plugin de nginx, no aplica en este setup)
+sudo apt install -y certbot
 
-# Obtener certificado
-sudo certbot --nginx -d tudominio.com
+# Opción standalone (primera vez, con el stack parado en el puerto 80):
+docker compose stop nginx
+sudo certbot certonly --standalone -d tudominio.com
+docker compose start nginx
 
-# El docker-compose incluye Nginx como reverse proxy
-# Editar ./nginx.conf con tu dominio real antes del primer deploy
+# Copiar los certs al volumen que docker-compose.yml monta en ./certs
+sudo mkdir -p ./certs
+sudo cp /etc/letsencrypt/live/tudominio.com/fullchain.pem ./certs/
+sudo cp /etc/letsencrypt/live/tudominio.com/privkey.pem ./certs/
+docker compose restart nginx
+
+# Renovación (cron/systemd timer, certbot lo agrega solo) -- agregar un
+# --deploy-hook que vuelva a copiar los certs y reinicie nginx:
+#   certbot renew --deploy-hook "cp /etc/letsencrypt/live/tudominio.com/*.pem /opt/guido-pizza/certs/ && cd /opt/guido-pizza && docker compose restart nginx"
 ```
 
 ---
@@ -111,12 +129,14 @@ sudo certbot --nginx -d tudominio.com
 
 ## 🔄 CI/CD Pipeline
 
-El proyecto incluye GitHub Actions listo:
+El proyecto tiene 3 workflows en `.github/workflows/`. **No hay `ci-cd.yml`** — se
+documentaba acá pero nunca se llegó a commitear; corregido 2026-07-26.
 
-| Workflow           | Archivo                       | Disparador             |
-| ------------------ | ----------------------------- | ---------------------- |
-| **CI**             | `.github/workflows/ci.yml`    | Push/PR a master       |
-| **CI/CD completo** | `.github/workflows/ci-cd.yml` | Push a main + dispatch |
+| Workflow    | Archivo                        | Disparador                  |
+| ----------- | ------------------------------- | --------------------------- |
+| **CI**      | `.github/workflows/ci.yml`      | Push/PR a master            |
+| **Deploy**  | `.github/workflows/deploy.yml`  | Manual (`workflow_dispatch`) — deshabilitado como auto-trigger, ver nota abajo |
+| **Backup**  | `.github/workflows/backup.yml`  | Cron diario 04:00 Colombia  |
 
 ### CI Pipeline (`.github/workflows/ci.yml`)
 
@@ -124,29 +144,28 @@ El proyecto incluye GitHub Actions listo:
 - ✅ TypeScript check
 - ✅ Build (Vite)
 - ✅ Tests (Vitest)
-- ✅ Dependency audit
+- ✅ Docker build + verify
+- ✅ E2E smoke (Playwright)
 
-### CI/CD Pipeline (`.github/workflows/ci-cd.yml`)
+### ⚠️ Deploy real: NO es automático vía GitHub Actions
 
-1. ✅ Lint & Test
-2. ✅ Docker Build + Trivy Scan
-3. ✅ E2E Tests (Playwright)
-4. ✅ Deploy a Staging
-5. ✅ Deploy a Production (solo tags v* o dispatch manual)
+`deploy.yml` desplegaba vía PM2 + `git pull` a `/var/www/juanchospizza` — una
+estrategia completamente distinta a Docker Compose (la que este documento
+describe) y que además llamaba a un script `npm start` inexistente. Se
+deshabilitó su disparo automático en cada push (auditoría 2026-07-26) para que
+no corra en paralelo/en conflicto con el deploy manual de la sección anterior.
 
-### Secrets requeridos en GitHub
+El deploy real hoy es **manual**: seguir los pasos 1-4 de arriba la primera
+vez, y para actualizaciones posteriores usar `npm run deploy:prod` (SSH +
+`git pull` + `docker compose up -d --build`) o entrar al VPS y correrlo a mano.
+
+### Secrets requeridos en GitHub (solo si se usa `deploy:staging`/`deploy:prod` o se reactiva `deploy.yml`)
 
 | Secret            | Propósito                  |
 | ----------------- | -------------------------- |
-| `DEPLOY_HOST`     | IP del servidor producción |
-| `DEPLOY_USER`     | Usuario SSH                |
-| `DEPLOY_SSH_KEY`  | Clave privada SSH          |
 | `STAGING_HOST`    | IP del servidor staging    |
-| `STAGING_USER`    | Usuario SSH staging        |
-| `STAGING_SSH_KEY` | Clave SSH staging          |
-| `PROD_HOST`       | IP producción              |
-| `PROD_USER`       | Usuario SSH producción     |
-| `PROD_SSH_KEY`    | Clave SSH producción       |
+| `PROD_HOST`       | IP producción               |
+| `DEPLOY_SSH_KEY`  | Clave privada SSH (si se usa `deploy.yml` manual) |
 
 ---
 
@@ -159,6 +178,9 @@ El proyecto incluye GitHub Actions listo:
 - [ ] Login como OPERATOR funciona
 - [ ] Menú digital carga correctamente
 - [ ] Static assets se sirven (JS, CSS, imágenes)
+- [ ] **🔴 Rotar los PINs por defecto** (1234/5678/0000/9999, sembrados por
+      `server/migrate.js` y documentados públicamente en el propio README) vía
+      CRM > Empleados, ANTES de compartir la URL con nadie del staff real.
 
 ### Primeras 24 horas
 

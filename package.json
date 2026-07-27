@@ -21,8 +21,8 @@
     "docker:stop": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "docker:clean": "docker compose down -v && docker system prune -f",
-    "deploy:staging": "ssh $STAGING_HOST 'cd /opt/guido-pizza && docker compose pull && docker compose up -d'",
-    "deploy:prod": "ssh $PROD_HOST 'cd /opt/guido-pizza && docker compose pull && docker compose up -d'"
+    "deploy:staging": "ssh $STAGING_HOST 'cd /opt/guido-pizza && git pull && docker compose up -d --build'",
+    "deploy:prod": "ssh $PROD_HOST 'cd /opt/guido-pizza && git pull && docker compose up -d --build'"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

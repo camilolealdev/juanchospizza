@@ -57,7 +57,7 @@ SELECT NOW() - MIN("createdAt") AS oldest_order FROM orders;
 ```bash
 # 1. Iniciar servicios
 cd /opt/guido-pizza
-docker-compose up -d
+docker compose up -d
 
 # 2. Verificar health
 curl -f http://localhost:3001/api/health
@@ -73,11 +73,11 @@ curl -f http://localhost:3000/
 
 ```bash
 # Todos los servicios deben responder
-docker-compose ps
+docker compose ps
 # Debe mostrar: app (Up), nginx (Up), postgres (Up), redis (Up)
 
 # Logs sin errores críticos
-docker-compose logs --tail=20 app | grep -i error
+docker compose logs --tail=20 app | grep -i error
 ```
 
 ---
@@ -89,7 +89,7 @@ docker-compose logs --tail=20 app | grep -i error
 git checkout <commit-hash-anterior>
 npm ci
 npm run build
-docker-compose restart app
+docker compose restart app
 
 # 2. Verificar
 curl -f http://localhost:3001/api/health
@@ -101,9 +101,9 @@ curl -f http://localhost:3001/api/health
 
 | Síntoma | Causa probable | Acción |
 |---------|---------------|--------|
-| Health check DB fail | Postgres caído | `docker-compose restart postgres` |
-| Health check Redis fail | Redis caído | `docker-compose restart redis` |
-| 502 Bad Gateway | Nginx → App falla | `docker-compose restart app` |
+| Health check DB fail | Postgres caído | `docker compose restart postgres` |
+| Health check Redis fail | Redis caído | `docker compose restart redis` |
+| 502 Bad Gateway | Nginx → App falla | `docker compose restart app` |
 | Páginas lentas | Alto tráfico | Verificar `GET /api/metrics` |
 | Error de pago | API key expirada | Rotar API key, actualizar .env |
 
