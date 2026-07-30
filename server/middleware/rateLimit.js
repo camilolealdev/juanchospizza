@@ -14,11 +14,45 @@
 
 import { getRedis } from '../services/redis.js';
 
+// Loopback IPs para /api/health. Lo leemos del TCP source real
+// (req.socket.remoteAddress), NO de req.ip — server/index.js define
+// app.set('trust proxy', 1), bajo lo cual Express honra el header
+// X-Forwarded-For del primer hop y req.ip puede ser spoofed por un
+// container hostil en app-network aunque el socket real no sea
+// loopback. /api/health no expone data sensible, pero el spec exige
+// "loopback only", así que la regla anti-spoofing es estricta.
+const LOOPBACK_RE = /^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1|0:0:0:0:0:0:0:1)$/;
+
 // ── Factory: crea un middleware rate-limiter ───────────────────────
 // minimiza la repetición entre los distintos limiters.
 function createLimiter({ keyPrefix, windowMs, maxAttempts, keyFromReq }) {
   return async function limiter(req, res, next) {
-    const identifier = keyFromReq ? keyFromReq(req) : (req.ip || req.socket?.remoteAddress || 'unknown');
+    // ── Skip loopback health probe ────────────────────────────────
+    // Docker HEALTHCHECK corre wget --spider contra /api/health cada
+    // 30s desde el propio container. Sin este bypass el contador
+    // redis rl:general:{ip} se desborda (>100/60s ≈ 2 healthchecks/60s),
+    // wget recibe 429 → Docker marca el container unhealthy → orquestador
+    // entra en restart-loop (FailingStreak 34 observado).
+    //
+    // server/index.js ya monta /api/health ANTES del limiter; este skip
+    // es defense in depth por si alguien reordena app.use() en el futuro.
+    //
+    // CRÍTICO: chequeamos req.socket.remoteAddress (TCP source real), NO
+    // req.ip. Bajo app.set('trust proxy', 1) en server/index.js, req.ip
+    // honra X-Forwarded-For del primer hop y un container hostil en
+    // app-network podría spoofear loopback con un curl cualquiera. /api/health
+    // no expone data sensible, pero el spec exige "loopback only".
+    //
+    // Para el identificador de redisKey seguimos usando req.ip (resolved
+    // trust-proxy-aware IP -- es el slot correcto para rate-limit por IP
+    // visible al upstream). Las dos variables se llaman distinto a
+    // propósito para que un futuro lector no las confunda.
+    const remoteIp = req.socket?.remoteAddress || '';
+    if (req.path === '/api/health' && LOOPBACK_RE.test(remoteIp)) {
+      return next();
+    }
+
+    const identifier = keyFromReq ? keyFromReq(req) : (req.ip || remoteIp || 'unknown');
     const redisKey = `rl:${keyPrefix}:${identifier}`;
     const redis = getRedis();
 
@@ -27,7 +61,8 @@ function createLimiter({ keyPrefix, windowMs, maxAttempts, keyFromReq }) {
 
       if (current === 1) {
         // Primera vez en esta ventana — expira automáticamente
-        await redis.expire(redisKey, windowMs);
+        // ⚠️ windowMs está en milisegundos, redis.expire() espera segundos
+        await redis.expire(redisKey, Math.ceil(windowMs / 1000));
         return next();
       }
 
