@@ -41,28 +41,37 @@ ON CONFLICT (id) DO NOTHING;
 -- ── Productos (pizzas, bebidas, entrantes, postres) ──────────
 INSERT INTO products (id, "categoryId", nombre, descripcion, "basePrice", type, image, tiempo, popularidad, vegetariano, "isPremium", exclusiva, subcategory) VALUES
   -- Pizzas (todas arrancan en mediana 32k como base; el armador toma el tamaño seleccionado)
-  ('prod_margarita',    'cat_pizzas', 'Margarita',         'Salsa de tomate, mozzarella fresca y albahaca.',                                  32000, 'pizza', '/img/pizza-margarita.jpg',    20, 95, FALSE, FALSE, FALSE, 'clasica'),
-  ('prod_pepperoni',    'cat_pizzas', 'Pepperoni',         'Pepperoni importado, mozzarella y orégano.',                                       35000, 'pizza', '/img/pizza-pepperoni.jpg',    20, 90, FALSE, FALSE, FALSE, 'clasica'),
-  ('prod_hawaiana',     'cat_pizzas', 'Hawaiana',          'Jamón, piña caramelizada y mozzarella.',                                           35000, 'pizza', '/img/pizza-hawaiana.jpg',     20, 78, FALSE, FALSE, FALSE, 'clasica'),
-  ('prod_vegetariana',  'cat_pizzas', 'Vegetariana',       'Mozzarella, champiñones, pimientos, cebolla y aceitunas.',                         33000, 'pizza', '/img/pizza-vegetariana.jpg',  22, 70, TRUE,  FALSE, FALSE, 'clasica'),
-  ('prod_4_estaciones', 'cat_pizzas', 'Cuatro Estaciones', 'Jamón, champiñones, alcachofas y aceitunas en cuatro cuadrantes.',                38000, 'pizza', '/img/pizza-4estaciones.jpg',  25, 65, FALSE, FALSE, FALSE, 'clasica'),
-  ('prod_bbq_chicken',  'cat_pizzas', 'BBQ Chicken',       'Pollo a la BBQ, cebolla morada, maíz y mozzarella.',                               38000, 'pizza', '/img/pizza-bbq.jpg',          22, 85, FALSE, FALSE, FALSE, 'especial'),
-  ('prod_carbonara',    'cat_pizzas', 'Carbonara',         'Salsa blanca, mozzarella, panceta, huevo y pimienta negra.',                      39000, 'pizza', '/img/pizza-carbonara.jpg',    22, 60, FALSE, TRUE,  FALSE, 'premium'),
-  ('prod_diavola',      'cat_pizzas', 'Diavola',           'Pepperoni picante, chorizo español, pimientos y mozzarella.',                   37000, 'pizza', '/img/pizza-diavola.jpg',      22, 55, FALSE, TRUE,  FALSE, 'premium'),
-  ('prod_margherita_dop', 'cat_pizzas', 'D.O.P. Margherita','Mozzarella di búfala D.O.P., tomate San Marzano y albahaca fresca.',            45000, 'pizza', '/img/pizza-margherita-dop.jpg', 25, 40, TRUE,  TRUE, TRUE, 'especial'),
+  -- NOTA imágenes: URLs de Unsplash (mismo patrón probado en
+  -- server/seedData/juanchosMenu.js, el seed legacy) -- las rutas locales
+  -- /img/*.jpg originales NUNCA existieron en public/img/ (nunca se
+  -- commitearon), así que cada producto servía el fallback SPA
+  -- (index.html, Content-Type text/html) como "imagen", rompiendo toda
+  -- la grilla de productos en el primer deploy real (2026-07-31). Son
+  -- fotos de stock genéricas para no bloquear el lanzamiento -- reemplazar
+  -- por fotos reales del negocio vía el CRM (products.image es editable)
+  -- en cuanto estén disponibles.
+  ('prod_margarita',    'cat_pizzas', 'Margarita',         'Salsa de tomate, mozzarella fresca y albahaca.',                                  32000, 'pizza', 'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?auto=format&fit=crop&w=600&q=80',    20, 95, FALSE, FALSE, FALSE, 'clasica'),
+  ('prod_pepperoni',    'cat_pizzas', 'Pepperoni',         'Pepperoni importado, mozzarella y orégano.',                                       35000, 'pizza', 'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=600&q=80',    20, 90, FALSE, FALSE, FALSE, 'clasica'),
+  ('prod_hawaiana',     'cat_pizzas', 'Hawaiana',          'Jamón, piña caramelizada y mozzarella.',                                           35000, 'pizza', 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80',     20, 78, FALSE, FALSE, FALSE, 'clasica'),
+  ('prod_vegetariana',  'cat_pizzas', 'Vegetariana',       'Mozzarella, champiñones, pimientos, cebolla y aceitunas.',                         33000, 'pizza', 'https://images.unsplash.com/photo-1604917877934-07d8d248d396?auto=format&fit=crop&w=600&q=80',  22, 70, TRUE,  FALSE, FALSE, 'clasica'),
+  ('prod_4_estaciones', 'cat_pizzas', 'Cuatro Estaciones', 'Jamón, champiñones, alcachofas y aceitunas en cuatro cuadrantes.',                38000, 'pizza', 'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?auto=format&fit=crop&w=600&q=80',  25, 65, FALSE, FALSE, FALSE, 'clasica'),
+  ('prod_bbq_chicken',  'cat_pizzas', 'BBQ Chicken',       'Pollo a la BBQ, cebolla morada, maíz y mozzarella.',                               38000, 'pizza', 'https://images.unsplash.com/photo-1555109307-f7d9da25c244?auto=format&fit=crop&w=600&q=80',          22, 85, FALSE, FALSE, FALSE, 'especial'),
+  ('prod_carbonara',    'cat_pizzas', 'Carbonara',         'Salsa blanca, mozzarella, panceta, huevo y pimienta negra.',                      39000, 'pizza', 'https://images.unsplash.com/photo-1512152272829-e3139592d56f?auto=format&fit=crop&w=600&q=80',    22, 60, FALSE, TRUE,  FALSE, 'premium'),
+  ('prod_diavola',      'cat_pizzas', 'Diavola',           'Pepperoni picante, chorizo español, pimientos y mozzarella.',                   37000, 'pizza', 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=600&q=80',      22, 55, FALSE, TRUE,  FALSE, 'premium'),
+  ('prod_margherita_dop', 'cat_pizzas', 'D.O.P. Margherita','Mozzarella di búfala D.O.P., tomate San Marzano y albahaca fresca.',            45000, 'pizza', 'https://images.unsplash.com/photo-1594007654729-407eedc4be65?auto=format&fit=crop&w=600&q=80', 25, 40, TRUE,  TRUE, TRUE, 'especial'),
 
   -- Bebidas
-  ('prod_coca_cola',    'cat_bebidas', 'Coca-Cola 350ml',   'Gaseosa clásica, bien fría.',                                                     6000,  'bebida', '/img/coca-cola.jpg', 2,  100, TRUE, FALSE, FALSE, 'gaseosa'),
-  ('prod_sprite',       'cat_bebidas', 'Sprite 350ml',      'Limonada gasificada, sin azúcar.',                                                 6000,  'bebida', '/img/sprite.jpg',     2,   85, TRUE, FALSE, FALSE, 'gaseosa'),
-  ('prod_agua',         'cat_bebidas', 'Agua 500ml',        'Agua mineral natural sin gas.',                                                    4000,  'bebida', '/img/agua.jpg',       2,   60, TRUE, FALSE, FALSE, 'agua'),
+  ('prod_coca_cola',    'cat_bebidas', 'Coca-Cola 350ml',   'Gaseosa clásica, bien fría.',                                                     6000,  'bebida', 'https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?auto=format&fit=crop&w=600&q=80', 2,  100, TRUE, FALSE, FALSE, 'gaseosa'),
+  ('prod_sprite',       'cat_bebidas', 'Sprite 350ml',      'Limonada gasificada, sin azúcar.',                                                 6000,  'bebida', 'https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?auto=format&fit=crop&w=600&q=80',     2,   85, TRUE, FALSE, FALSE, 'gaseosa'),
+  ('prod_agua',         'cat_bebidas', 'Agua 500ml',        'Agua mineral natural sin gas.',                                                    4000,  'bebida', 'https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?auto=format&fit=crop&w=600&q=80',       2,   60, TRUE, FALSE, FALSE, 'agua'),
 
   -- Entrantes
-  ('prod_pan_ajo',      'cat_entrantes', 'Pan de Ajo',       'Baguette tostada con mantequilla de ajo y perejil.',                              8000,  'entrante', '/img/pan-ajo.jpg',    8,   70, TRUE, FALSE, FALSE, 'pan'),
-  ('prod_alitas_bbq',   'cat_entrantes', 'Alitas BBQ',       '6 alitas de pollo glaseadas con salsa BBQ casera.',                               18000, 'entrante', '/img/alitas-bbq.jpg', 15,  80, FALSE, FALSE, FALSE, 'carne'),
+  ('prod_pan_ajo',      'cat_entrantes', 'Pan de Ajo',       'Baguette tostada con mantequilla de ajo y perejil.',                              8000,  'entrante', 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?auto=format&fit=crop&w=600&q=80',    8,   70, TRUE, FALSE, FALSE, 'pan'),
+  ('prod_alitas_bbq',   'cat_entrantes', 'Alitas BBQ',       '6 alitas de pollo glaseadas con salsa BBQ casera.',                               18000, 'entrante', 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80', 15,  80, FALSE, FALSE, FALSE, 'carne'),
 
   -- Postres
-  ('prod_tiramisu',     'cat_postres', 'Tiramisú',          'Clásico italiano con café espresso, mascarpone y cacao.',                        12000, 'postre', '/img/tiramisu.jpg',   3,   65, TRUE, FALSE, FALSE, 'italiano'),
-  ('prod_brownie',      'cat_postres', 'Brownie con Helado','Brownie de chocolate caliente con bola de helado de vainilla.',                 10000, 'postre', '/img/brownie.jpg',    5,   75, TRUE, FALSE, FALSE, 'chocolate')
+  ('prod_tiramisu',     'cat_postres', 'Tiramisú',          'Clásico italiano con café espresso, mascarpone y cacao.',                        12000, 'postre', 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80',   3,   65, TRUE, FALSE, FALSE, 'italiano'),
+  ('prod_brownie',      'cat_postres', 'Brownie con Helado','Brownie de chocolate caliente con bola de helado de vainilla.',                 10000, 'postre', 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=600&q=80',    5,   75, TRUE, FALSE, FALSE, 'chocolate')
 ON CONFLICT (id) DO NOTHING;
 
 -- ── Ingredientes (precio_extra en COP por ingrediente adicional) ──
