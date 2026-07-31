@@ -5,19 +5,49 @@ const ALL_CONSOLE_ENTRIES: { type: string; text: string; url: string; timestamp:
 const ALL_NETWORK_FAILURES: { url: string; status: number; method: string }[] = [];
 const ALL_UNHANDLED_REJECTIONS: { message: string; url: string }[] = [];
 
+// [2026-07-30] Backlog: en CI no hay API keys reales de proveedores
+// externos (Gemini, pasarelas de pago, push). Las llamadas opcionales a
+// esos hosts fallan legítimamente (401/403) y NO son bugs del CRM — si se
+// reportaran como fallos de red, el audit de consola quedaría lleno de
+// ruido y escondería los fallos reales. Se filtran por hostname (mejor
+// que claves falsas, que generarían llamadas reales a providers y
+// dependencia de red en CI).
+const OPTIONAL_EXTERNAL_HOSTS = [
+  'generativelanguage.googleapis.com', // Gemini (menú inteligente)
+  'api.groq.com',
+  'api.bold.co',
+  'api.mercadopago.com',
+  'production.wompi.co',
+  'sandbox.wompi.co',
+  'api.paypal.com',
+  'www.paypal.com',
+  'fcm.googleapis.com', // push
+];
+
+function isOptionalExternal(url: string): boolean {
+  return OPTIONAL_EXTERNAL_HOSTS.some((h) => url.includes(h));
+}
+
 test.beforeEach(async ({ page }) => {
   ALL_CONSOLE_ENTRIES.length = 0;
   ALL_NETWORK_FAILURES.length = 0;
   ALL_UNHANDLED_REJECTIONS.length = 0;
 
-  // Capture ALL console messages
+  // Capture ALL console messages — salvo errores de providers externos
+  // opcionales (Gemini/pasarelas sin key en CI llegan como console.error
+  // desde el frontend; se filtran igual que los fallos de red para que el
+  // reporte muestre solo problemas reales del CRM).
   page.on('console', (msg) => {
-    ALL_CONSOLE_ENTRIES.push({
+    const entry = {
       type: msg.type(),
       text: msg.text(),
       url: msg.location().url,
       timestamp: Date.now(),
-    });
+    };
+    if (msg.type() === 'error' && isOptionalExternal(`${entry.url} ${entry.text}`)) {
+      return;
+    }
+    ALL_CONSOLE_ENTRIES.push(entry);
     if (msg.type() === 'error') {
       console.error(`  ❌ CONSOLE.ERROR: ${msg.text()}`);
     }
@@ -26,10 +56,10 @@ test.beforeEach(async ({ page }) => {
     }
   });
 
-  // Capture network failures (4xx/5xx)
+  // Capture network failures (4xx/5xx) — salvo providers externos opcionales
   page.on('response', async (response) => {
     const status = response.status();
-    if (status >= 400) {
+    if (status >= 400 && !isOptionalExternal(response.url())) {
       ALL_NETWORK_FAILURES.push({
         url: response.url(),
         status,
@@ -48,10 +78,11 @@ test.beforeEach(async ({ page }) => {
     console.error(`  💥 UNHANDLED ERROR: ${err.message}`);
   });
 
-  // Capture request failures (network errors, DNS, etc.)
+  // Capture request failures (network errors, DNS, etc.) — salvo providers
+  // externos opcionales (mismo criterio que 4xx/5xx arriba)
   page.on('requestfailed', (request) => {
     const failure = request.failure();
-    if (failure) {
+    if (failure && !isOptionalExternal(request.url())) {
       ALL_NETWORK_FAILURES.push({
         url: request.url(),
         status: 0,

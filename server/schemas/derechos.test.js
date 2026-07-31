@@ -7,7 +7,7 @@
 //   - supresion: el titular pide eliminar sus datos
 //   - reclamo: el titular presenta una queja por uso indebido
 import { describe, it, expect } from 'vitest';
-import { derechoBaseSchema } from './derechos.js';
+import { derechoBaseSchema, canTransitionDerecho } from './derechos.js';
 
 const textoLargo = ' '.repeat(0) + 'Esta es una descripción de prueba con más de 10 caracteres.';
 
@@ -129,5 +129,44 @@ describe('derechoBaseSchema', () => {
       telefono: '3117074843',
     });
     expect(r.success).toBe(false);
+  });
+});
+
+describe('canTransitionDerecho (máquina de estados)', () => {
+  it('permite avanzar pendiente → en_proceso / respondida / rechazada', () => {
+    expect(canTransitionDerecho('pendiente', 'en_proceso')).toBe(true);
+    expect(canTransitionDerecho('pendiente', 'respondida')).toBe(true);
+    expect(canTransitionDerecho('pendiente', 'rechazada')).toBe(true);
+  });
+
+  it('permite en_proceso → respondida / rechazada', () => {
+    expect(canTransitionDerecho('en_proceso', 'respondida')).toBe(true);
+    expect(canTransitionDerecho('en_proceso', 'rechazada')).toBe(true);
+  });
+
+  it('permite en_proceso → pendiente (deshacer un marcado por error)', () => {
+    expect(canTransitionDerecho('en_proceso', 'pendiente')).toBe(true);
+  });
+
+  it('prohíbe regresar respondida → pendiente / en_proceso / rechazada (terminal)', () => {
+    expect(canTransitionDerecho('respondida', 'pendiente')).toBe(false);
+    expect(canTransitionDerecho('respondida', 'en_proceso')).toBe(false);
+    expect(canTransitionDerecho('respondida', 'rechazada')).toBe(false);
+  });
+
+  it('prohíbe regresar rechazada → cualquier otro estado (terminal)', () => {
+    expect(canTransitionDerecho('rechazada', 'pendiente')).toBe(false);
+    expect(canTransitionDerecho('rechazada', 'en_proceso')).toBe(false);
+    expect(canTransitionDerecho('rechazada', 'respondida')).toBe(false);
+  });
+
+  it('permite mismo estado (editar texto de respuesta sin cambiar estado)', () => {
+    expect(canTransitionDerecho('respondida', 'respondida')).toBe(true);
+    expect(canTransitionDerecho('pendiente', 'pendiente')).toBe(true);
+  });
+
+  it('desde estado desconocido (legacy) solo permite estados conocidos', () => {
+    expect(canTransitionDerecho(null, 'pendiente')).toBe(true);
+    expect(canTransitionDerecho(undefined, 'respondida')).toBe(true);
   });
 });

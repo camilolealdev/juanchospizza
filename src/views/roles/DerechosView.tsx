@@ -25,6 +25,17 @@ const ESTADO_LABELS: Record<DerechoSolicitud['estado'], string> = {
 
 const ESTADOS = ['pendiente', 'en_proceso', 'respondida', 'rechazada'] as const;
 
+// Máquina de estados ARCO (espejo del backend, server/schemas/derechos.js):
+// pendiente ↔ en_proceso → respondida|rechazada. Los estados terminales no
+// tienen transiciones salientes. Se usa para deshabilitar opciones inválidas
+// en el selector de estado (el backend además lo valida con 409).
+const TRANSICIONES: Record<DerechoSolicitud['estado'], DerechoSolicitud['estado'][]> = {
+  pendiente: ['en_proceso', 'respondida', 'rechazada'],
+  en_proceso: ['pendiente', 'respondida', 'rechazada'],
+  respondida: [],
+  rechazada: [],
+};
+
 // Solicitudes de derechos ARCO (Ley 1581 Art. 14-15) — el admin las ve y
 // responde acá dentro del plazo legal de 10 días hábiles. Cada respuesta
 // queda registrada con quién (respondedBy) y cuándo (respondedAt) para
@@ -248,7 +259,11 @@ const DerechosView: React.FC = () => {
                   className="w-full bg-stone-900 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-orange-600/50 outline-none"
                 >
                   {ESTADOS.map((e) => (
-                    <option key={e} value={e}>
+                    <option
+                      key={e}
+                      value={e}
+                      disabled={e !== respondiendo.estado && !TRANSICIONES[respondiendo.estado].includes(e)}
+                    >
                       {ESTADO_LABELS[e]}
                     </option>
                   ))}

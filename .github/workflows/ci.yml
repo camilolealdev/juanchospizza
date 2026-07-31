@@ -137,6 +137,11 @@ jobs:
       # [2026-07-30] Backlog: full-audit.spec.ts (26 tests, audit de
       # consola + navegación de módulos) nunca corría en CI — solo en
       # local. Se agrega al mismo run de playwright.
+      #
+      # Nota: NO se inyectan claves falsas de proveedores (Gemini, pago,
+      # push). full-audit.spec.ts filtra por hostname los endpoints externos
+      # opcionales (ver OPTIONAL_EXTERNAL_HOSTS en el spec), así el audit
+      # reporta solo fallos reales del CRM y no ruido de providers sin key.
       - name: 🧪 Run E2E tests
         run: npx playwright test --reporter=list e2e/smoke.spec.ts e2e/api-smoke.spec.ts e2e/full-audit.spec.ts
 
