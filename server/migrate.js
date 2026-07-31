@@ -244,6 +244,35 @@ const MIGRATIONS = [
       `);
     },
   },
+
+  // ── 007: UNIQUE constraint en invoices.orderId (cierra race TOCTOU) ──
+  // POST /api/invoices hacía SELECT id FROM invoices WHERE "orderId"=$1
+  // seguido de un INSERT separado, sin transacción/lock, apoyado solo en
+  // el índice NO-único idx_invoices_orderId. Dos requests concurrentes
+  // para la misma orden podían pasar el chequeo y ambas insertar,
+  // generando doble factura para un solo pedido (bug real de cumplimiento
+  // de facturación electrónica + doble conteo de ingresos). El índice
+  // UNIQUE cierra la carrera a nivel de DB; el endpoint ahora además
+  // captura el error 23505 (unique_violation) y responde 409 en vez de
+  // confiar únicamente en el SELECT previo.
+  //
+  // Para instalaciones NUEVAS, db.js/schema.sql ya crean el índice como
+  // UNIQUE directamente (idx_invoices_orderId_unique) -- acá el DROP no
+  // encuentra nada que borrar y el CREATE es no-op idempotente.
+  //
+  // ⚠️ Si la tabla ya tiene orderId duplicados (el bug ya ocurrió en
+  // producción antes de este fix), el CREATE UNIQUE INDEX fallará y esta
+  // migración quedará pendiente hasta limpiar los duplicados a mano
+  // (mismo criterio que el resto de este archivo: nunca enmascarar datos
+  // inconsistentes silenciosamente).
+  {
+    id: 7,
+    name: 'Replace non-unique idx_invoices_orderId with a UNIQUE index to prevent duplicate invoices',
+    up: async (pool) => {
+      await pool.query('DROP INDEX IF EXISTS idx_invoices_orderId');
+      await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_orderId_unique ON invoices("orderId")');
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────
@@ -276,7 +305,8 @@ export async function runMigrations(pool) {
 
     if (existingHash) {
       if (existingHash !== hash) {
-        logger.warn({ migrationId: migration.id, name: migration.name },
+        logger.warn(
+          { migrationId: migration.id, name: migration.name },
           `Migración #${migration.id} "${migration.name}" cambió desde que se aplicó. Ignorando.`
         );
       }
@@ -284,22 +314,31 @@ export async function runMigrations(pool) {
     }
 
     // Aplicar migración pendiente
+    // Usa un único client dedicado (pool.connect()) para todo el ciclo
+    // BEGIN/up/INSERT/COMMIT: emitir BEGIN/COMMIT/ROLLBACK como pool.query()
+    // separados no garantiza que las tres lleguen a la misma conexión física
+    // (pg.Pool puede servir cada .query() con un cliente distinto del pool),
+    // rompiendo la atomicidad de la transacción bajo un pooler transaccional
+    // (Neon/RDS-style) o bajo concurrencia real.
     logger.info({ migrationId: migration.id }, `Migración #${migration.id}: ${migration.name}...`);
+    const client = await pool.connect();
     try {
-      await pool.query('BEGIN');
-      await migration.up(pool);
-      await pool.query(`INSERT INTO "${MIGRATIONS_TABLE}" (id, name, hash) VALUES ($1, $2, $3)`, [
+      await client.query('BEGIN');
+      await migration.up(client);
+      await client.query(`INSERT INTO "${MIGRATIONS_TABLE}" (id, name, hash) VALUES ($1, $2, $3)`, [
         migration.id,
         migration.name,
         hash,
       ]);
-      await pool.query('COMMIT');
+      await client.query('COMMIT');
       logger.info({ migrationId: migration.id }, `Migración #${migration.id} aplicada`);
       pending++;
     } catch (err) {
-      await pool.query('ROLLBACK');
+      await client.query('ROLLBACK');
       logger.error({ err, migrationId: migration.id }, `Migración #${migration.id} falló: ${err.message}`);
       throw err;
+    } finally {
+      client.release();
     }
   }
 

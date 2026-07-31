@@ -129,11 +129,31 @@ export function notifyAuthorized(allowedRoles, options, event, data) {
   }
 }
 
+// Extrae de un ticket de digiturno solo los campos seguros para la pantalla
+// pública (sin autenticar) de la sede: nunca customerName, notes, items ni
+// total -- esos campos solo van al staff vía notifyAuthorized. El set de
+// campos espeja lo que ya expone GET /api/digiturno/queue (routes/digiturno.js)
+// menos customerName, que ese endpoint sí filtra pero que aquí excluimos
+// explícitamente para no reabrir la fuga por el WS.
+function toPublicDigiturnoTicket(ticket) {
+  return {
+    id: ticket.id,
+    ticketNumber: ticket.ticketNumber,
+    status: ticket.status,
+    guestCount: ticket.guestCount,
+    source: ticket.source,
+    tableName: ticket.tableName,
+    createdAt: ticket.createdAt,
+  };
+}
+
 // Funciones helper para eventos comunes
 export function notifyNewOrder(order) {
-  broadcast('order:new', { order });
-  broadcastToRole('OPERATOR', 'order:new', { order });
-  broadcastToRole('REPARTIDOR', 'order:new', { order });
+  // El payload trae customerName, total y paymentMethod -- PII y datos de
+  // facturación que no deben llegar a la pantalla pública del digiturno ni
+  // a roles sin acceso a pedidos. Restringido a los mismos roles que
+  // GET/PATCH /api/orders (ver requireRole en routes/orders.js).
+  notifyAuthorized(['ADMIN', 'OPERATOR', 'REPARTIDOR'], {}, 'order:new', { order });
 }
 
 export function notifyOrderUpdate(orderId, status) {
@@ -141,21 +161,27 @@ export function notifyOrderUpdate(orderId, status) {
 }
 
 export function notifyTableUpdate(tableId, status) {
-  broadcast('table:update', { tableId, status });
-  broadcastToRole('OPERATOR', 'table:update', { tableId, status });
+  // Mismos roles que GET/PATCH /api/tables (routes/tables.js).
+  notifyAuthorized(['ADMIN', 'OPERATOR'], {}, 'table:update', { tableId, status });
 }
 
 export function notifyComandaUpdate(comandaId, action) {
-  broadcast('comanda:update', { comandaId, action });
-  broadcastToRole('OPERATOR', 'comanda:update', { comandaId, action });
+  // Mismos roles que /api/comandas (routes/comandas.js).
+  notifyAuthorized(['ADMIN', 'OPERATOR'], {}, 'comanda:update', { comandaId, action });
 }
 
 export function notifyDigiturnoUpdate(ticket) {
-  broadcast('digiturno:update', { ticket });
-  broadcastToRole('OPERATOR', 'digiturno:update', { ticket });
+  // Staff: ticket completo (mismos roles que PATCH /api/digiturno/:id/status).
+  notifyAuthorized(['ADMIN', 'OPERATOR'], {}, 'digiturno:update', { ticket });
+  // Pantalla pública de la sede: solo campos no sensibles, filtrado por sede.
+  notifyAuthorized(['public'], { locationId: ticket.locationId }, 'digiturno:update', {
+    ticket: toPublicDigiturnoTicket(ticket),
+  });
 }
 
 export function notifyDigiturnoNew(ticket) {
-  broadcast('digiturno:new', { ticket });
-  broadcastToRole('OPERATOR', 'digiturno:new', { ticket });
+  notifyAuthorized(['ADMIN', 'OPERATOR'], {}, 'digiturno:new', { ticket });
+  notifyAuthorized(['public'], { locationId: ticket.locationId }, 'digiturno:new', {
+    ticket: toPublicDigiturnoTicket(ticket),
+  });
 }

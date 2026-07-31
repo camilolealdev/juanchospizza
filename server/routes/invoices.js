@@ -169,7 +169,15 @@ router.post('/api/invoices', authMiddleware, requireRole('ADMIN'), validate(crea
     setImmediate(() => notifyInvoiceUpdate(id, 'created', locationId));
 
     res.status(201).json(created.rows[0]);
-  } catch (_e) {
+  } catch (e) {
+    // El SELECT de arriba es solo un chequeo optimista (early-exit sin
+    // costo de escribir e insertar); la garantía real contra dos facturas
+    // para la misma orden es el índice UNIQUE idx_invoices_orderId_unique
+    // (server/migrate.js #7). Si dos requests concurrentes pasan ambas el
+    // SELECT, el INSERT de la segunda choca acá con 23505 (unique_violation).
+    if (e.code === '23505') {
+      return res.status(409).json({ error: 'La orden ya tiene una factura asociada' });
+    }
     res.status(500).json({ error: 'Error al crear factura' });
   }
 });

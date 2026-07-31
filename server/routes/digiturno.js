@@ -4,7 +4,7 @@
 import express from 'express';
 import logger from '../services/logger.js';
 import { pool } from '../db.js';
-import { authMiddleware, requireRole } from '../auth.js';
+import { authMiddleware, requireRole, requireSameLocation } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import { broadcast, notifyDigiturnoNew, notifyDigiturnoUpdate } from '../websocket.js';
 import { createDigiturnoSchema, updateDigiturnoStatusSchema, updateDigiturnoSchema } from '../schemas/digiturno.js';
@@ -21,35 +21,41 @@ async function getNextTicketNumber(locationId) {
 }
 
 // GET /api/digiturno — listar tickets activos (con filtros)
-router.get('/api/digiturno', authMiddleware, async (req, res) => {
-  try {
-    const { status, locationId, orderType } = req.query;
-    let query = 'SELECT * FROM digiturno_tickets';
-    const conditions = [];
-    const params = [];
+router.get(
+  '/api/digiturno',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR'),
+  requireSameLocation((req) => req.query.locationId),
+  async (req, res) => {
+    try {
+      const { status, locationId, orderType } = req.query;
+      let query = 'SELECT * FROM digiturno_tickets';
+      const conditions = [];
+      const params = [];
 
-    if (status) {
-      params.push(status);
-      conditions.push(`status = $${params.length}`);
-    }
-    if (locationId) {
-      params.push(locationId);
-      conditions.push(`"locationId" = $${params.length}`);
-    }
-    if (orderType) {
-      params.push(orderType);
-      conditions.push(`"orderType" = $${params.length}`);
-    }
+      if (status) {
+        params.push(status);
+        conditions.push(`status = $${params.length}`);
+      }
+      if (locationId) {
+        params.push(locationId);
+        conditions.push(`"locationId" = $${params.length}`);
+      }
+      if (orderType) {
+        params.push(orderType);
+        conditions.push(`"orderType" = $${params.length}`);
+      }
 
-    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-    query += ' ORDER BY "ticketNumber" ASC';
+      if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+      query += ' ORDER BY "ticketNumber" ASC';
 
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (_e) {
-    res.status(500).json({ error: 'Error al listar tickets' });
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (_e) {
+      res.status(500).json({ error: 'Error al listar tickets' });
+    }
   }
-});
+);
 
 // GET /api/digiturno/stats — estadísticas diarias del digiturno
 // Retorna: tickets hoy, servidos hoy, tiempo promedio de espera, etc.
@@ -121,25 +127,31 @@ router.get('/api/digiturno/stats', async (req, res) => {
 });
 
 // GET /api/digiturno/current — obtener el ticket actual (el más antiguo en preparing)
-router.get('/api/digiturno/current', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
-  try {
-    const { locationId } = req.query;
-    let query = `SELECT * FROM digiturno_tickets WHERE status IN ('preparing', 'waiting')`;
-    const params = [];
+router.get(
+  '/api/digiturno/current',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR'),
+  requireSameLocation((req) => req.query.locationId),
+  async (req, res) => {
+    try {
+      const { locationId } = req.query;
+      let query = `SELECT * FROM digiturno_tickets WHERE status IN ('preparing', 'waiting')`;
+      const params = [];
 
-    if (locationId) {
-      params.push(locationId);
-      query += ` AND "locationId" = $1`;
+      if (locationId) {
+        params.push(locationId);
+        query += ` AND "locationId" = $1`;
+      }
+
+      query += ' ORDER BY "ticketNumber" ASC LIMIT 1';
+
+      const result = await pool.query(query, params);
+      res.json(result.rows[0] || null);
+    } catch (_e) {
+      res.status(500).json({ error: 'Error al obtener ticket actual' });
     }
-
-    query += ' ORDER BY "ticketNumber" ASC LIMIT 1';
-
-    const result = await pool.query(query, params);
-    res.json(result.rows[0] || null);
-  } catch (_e) {
-    res.status(500).json({ error: 'Error al obtener ticket actual' });
   }
-});
+);
 
 // GET /api/digiturno/queue — cola completa para pantalla de clientes
 router.get('/api/digiturno/queue', async (req, res) => {
@@ -222,6 +234,7 @@ router.post(
   authMiddleware,
   requireRole('ADMIN', 'OPERATOR'),
   validate(createDigiturnoSchema),
+  requireSameLocation((req) => req.body.locationId),
   async (req, res) => {
     const { orderType, locationId, tableId, tableName, customerName, guestCount, source, items, total, notes } =
       req.body;
@@ -267,8 +280,10 @@ router.post(
       } catch (e) {
         // Si es unique_violation (23505) y quedan intentos, reintentar
         if (e.code === '23505' && attempt < MAX_RETRIES - 1) {
-          logger.warn({ locationId, attempt: attempt + 1, maxRetries: MAX_RETRIES },
-            '[Digiturno] Race condition en ticket # - retry');
+          logger.warn(
+            { locationId, attempt: attempt + 1, maxRetries: MAX_RETRIES },
+            '[Digiturno] Race condition en ticket # - retry'
+          );
           continue;
         }
         // Si es el último intento o no es unique_violation, retornar error
@@ -291,6 +306,14 @@ router.patch(
   validate(updateDigiturnoStatusSchema),
   async (req, res) => {
     try {
+      // La sede a validar es la del ticket existente en DB, no una que el
+      // cliente pudiera mandar -- este endpoint solo recibe `status`.
+      const existing = await pool.query('SELECT * FROM digiturno_tickets WHERE id = $1', [req.params.id]);
+      if (!existing.rows.length) return res.status(404).json({ error: 'Ticket no encontrado' });
+      if (req.auth.role !== 'ADMIN' && req.auth.locationId && existing.rows[0].locationId !== req.auth.locationId) {
+        return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+      }
+
       const { status } = req.body;
       const now = new Date().toISOString();
 
@@ -338,6 +361,12 @@ router.put(
   validate(updateDigiturnoSchema),
   async (req, res) => {
     try {
+      const existing = await pool.query('SELECT "locationId" FROM digiturno_tickets WHERE id = $1', [req.params.id]);
+      if (!existing.rows.length) return res.status(404).json({ error: 'Ticket no encontrado' });
+      if (req.auth.role !== 'ADMIN' && req.auth.locationId && existing.rows[0].locationId !== req.auth.locationId) {
+        return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+      }
+
       const { orderType, customerName, guestCount, notes, items, total } = req.body;
       const updates = [];
       const params = [];
@@ -383,6 +412,14 @@ router.put(
 // DELETE /api/digiturno/:id — cancelar/eliminar ticket
 router.delete('/api/digiturno/:id', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
+    // ADMIN-only hoy, pero se deja el mismo chequeo defensivo que el resto
+    // de mutaciones por si el rol se relaja a OPERATOR más adelante.
+    const existing = await pool.query('SELECT "locationId" FROM digiturno_tickets WHERE id = $1', [req.params.id]);
+    if (!existing.rows.length) return res.status(404).json({ error: 'Ticket no encontrado' });
+    if (req.auth.role !== 'ADMIN' && req.auth.locationId && existing.rows[0].locationId !== req.auth.locationId) {
+      return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+    }
+
     const result = await pool.query('DELETE FROM digiturno_tickets WHERE id = $1 RETURNING id', [req.params.id]);
     if (!result.rows.length) return res.status(404).json({ error: 'Ticket no encontrado' });
     res.json({ deleted: true });

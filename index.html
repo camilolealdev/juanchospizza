@@ -7,6 +7,11 @@
     <meta name="description" content="Juancho's Pizza con sedes en Nemocón y Zipaquirá. Pizzas artesanales, lasañas y spaguettis. Domicilios rápidos. Pizzería en Nemocón y Zipaquirá, Cundinamarca.">
     <meta name="keywords" content="Juancho's Pizza Nemocón, Juancho's Pizza Zipaquirá, Pizzería en Nemocón, Pizzería en Zipaquirá, Domicilios en Nemocón, Domicilios en Zipaquirá, pizza artesanal Cundinamarca">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Guido Pizza">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,700;1,400&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -25,6 +30,26 @@
     <meta name="twitter:image" content="https://juanchospizza.com/og-image.jpg">
 
     <link rel="stylesheet" href="/styles.css">
+
+    <!-- Catch Service Worker registration errors (SSL autofirmado en local) -->
+    <script>
+    // El PWA plugin (vite-plugin-pwa) intenta registrar el SW automáticamente.
+    // Con SSL autofirmado en local, el navegador rechaza el registro con
+    // SecurityError. Capturamos promesas rechazadas NO manejadas que
+    // contengan "ServiceWorker" o "sw.js" para silenciar este error
+    // esperable en desarrollo local.
+    window.addEventListener('unhandledrejection', function(e) {
+      if (e.reason && (
+        (e.reason.message && e.reason.message.indexOf('ServiceWorker') !== -1) ||
+        (e.reason.message && e.reason.message.indexOf('sw.js') !== -1) ||
+        (e.reason.name && e.reason.name === 'SecurityError' &&
+         e.reason.message && e.reason.message.indexOf('service worker') !== -1)
+      )) {
+        e.preventDefault();
+        console.info('SW: registro omitido (SSL autofirmado en local — normal en desarrollo)');
+      }
+    });
+    </script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",

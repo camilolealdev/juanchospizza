@@ -5,6 +5,13 @@
 
 ARG NODE_VERSION=22-alpine
 ARG BUILD_PORT=3001
+# ── Registry mirror (fallback) ─────────────────────────────────
+# Si el registry oficial de npm da timeout (ej: Docker Desktop + resolución
+# IPv6), se puede cambiar a un mirror. Ejemplo de uso:
+#   docker compose build --build-arg NPM_REGISTRY=https://registry.npmmirror.com app
+# El valor por defecto '' significa 'usar el registry oficial de npm' (no
+# se pasa --registry a npm ci). Solo cambiar si hay problemas de conectividad.
+ARG NPM_REGISTRY=
 
 # ── Stage 0: Runtime base (instalación limpia con npmrc) ─────────────────
 # Separado para que npmrc y los directorios base sean cacheados aunque
@@ -12,10 +19,17 @@ ARG BUILD_PORT=3001
 FROM node:${NODE_VERSION} AS base
 WORKDIR /app
 
-# Silenciar npm en producción: sin audit, sin fund, sin progreso
+# Silenciar npm en producción y configurar network resilience.
+# Network: Docker Desktop en Windows tiene proxy DNS virtual que falla
+# con resolución IPv6 de npm registry (ETIMEDOUT). Se aumentan timeouts
+# y reintentos. prefer-ipv4 se pasa como flag CLI en npm ci, no acá.
 RUN npm config set fund false --location=project && \
     npm config set audit false --location=project && \
-    npm config set progress false --location=project
+    npm config set progress false --location=project && \
+    npm config set fetch-timeout 120000 --location=project && \
+    npm config set fetch-retries 5 --location=project && \
+    npm config set fetch-retry-mintimeout 20000 --location=project && \
+    npm config set fetch-retry-maxtimeout 120000 --location=project
 
 # ── Stage 1: Instalación de dependencias (capa cacheable) ───────────────
 # package.json y lockfile cambian mucho menos que el código fuente.
@@ -28,27 +42,36 @@ COPY package.json package-lock.json ./
 # lockfile no coincide con package.json — evita sorpresas en producción.
 # --ignore-scripts: los scripts postinstall (ej. husky, node-gyp) se
 # ejecutarán solo en la stage build donde realmente se necesitan.
-RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund 2>&1 && \
-    npm cache clean --force 2>/dev/null
+# NOTA: --prefer-ipv4 funciona en npm v10 (Node 22) pero emite warning:
+# "Unknown CLI config --prefer-ipv4. This will stop working in the next major
+# version." Si npm v11 lo elimina, migrar a forzar IPv4 vía:
+#   NODE_OPTIONS="--dns-result-order=ipv4first"
+# o usar solo --registry con un mirror IPv4 como alternativa.
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund --prefer-ipv4 ${NPM_REGISTRY:+--registry "$NPM_REGISTRY"} 2>&1
 
 # ── Stage 2: Dependencias de desarrollo (solo para build) ───────────────
 # capa independiente que se descarta al final — no llega a runtime.
 FROM base AS deps-dev
 COPY package.json package-lock.json ./
-RUN npm ci --include=dev --ignore-scripts --no-audit --no-fund 2>&1 && \
-    npm cache clean --force 2>/dev/null
+RUN npm ci --include=dev --ignore-scripts --no-audit --no-fund --prefer-ipv4 ${NPM_REGISTRY:+--registry "$NPM_REGISTRY"} 2>&1
 
 # ── Stage 3: Build del frontend (Vite + TypeScript) ─────────────────────
 # Copia en orden de menor a mayor tasa de cambio para maximizar cache:
 # 1. configs (tsconfig, vite, tailwind, postcss)
 # 2. archivos fuente
 FROM deps-dev AS build
+
+# VITE_API_URL expone la URL base para WebSocket y llamadas API; se inyecta
+# desde docker-compose.yml (--build-arg) con el valor correcto según entorno
+# (ej: https://juanchospizza.com para producción, https://localhost para dev).
+ARG VITE_API_URL
+
 COPY tsconfig.json vite.config.ts tailwind.config.js postcss.config.js ./
 COPY public/ ./public/
 COPY index.html ./
 COPY src/ ./src/
 
-RUN npm run build 2>&1
+RUN VITE_API_URL=${VITE_API_URL} npm run build 2>&1
 
 # ── Stage 4: Runtime final (imagen mínima) ─────────────────────────────
 # Solo lo necesario para correr: Node, production deps, server, y dist.

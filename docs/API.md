@@ -99,20 +99,31 @@ Refrescar token antes de que expire.
 
 ### `GET /api/health`
 
-Health check del servidor.
+Health check del servidor. **No tiene rate limit** (definido antes del middleware generalRateLimit) para que Docker HEALTHCHECK nunca reciba 429.
 
 **Response (200):**
 
 ```json
 {
-  "status": "ok",
-  "timestamp": "2026-07-15T10:00:00.000Z",
+  "status": "healthy",
   "uptime": 3600,
-  "version": "2.0.0"
+  "timestamp": "2026-07-29T10:00:00.000Z",
+  "services": {
+    "database": "connected",
+    "redis": "connected"
+  }
 }
 ```
 
+| Campo               | Descripción                                                |
+| ------------------- | ---------------------------------------------------------- |
+| `status`            | `"healthy"` si DB conectada, `"degraded"` si no            |
+| `uptime`            | Segundos desde que arrancó el servidor                     |
+| `services.database` | `"connected"` / `"error"`                                  |
+| `services.redis`    | `"connected"` / `"memory_fallback"` (si Redis no responde) |
+
 **Auth:** ❌ Público
+**Rate limit:** ❌ No aplica
 
 ---
 
@@ -507,6 +518,127 @@ Suscribir navegador a notificaciones push.
 Estado de configuración de proveedores de pago.
 
 **Auth:** ADMIN
+
+---
+
+### Bold (Colombia)
+
+#### `POST /api/payments/bold/create-link`
+
+Crea un link de pago Bold (checkout hosted) para un pedido.
+
+**Body:**
+
+```json
+{
+  "orderId": "ord_1234567890_abc123"
+}
+```
+
+**Response (201):**
+
+```json
+{
+  "url": "https://checkout.bold.co/LNK_H7S4xxx",
+  "paymentLink": "LNK_H7S4xxx",
+  "reused": false
+}
+```
+
+| Campo         | Descripción                                        |
+| ------------- | -------------------------------------------------- |
+| `url`         | URL del checkout de Bold para redirigir al cliente |
+| `paymentLink` | ID del link en Bold (LNK_*)                        |
+| `reused`      | `true` si se reutilizó un link existente y activo  |
+
+**Errores:**
+
+| Código | Significado                                                    |
+| ------ | -------------------------------------------------------------- |
+| `400`  | Pedido ya pagado, cancelado/completado, o paymentLink inválido |
+| `404`  | Order not found                                                |
+| `502`  | Error de Bold (timeout, credenciales, validación)              |
+| `503`  | Bold no configurado (falta BOLD_API_KEY)                       |
+
+**Idempotencia:** Bold usa `reference` (orderNumber) para detectar duplicados. Si ya existe un link activo para la orden, se reutiliza en vez de crear uno nuevo.
+
+**Auth:** ❌ Público (usa solo orderId, la autenticación la hace Bold vía API key server-side)
+
+---
+
+#### `GET /api/payments/bold/status/:paymentLink`
+
+Consulta el estado actual de un link de pago Bold contra la API de Bold.
+
+**Response (200):**
+
+```json
+{
+  "boldStatus": "PAID",
+  "paymentStatus": "paid",
+  "paymentLink": "LNK_H7S4xxx",
+  "amount": { "currency": "COP", "total": 55000 }
+}
+```
+
+| Campo           | Descripción                                                                              |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| `boldStatus`    | Estado crudo de Bold: `ACTIVE`, `PROCESSING`, `PAID`, `REJECTED`, `CANCELLED`, `EXPIRED` |
+| `paymentStatus` | Mapeado a nuestro sistema: `pending`, `paid`, `failed`                                   |
+| `paymentLink`   | ID del link en Bold                                                                      |
+
+**Auth:** ADMIN
+
+---
+
+#### `POST /api/payments/bold/webhook`
+
+Webhook de Bold (CloudEvents v1.0). Bold notifica eventos de pago (`SALE_APPROVED`, `SALE_REJECTED`, etc.) a esta URL.
+
+**Verificación:**
+
+- **Principal**: Header `x-bold-signature` con HMAC-SHA256 del body RAW contra `BOLD_WEBHOOK_SECRET`
+- **Fallback**: Header `x-webhook-secret` comparación directa (Bold Simple)
+
+**Eventos:**
+
+| Evento          | Acción                                          |
+| --------------- | ----------------------------------------------- |
+| `SALE_APPROVED` | `paymentStatus → 'paid'`, envía push al cliente |
+| `SALE_REJECTED` | `paymentStatus → 'failed'`                      |
+| `VOID_APPROVED` | `paymentStatus → 'failed'`                      |
+
+**Comportamiento:** Responde `200 OK` inmediatamente (≤2s como exige Bold) y procesa la actualización de la orden en background (`setImmediate`).
+
+**Auth:** ❌ Público (verificado por firma HMAC)
+
+---
+
+### Wompi
+
+#### `POST /api/payments/wompi/create-transaction`
+
+Crea una transacción Wompi.
+
+**Response (201):** `{ transactionId, approved, paymentUrl }`
+
+**Auth:** ❌ Público
+
+---
+
+### MercadoPago
+
+#### `POST /api/payments/mercadopago/create-payment`
+
+**⚠️ DESHABILITADO** — El método `pix` es brasileño; no funciona en Colombia. Usar Bold o Wompi.
+
+---
+
+### PayPal
+
+#### `POST /api/payments/paypal/create-order`
+
+Crea una orden de PayPal. **Stub sin API real** — redirige a PayPal con URL construida básica.
 
 ---
 

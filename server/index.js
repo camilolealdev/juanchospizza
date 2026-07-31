@@ -14,7 +14,7 @@ import { initWebSocket } from './websocket.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { requestId } from './middleware/requestId.js';
 import httpLogger from './middleware/requestLogger.js';
-import { metricsMiddleware, metricsHandler, trackWsConnection, trackRedisStatus } from './middleware/metrics.js';
+import { metricsMiddleware, metricsHandler, trackRedisStatus } from './middleware/metrics.js';
 import cookieParser from 'cookie-parser';
 import { csrfProtection, csrfTokenHandler } from './middleware/csrf.js';
 
@@ -80,15 +80,26 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com', ...(isProduction ? [] : ["'unsafe-inline'"])],
+        // 'unsafe-inline' en scripts: necesario porque vite-plugin-pwa injecta
+        // scripts inline para el registration flow del Service Worker, y algunos
+        // componentes de React renderizan event handlers inline. Migrar a
+        // 'strict-dynamic' + nonce sería más seguro, pero requiere cambios en
+        // la arquitectura SSR que están fuera del scope actual.
+        scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com', "'unsafe-inline'"],
         styleSrc: [
           "'self'",
           'https://fonts.googleapis.com',
           'https://cdnjs.cloudflare.com',
-          ...(isProduction ? [] : ["'unsafe-inline'"]),
+          // React + Tailwind generan estilos inline en runtime (CSS-in-JS,
+          // estilos condicionales, animaciones). Sin 'unsafe-inline' el CSP
+          // bloquea TODO el styling, rompiendo el frontend. En un futuro,
+          // migrar a strict-dynamic + nonces eliminaría esta dependencia.
+          "'unsafe-inline'",
         ],
-        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-        imgSrc: ["'self'", 'data:', 'https:'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com', 'data:'],
+        // blob: necesario para OG image preview (canvas-to-blob), loaders de
+        // imágenes vía fetch + createObjectURL, y capturas de pantalla internas.
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
         connectSrc: [
           "'self'",
           'ws://localhost:*',
@@ -100,7 +111,7 @@ app.use(
           'https://sandbox.wompi.co',
           'https://production.wompi.co',
         ],
-        frameSrc: ["'self'", 'https://checkout.bold.co', 'https://www.mercadopago.com.co'],
+        frameSrc: ["'self'", 'https://checkout.bold.co', 'https://www.mercadopago.com.co', 'https://www.google.com'],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },
@@ -126,9 +137,48 @@ app.use(
     credentials: true,
   })
 );
+// raw body parser para webhooks que necesitan firma HMAC contra el body
+// original (Bold, etc.) -- se monta ANTES de express.json() para capturar
+// el buffer crudo. El buffer queda en req.rawBody para que el handler de
+// webhook pueda verificar la firma contra el body exacto que recibió.
+app.use('/api/payments/bold/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// ── Health & Metrics (ANTES del rateLimiter) ──────────────────────
+// Docker HEALTHCHECK pega directo a localhost:3001 sin pasar por nginx.
+// Si /api/health estuviera detrás del generalRateLimit, el healthcheck
+// recibiría 429 en picos de tráfico desde una misma IP (como audits,
+// crawlers, tests) y Docker marcaría el contenedor unhealthy — un falso
+// positivo que cascada a orquestadores (K8s, Swarm, Railway) reiniciando
+// el contenedor sin necesidad.
+const startTime = Date.now();
+app.get('/api/health', async (_req, res) => {
+  let dbOk = false;
+  try {
+    await pool.query('SELECT 1');
+    dbOk = true;
+  } catch {
+    /* pool not ready */
+  }
+
+  res.json({
+    status: dbOk ? 'healthy' : 'degraded',
+    uptime: Math.floor((Date.now() - startTime) / 1000),
+    timestamp: new Date().toISOString(),
+    services: {
+      database: dbOk ? 'connected' : 'error',
+      redis: isRedisAvailable() ? 'connected' : 'memory_fallback',
+    },
+  });
+});
+
+// Metrics endpoint (también fuera de rate limiter para que Prometheus
+// pueda scrape sin interferencias)
+app.get('/api/metrics', metricsHandler);
+
 app.use(generalRateLimit);
 app.use(serviceKeyMiddleware);
 
@@ -195,32 +245,6 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
   }
 });
-
-// ── Health endpoint ────────────────────────────────────────────
-// Expone estado del servidor, uptime, y disponibilidad de servicios
-// (base de datos, Redis). Usado por Docker HEALTHCHECK y monitoreo.
-const startTime = Date.now();
-app.get('/api/health', async (_req, res) => {
-  let dbOk = false;
-  try {
-    await pool.query('SELECT 1');
-    dbOk = true;
-  } catch { /* pool not ready */ }
-
-  res.json({
-    status: dbOk ? 'healthy' : 'degraded',
-    uptime: Math.floor((Date.now() - startTime) / 1000),
-    timestamp: new Date().toISOString(),
-    services: {
-      database: dbOk ? 'connected' : 'error',
-      redis: isRedisAvailable() ? 'connected' : 'memory_fallback',
-    },
-  });
-});
-
-// ── Metrics endpoint ───────────────────────────────────────────
-// Expone métricas Prometheus en /api/metrics para scraping.
-app.get('/api/metrics', metricsHandler);
 
 // ── Error handlers ─────────────────────────────────────────────
 app.use(notFoundHandler);

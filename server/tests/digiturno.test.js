@@ -16,11 +16,19 @@ vi.mock('../db.js', () => ({
 }));
 
 vi.mock('../auth.js', () => ({
-  authMiddleware: (req, res, next) => next(),
+  // role: 'ADMIN' hace que los chequeos de requireSameLocation en las rutas
+  // (agregados junto con el fix de scoping por sede) sean no-op en estos
+  // tests, que no ejercitan esa lógica -- mismo criterio que requireRole
+  // mockeado como pass-through.
+  authMiddleware: (req, res, next) => {
+    req.auth = { sub: 'test-employee', role: 'ADMIN', locationId: null };
+    next();
+  },
   requireRole:
     (..._roles) =>
     (req, res, next) =>
       next(),
+  requireSameLocation: (_getLocationId) => (req, res, next) => next(),
 }));
 
 vi.mock('../websocket.js', () => ({
@@ -271,6 +279,7 @@ describe('Digiturno Routes', () => {
 
   describe('PATCH /api/digiturno/:id/status', () => {
     it('debe actualizar a preparing con calledAt', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [mockTicket()] }); // SELECT existente (chequeo de sede)
       mockQuery.mockResolvedValueOnce({ rowCount: 1 }); // UPDATE
       mockQuery.mockResolvedValueOnce({ rows: [mockTicket({ status: 'preparing' })] }); // SELECT
 
@@ -281,6 +290,7 @@ describe('Digiturno Routes', () => {
     });
 
     it('debe actualizar a ready/served con completedAt', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [mockTicket()] }); // SELECT existente
       mockQuery.mockResolvedValueOnce({ rowCount: 1 });
       mockQuery.mockResolvedValueOnce({ rows: [mockTicket({ status: 'ready' })] });
 
@@ -291,7 +301,8 @@ describe('Digiturno Routes', () => {
     });
 
     it('debe retornar 404 si el ticket no existe', async () => {
-      mockQuery.mockResolvedValueOnce({ rowCount: 0 });
+      // El lookup de existencia (para el chequeo de sede) ahora ocurre
+      // ANTES del UPDATE, así que el 404 corta el flujo ahí mismo.
       mockQuery.mockResolvedValueOnce({ rows: [] });
 
       const res = await supertest(app).patch('/api/digiturno/nonexistent/status').send({ status: 'served' });
@@ -303,7 +314,8 @@ describe('Digiturno Routes', () => {
 
   describe('DELETE /api/digiturno/:id', () => {
     it('debe eliminar un ticket', async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [{ id: 'dig_test_001' }] });
+      mockQuery.mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] }); // SELECT existente (chequeo de sede)
+      mockQuery.mockResolvedValueOnce({ rows: [{ id: 'dig_test_001' }] }); // DELETE
 
       const res = await supertest(app).delete('/api/digiturno/dig_test_001');
 
@@ -312,6 +324,7 @@ describe('Digiturno Routes', () => {
     });
 
     it('debe retornar 404 si no existe', async () => {
+      // Mismo criterio: el lookup previo ya corta el flujo antes del DELETE.
       mockQuery.mockResolvedValueOnce({ rows: [] });
 
       const res = await supertest(app).delete('/api/digiturno/nonexistent');

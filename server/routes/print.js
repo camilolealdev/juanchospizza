@@ -8,6 +8,17 @@ import { generateInvoicePDF, generateOrderPDF } from '../services/pdf.js';
 
 const router = express.Router();
 
+// Escapa entities básicas para interpolar strings de la BD en HTML (previene XSS almacenado)
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Helper: genera HTML de recibo
 function receiptHTML(data) {
   const { title, orderNumber, customerName, customerPhone, address, items, total, paymentMethod, date, mesa } = data;
@@ -15,14 +26,14 @@ function receiptHTML(data) {
     .map(
       (i) => `
     <tr>
-      <td style="padding:4px 8px;text-align:left;">${i.quantity}x ${i.productName || i.name || ''}</td>
+      <td style="padding:4px 8px;text-align:left;">${i.quantity}x ${escapeHtml(i.productName || i.name || '')}</td>
       <td style="padding:4px 8px;text-align:right;">$${(i.subtotal || i.price || 0).toLocaleString('es-CO')}</td>
     </tr>`
     )
     .join('');
 
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${title}</title>
+<html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
 <style>
   body { font-family: 'Courier New', monospace; font-size: 12px; width: 80mm; margin: 0 auto; padding: 10px; }
   h1 { text-align: center; font-size: 18px; margin-bottom: 5px; }
@@ -38,16 +49,16 @@ function receiptHTML(data) {
 </style></head><body>
   <div class="header">
     <h1>🍕 Juancho's Pizza</h1>
-    <h2>${title}</h2>
-    ${mesa ? `<p>Mesa: <strong>${mesa}</strong></p>` : ''}
+    <h2>${escapeHtml(title)}</h2>
+    ${mesa ? `<p>Mesa: <strong>${escapeHtml(mesa)}</strong></p>` : ''}
   </div>
   <div class="info">
-    <p><strong>No. Pedido:</strong> ${orderNumber || ''}</p>
+    <p><strong>No. Pedido:</strong> ${escapeHtml(orderNumber || '')}</p>
     <p><strong>Fecha:</strong> ${date || new Date().toLocaleString('es-CO')}</p>
-    ${customerName ? `<p><strong>Cliente:</strong> ${customerName}</p>` : ''}
-    ${customerPhone ? `<p><strong>Tel:</strong> ${customerPhone}</p>` : ''}
-    ${address ? `<p><strong>Dirección:</strong> ${address}</p>` : ''}
-    <p><strong>Pago:</strong> ${paymentMethod || ''}</p>
+    ${customerName ? `<p><strong>Cliente:</strong> ${escapeHtml(customerName)}</p>` : ''}
+    ${customerPhone ? `<p><strong>Tel:</strong> ${escapeHtml(customerPhone)}</p>` : ''}
+    ${address ? `<p><strong>Dirección:</strong> ${escapeHtml(address)}</p>` : ''}
+    <p><strong>Pago:</strong> ${escapeHtml(paymentMethod || '')}</p>
   </div>
   <table><thead><tr><th>Producto</th><th style="text-align:right;">Valor</th></tr></thead><tbody>${itemsHtml}</tbody></table>
   <div class="total">Total: $${(total || 0).toLocaleString('es-CO')}</div>
@@ -68,9 +79,9 @@ function kitchenTicketHTML(data) {
       (i) => `
     <tr>
       <td style="padding:6px 8px;font-size:14px;font-weight:bold;">${i.quantity}x</td>
-      <td style="padding:6px 8px;font-size:14px;">${i.productName}</td>
+      <td style="padding:6px 8px;font-size:14px;">${escapeHtml(i.productName)}</td>
     </tr>
-    ${i.notes ? `<tr><td></td><td style="padding:0 8px 6px;font-size:11px;color:#666;">Nota: ${i.notes}</td></tr>` : ''}`
+    ${i.notes ? `<tr><td></td><td style="padding:0 8px 6px;font-size:11px;color:#666;">Nota: ${escapeHtml(i.notes)}</td></tr>` : ''}`
     )
     .join('');
 
@@ -91,8 +102,8 @@ function kitchenTicketHTML(data) {
     <h1>🍕 Cocina</h1>
     <div class="hora">${new Date().toLocaleString('es-CO')}</div>
   </div>
-  <div class="mesa">MESA ${mesa?.name || ''} (${mesa?.area || ''})</div>
-  <p style="text-align:center;font-size:11px;">Mesero: ${comanda.waiterName || 'N/A'} | Comensales: ${comanda.guestCount || 1}</p>
+  <div class="mesa">MESA ${escapeHtml(mesa?.name || '')} (${escapeHtml(mesa?.area || '')})</div>
+  <p style="text-align:center;font-size:11px;">Mesero: ${escapeHtml(comanda.waiterName || 'N/A')} | Comensales: ${comanda.guestCount || 1}</p>
   <table><tbody>${itemsHtml}</tbody></table>
   <div class="footer">
     <p>--- ${items.filter((i) => i.status !== 'cancelled').length} productos ---</p>

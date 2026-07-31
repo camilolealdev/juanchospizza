@@ -557,7 +557,11 @@ export async function initDB() {
     await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "tipoOperacion" TEXT DEFAULT \'10\'');
     await pool.query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS moneda TEXT DEFAULT 'COP'");
 
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_invoices_orderId ON invoices("orderId")');
+    // UNIQUE (no solo INDEX) para prevenir doble factura por orden bajo
+    // requests concurrentes -- ver server/migrate.js migración #7. Para
+    // bases ya existentes creadas antes de este fix, la migración #7 se
+    // encarga de reemplazar el índice no-único por este mismo.
+    await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_orderId_unique ON invoices("orderId")');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_credit_notes_invoiceId ON credit_notes("invoiceId")');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_purchase_orders_status ON purchase_orders(status)');

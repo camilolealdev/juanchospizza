@@ -20,7 +20,7 @@ export const DIAN_CONFIG = {
     // [MANUAL] Razon Social completa
     razonSocial: 'JUANCHO PIZZA SAS',
     // [MANUAL] Nombre Comercial
-    nombreComercial: 'Juancho\'s Pizza',
+    nombreComercial: "Juancho's Pizza",
     // [MANUAL] Direccion del establecimiento
     direccion: 'Cra 7 #12-34',
     // [MANUAL] Ciudad (codigo Dane)
@@ -107,7 +107,7 @@ export const DIAN_CONFIG = {
 
 /**
  * Genera el XML completo de factura electrónica.
- * 
+ *
  * @param {Object} invoice - Datos de la factura desde la DB
  * @param {Object} order - Datos de la orden asociada
  * @param {Object} client - Datos del cliente (opcional)
@@ -138,19 +138,21 @@ export function generateInvoiceXml(invoice, order, client) {
   // a un XML generado que la DIAN rechazará con diagnóstico opaco.
   validateReceptorNit(receptor.nit);
 
+  // Procesar items de la orden
+  const items = parseOrderItems(order);
+  const totales = calculateTotals(items);
+
   // Detección de tasa dominante: lanza si la factura mezcla tasas — el
   // generador actual no soporta múltiples TaxSubtotal blocks. El "%"
   // se emite con 2 decimales para casar con el XML previo (19.00).
+  // 2026-07-30: movido después de `items` — antes referenciaba `items`
+  // en la temporal dead zone de su propio `const`, causando que
+  // generateInvoiceXml lanzara ReferenceError en TODAS las llamadas.
   const taxRate = detectDominantTaxRate(items);
   const taxRatePct = (taxRate * 100).toFixed(2);
 
   const fechaEmision = new Date(invoice.createdAt || order?.createdAt || new Date()).toISOString();
-  const horaEmision = fechaEmision; // ISO 8601
   const fechaVencimiento = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // +30 días
-
-  // Procesar items de la orden
-  const items = parseOrderItems(order);
-  const totales = calculateTotals(items);
 
   // Construir XML
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
@@ -252,18 +254,18 @@ export function generateInvoiceXml(invoice, order, client) {
   xml += `          <cbc:ID>${receptor.codigoCiudad}</cbc:ID>\n`;
   xml += `          <cbc:CityName>${receptor.ciudad || 'Bogotá'}</cbc:CityName>\n`;
   xml += `          <cbc:CountrySubentityCode>${receptor.codigoDepartamento}</cbc:CountrySubentityCode>\n`;
-  xml += `          <cbc:Line>${receptor.direccion}</cbc:Line>\n`;
+  xml += `          <cbc:Line>${escapeXml(receptor.direccion)}</cbc:Line>\n`;
   xml += '        </cac:Address>\n';
   xml += '      </cac:PhysicalLocation>\n';
   xml += '      <cac:PartyTaxScheme>\n';
   xml += '        <cbc:TaxLevelCode listName="O-99">R-99-PN</cbc:TaxLevelCode>\n';
   xml += '      </cac:PartyTaxScheme>\n';
   xml += '      <cac:PartyLegalEntity>\n';
-  xml += `        <cbc:RegistrationName>${receptor.razonSocial}</cbc:RegistrationName>\n`;
+  xml += `        <cbc:RegistrationName>${escapeXml(receptor.razonSocial)}</cbc:RegistrationName>\n`;
   xml += '      </cac:PartyLegalEntity>\n';
   xml += '      <cac:Contact>\n';
-  xml += `        <cbc:Telephone>${receptor.telefono}</cbc:Telephone>\n`;
-  xml += `        <cbc:ElectronicMail>${receptor.email}</cbc:ElectronicMail>\n`;
+  xml += `        <cbc:Telephone>${escapeXml(receptor.telefono)}</cbc:Telephone>\n`;
+  xml += `        <cbc:ElectronicMail>${escapeXml(receptor.email)}</cbc:ElectronicMail>\n`;
   xml += '      </cac:Contact>\n';
   xml += '    </cac:Party>\n';
   xml += '  </cac:AccountingCustomerParty>\n';
@@ -302,7 +304,7 @@ export function generateInvoiceXml(invoice, order, client) {
     xml += `    <cbc:LineExtensionAmount currencyID="COP">${item.subtotal}</cbc:LineExtensionAmount>\n`;
     xml += '    <cac:Item>\n';
     xml += `      <cbc:Description>${escapeXml(item.name)}</cbc:Description>\n`;
-    xml += `      <cbc:BrandName>${escapeXml(item.brand || 'Juancho\'s Pizza')}</cbc:BrandName>\n`;
+    xml += `      <cbc:BrandName>${escapeXml(item.brand || "Juancho's Pizza")}</cbc:BrandName>\n`;
     xml += `      <cbc:ModelName>${escapeXml(item.model || '')}</cbc:ModelName>\n`;
     xml += '    </cac:Item>\n';
     xml += '    <cac:Price>\n';
@@ -340,7 +342,7 @@ export function generateInvoiceXml(invoice, order, client) {
 /**
  * Genera el XML para Nota Crédito/Débito
  */
-export function generateCreditNoteXml(creditNote, invoice, order) {
+export function generateCreditNoteXml(creditNote, _invoice, _order) {
   // [MANUAL] Implementar según necesidad
   return `<!-- NOTA ${creditNote.tipoNota?.toUpperCase()} - PENDIENTE DE GENERACIÓN -->
 <CreditNote>
@@ -389,9 +391,7 @@ function validateReceptorNit(nit) {
     throw new Error(`[DIAN] receptor.nit debe ser string, recibido: ${typeof nit}`);
   }
   if (!/^[1-9][0-9]{5,14}$/.test(nit)) {
-    throw new Error(
-      '[DIAN] receptor.nit inválido: "' + nit + '" (debe ser 6–15 dígitos sin ceros a la izquierda)'
-    );
+    throw new Error('[DIAN] receptor.nit inválido: "' + nit + '" (debe ser 6–15 dígitos sin ceros a la izquierda)');
   }
 }
 
@@ -400,8 +400,11 @@ function parseOrderItems(order) {
 
   let rawItems = order.items;
   if (typeof rawItems === 'string') {
-    try { rawItems = JSON.parse(rawItems); }
-    catch { rawItems = []; }
+    try {
+      rawItems = JSON.parse(rawItems);
+    } catch {
+      rawItems = [];
+    }
   }
 
   if (!Array.isArray(rawItems)) return [];
@@ -415,10 +418,7 @@ function parseOrderItems(order) {
     // 19% por compatibilidad con productos no marcados. La validación
     // de tasa única por factura vive en generateInvoiceXml
     // (detectDominantTaxRate).
-    const ivaRate =
-      typeof item.ivaRate === 'number' && item.ivaRate >= 0 && item.ivaRate <= 1
-        ? item.ivaRate
-        : 0.19;
+    const ivaRate = typeof item.ivaRate === 'number' && item.ivaRate >= 0 && item.ivaRate <= 1 ? item.ivaRate : 0.19;
     const iva = Math.round(subtotal * ivaRate);
 
     return {

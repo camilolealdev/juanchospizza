@@ -1,46 +1,74 @@
 # 🚀 Guía de Deploy — Juancho's Pizza / GastroPro v2.0.0
 
-> **Última actualización:** Julio 2026
-> **Stack:** React 18 + Vite + Express + PostgreSQL + Redis + Docker
+> **Última actualización:** Julio 2026  
+> **Stack:** React 18 + Vite + Express + PostgreSQL + Redis + Docker  
+> **Objetivo:** VPS Ubuntu con Docker Compose
 
 ---
 
 ## 📋 Prerequisitos
 
+### Servidor VPS (mínimo recomendado)
+
+| Recurso | Mínimo        | Recomendado  |
+| ------- | ------------- | ------------ |
+| CPU     | 2 cores       | 4 cores      |
+| RAM     | 2 GB          | 4 GB         |
+| Disco   | 20 GB SSD     | 40 GB SSD    |
+| Docker  | 24+           | 24+          |
+| OS      | Ubuntu 22.04+ | Ubuntu 24.04 |
+
 ### Variables de Entorno Requeridas
 
 ```bash
-# Obligatorias (sin estas no arranca)
-DATABASE_URL=postgres://user:password@host:5432/juanchos_pizza
-JWT_SECRET=<generar con: openssl rand -hex 32>
-FRONTEND_URL=https://tudominio.com
+# ── Base de datos ─────────────────────────────────────────────
+POSTGRES_PASSWORD=<generar seguro>
+DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/juanchos_pizza
 
-# Opcionales pero recomendadas
-GEMINI_API_KEY=          # Menú inteligente (Google AI Studio)
-POSTGRES_PASSWORD=       # Docker Compose
+# ── JWT ───────────────────────────────────────────────────────
+JWT_SECRET=$(openssl rand -hex 32)
+JWT_EXPIRES_IN=15m
+
+# ── URLs ──────────────────────────────────────────────────────
+FRONTEND_URL=https://tudominio.com
 ALLOWED_ORIGINS=https://tudominio.com
 
-# Pasarelas de pago (opcionales hasta activarlas)
-BOLD_API_KEY=
-MP_ACCESS_TOKEN=
-WOMPI_MERCHANT_ID=
-PAYPAL_CLIENT_ID=
+# ── Gemini (opcional) ─────────────────────────────────────────
+GEMINI_API_KEY=       # Dejar vacío si no se usa menú inteligente
 
-# Push Notifications
-VAPID_PUBLIC_KEY=        # npx web-push generate-vapid-keys
+# ── Pasarelas de pago ─────────────────────────────────────────
+BOLD_API_KEY=
+BOLD_WEBHOOK_SECRET=
+WOMPI_MERCHANT_ID=
+WOMPI_EVENTS_SECRET=
+
+# ── Push (opcional) ───────────────────────────────────────────
+VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:admin@tudominio.com
+
+# ── SMTP (opcional) ───────────────────────────────────────────
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+EMAIL_FROM=noreply@tudominio.com
 ```
 
 ---
 
-## 🐳 Opción 1: Docker Compose (Recomendada)
+## 🐳 Deploy con Docker Compose (RECOMENDADO)
 
-### 1. Preparar servidor
+### 1. Preparar servidor VPS
 
 ```bash
-# Requisitos: Ubuntu 22.04+, Docker 24+, Docker Compose v2
+# Instalar Docker
 sudo apt update && sudo apt install -y docker.io docker-compose-v2
 sudo systemctl enable --now docker
+
+# Agregar usuario al grupo docker (evita sudo en cada comando)
+sudo usermod -aG docker $USER
+# Cerrar sesión y volver a entrar para aplicar el grupo
 ```
 
 ### 2. Clonar y configurar
@@ -49,123 +77,140 @@ sudo systemctl enable --now docker
 git clone https://github.com/camilolealdev/juanchospizza.git /opt/guido-pizza
 cd /opt/guido-pizza
 
-# Crear .env.production con todas las variables
-# (.env.production.example es el comprehensive actualizado; .env.example también existe pero está incompleto)
+# Crear .env (para docker compose interpolation)
+cat > .env <<EOF
+POSTGRES_PASSWORD=<tu_password_seguro>
+JWT_SECRET=$(openssl rand -hex 32)
+ALLOWED_ORIGINS=https://tudominio.com
+EOF
+
+# Crear .env.production (para el app service)
 cp .env.production.example .env.production
 nano .env.production
-
-# Generar JWT_SECRET
-echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env.production
+# Completar TODAS las variables (al menos DATABASE_URL, JWT_SECRET, FRONTEND_URL)
 ```
 
 ### 3. Iniciar servicios
 
 ```bash
 docker compose up -d
-# Verificar health
-docker compose ps
-curl http://localhost:3001/api/health
+
+# Verificar que todo esté healthy
+watch docker compose ps
+
+# Probar health
+curl -k https://localhost/api/health
 ```
 
-### 4. Configurar Nginx + SSL
+### 4. Configurar SSL con Let's Encrypt
 
-`nginx.conf` ya viene en el repo (auditoría 2026-07-26) — no hace falta crearlo, pero
-**sí revisar `server_name` y descomentar HSTS una vez que SSL funcione**.
-
-⚠️ **`certbot --nginx` NO sirve acá** — ese plugin espera un nginx instalado
-directamente en el host (systemd), pero en este proyecto nginx corre *dentro*
-de un contenedor Docker. Usar el flujo `standalone` (para el primer certificado,
-con el contenedor nginx parado) o `webroot` (sin downtime, usando el
-`location /.well-known/acme-challenge/` que `nginx.conf` ya expone):
+> ⚠️ `certbot --nginx` NO funciona acá — nginx corre dentro de Docker.  
+> Usar el flujo **standalone** o **webroot**:
 
 ```bash
-# Instalar certbot (SIN el plugin de nginx, no aplica en este setup)
+# Instalar certbot (SIN plugin nginx)
 sudo apt install -y certbot
 
-# Opción standalone (primera vez, con el stack parado en el puerto 80):
+# Opción A — Standalone (primera vez, requiere detener nginx):
 docker compose stop nginx
 sudo certbot certonly --standalone -d tudominio.com
 docker compose start nginx
 
-# Copiar los certs al volumen que docker-compose.yml monta en ./certs
-sudo mkdir -p ./certs
-sudo cp /etc/letsencrypt/live/tudominio.com/fullchain.pem ./certs/
-sudo cp /etc/letsencrypt/live/tudominio.com/privkey.pem ./certs/
+# Opción B — Webroot (sin downtime, recomienda):
+sudo certbot certonly --webroot -w /var/www/certbot -d tudominio.com
+
+# Copiar certificados al volumen montado por docker-compose
+sudo mkdir -p /opt/guido-pizza/certs
+sudo cp /etc/letsencrypt/live/tudominio.com/fullchain.pem /opt/guido-pizza/certs/
+sudo cp /etc/letsencrypt/live/tudominio.com/privkey.pem /opt/guido-pizza/certs/
 docker compose restart nginx
 
-# Renovación (cron/systemd timer, certbot lo agrega solo) -- agregar un
-# --deploy-hook que vuelva a copiar los certs y reinicie nginx:
-#   certbot renew --deploy-hook "cp /etc/letsencrypt/live/tudominio.com/*.pem /opt/guido-pizza/certs/ && cd /opt/guido-pizza && docker compose restart nginx"
+# Renovación automática (certbot crea systemd timer):
+# Editar /etc/letsencrypt/renewal/tudominio.com.conf y agregar:
+# renew_hook = cp /etc/letsencrypt/live/tudominio.com/*.pem /opt/guido-pizza/certs/ && cd /opt/guido-pizza && docker compose restart nginx
 ```
 
----
-
-## ☁️ Opción 2: Railway / Render / Fly.io
-
-### Railway (recomendado para Colombia)
+### 5. Verificar seguridad SSL
 
 ```bash
-# 1. Crear cuenta en railway.com
-# 2. Conectar repositorio GitHub
-# 3. Crear servicio web
-#    - Root directory: pizzeria-merge/   (ajusta al nombre del worktree activo de tu fork)
-#    - Start command: node server/index.js
-# 4. Agregar PostgreSQL (Railway lo provisiona automáticamente)
-# 5. Configurar variables de entorno en Railway Dashboard
-# 6. Deploy automático en cada push a master
+curl -sI https://tudominio.com | grep -i strict-transport-security
+# Debe mostrar: Strict-Transport-Security: max-age=31536000
+
+# Tests online: https://www.ssllabs.com/ssltest/
 ```
 
-### Variables requeridas en Railway
+### 🔥 Post-Deploy: Limpiar rate limits en Redis
 
-| Variable         | Valor                       | Dónde obtener                                              |
-| ---------------- | --------------------------- | ---------------------------------------------------------- |
-| `DATABASE_URL`   | `postgres://...`            | Lo provee Railway al agregar PostgreSQL                    |
-| `JWT_SECRET`     | rand 32 hex                 | `openssl rand -hex 32`                                     |
-| `FRONTEND_URL`   | `https://tuapp.railway.app` | URL que asigna Railway                                     |
-| `NODE_ENV`       | `production`                | Fijo                                                       |
-| `GEMINI_API_KEY` | `AIza...`                   | [Google AI Studio](https://aistudio.google.com/app/apikey) |
+Si se migra de una versión anterior (con el bug `redis.expire(ms)`), los rate limit keys viejos pueden tener TTLs enormes (~16h). Limpiar al primer deploy:
+
+```bash
+# Desde el VPS:
+cd /opt/guido-pizza
+docker compose exec redis redis-cli KEYS 'rl:*'  # Ver qué hay
+docker compose exec redis redis-cli FLUSHALL     # Limpiar TODO
+# O solo rate limits:
+docker compose exec redis redis-cli EVAL "return redis.call('DEL', unpack(redis.call('KEYS', 'rl:*')))" 0
+```
+
+> ⚠️ `FLUSHALL` limpia TODO Redis — solo hacerlo si Redis solo se usa para rate limiting.
 
 ---
 
-## 🔄 CI/CD Pipeline
+---
 
-El proyecto tiene 3 workflows en `.github/workflows/`. **No hay `ci-cd.yml`** — se
-documentaba acá pero nunca se llegó a commitear; corregido 2026-07-26.
+## 🔄 CI/CD con GitHub Actions
 
-| Workflow    | Archivo                        | Disparador                  |
-| ----------- | ------------------------------- | --------------------------- |
-| **CI**      | `.github/workflows/ci.yml`      | Push/PR a master            |
-| **Deploy**  | `.github/workflows/deploy.yml`  | Manual (`workflow_dispatch`) — deshabilitado como auto-trigger, ver nota abajo |
-| **Backup**  | `.github/workflows/backup.yml`  | Cron diario 04:00 Colombia  |
+El proyecto tiene el workflow **`deploy-prod.yml`** que automatiza el deploy:
 
-### CI Pipeline (`.github/workflows/ci.yml`)
+### Secrets requeridos en GitHub
 
-- ✅ Lint (ESLint)
-- ✅ TypeScript check
-- ✅ Build (Vite)
-- ✅ Tests (Vitest)
-- ✅ Docker build + verify
-- ✅ E2E smoke (Playwright)
+| Secret         | Valor             | Ejemplo                                  |
+| -------------- | ----------------- | ---------------------------------------- |
+| `PROD_HOST`    | IP del VPS        | `123.123.123.123`                        |
+| `PROD_USER`    | Usuario SSH       | `deploy`                                 |
+| `PROD_SSH_KEY` | Clave privada SSH | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
+| `PROD_PATH`    | Ruta en VPS       | `/opt/guido-pizza`                       |
+| `PROD_URL`     | URL pública       | `https://tudominio.com`                  |
 
-### ⚠️ Deploy real: NO es automático vía GitHub Actions
+### Pipeline
 
-`deploy.yml` desplegaba vía PM2 + `git pull` a `/var/www/juanchospizza` — una
-estrategia completamente distinta a Docker Compose (la que este documento
-describe) y que además llamaba a un script `npm start` inexistente. Se
-deshabilitó su disparo automático en cada push (auditoría 2026-07-26) para que
-no corra en paralelo/en conflicto con el deploy manual de la sección anterior.
+El workflow hace:
 
-El deploy real hoy es **manual**: seguir los pasos 1-4 de arriba la primera
-vez, y para actualizaciones posteriores usar `npm run deploy:prod` (SSH +
-`git pull` + `docker compose up -d --build`) o entrar al VPS y correrlo a mano.
+```
+workflow_dispatch (selector de rama)
+  │
+  ├─ 🔍 Quality: typecheck → build → tests → lint → audit
+  │
+  ├─ 🐳 Docker Build Check: build + verify image
+  │
+  ├─ 🚀 Deploy (SSH via appleboy/ssh-action):
+  │     1. git pull
+  │     2. Verificar .env.production existe
+  │     3. docker compose down --remove-orphans
+  │     4. docker compose up -d --build
+  │     5. docker image prune
+  │     6. Health check (localhost:3001 → localhost fallback)
+  │     7. docker compose ps (estado final)
+  │
+  └─ 🔥 Smoke Test: Playwright contra URL producción
+```
 
-### Secrets requeridos en GitHub (solo si se usa `deploy:staging`/`deploy:prod` o se reactiva `deploy.yml`)
+### Cómo usar
 
-| Secret            | Propósito                  |
-| ----------------- | -------------------------- |
-| `STAGING_HOST`    | IP del servidor staging    |
-| `PROD_HOST`       | IP producción               |
-| `DEPLOY_SSH_KEY`  | Clave privada SSH (si se usa `deploy.yml` manual) |
+1. Ir a GitHub → Actions → "🚀 Deploy Production (Docker Compose)"
+2. Click "Run workflow"
+3. Seleccionar rama (`master`)
+4. Click "Run"
+
+### Actualizaciones manuales (sin GitHub Actions)
+
+```bash
+# Conectarse al VPS y ejecutar:
+ssh deploy@tudominio.com
+cd /opt/guido-pizza
+git pull origin master
+docker compose up -d --build
+```
 
 ---
 
@@ -177,25 +222,26 @@ vez, y para actualizaciones posteriores usar `npm run deploy:prod` (SSH +
 - [ ] Login como ADMIN funciona
 - [ ] Login como OPERATOR funciona
 - [ ] Menú digital carga correctamente
-- [ ] Static assets se sirven (JS, CSS, imágenes)
-- [ ] **🔴 Rotar los PINs por defecto** (1234/5678/0000/9999, sembrados por
-      `server/migrate.js` y documentados públicamente en el propio README) vía
-      CRM > Empleados, ANTES de compartir la URL con nadie del staff real.
+- [ ] Static assets se sirven (JS, CSS, imágenes, iconos)
+- [ ] PWA manifest se carga: `curl https://tudominio.com/manifest.webmanifest`
+- [ ] **🔴 Rotar los PINs por defecto** (1234/5678/0000/9999) vía CRM > Empleados
 
 ### Primeras 24 horas
 
-- [ ] Crear un pedido de prueba
-- [ ] Verificar que el WebSocket se conecta
+- [ ] Crear pedido de prueba → método de pago Bold
+- [ ] Verificar WebSocket se conecta
 - [ ] Probar cambio de estado de pedido
-- [ ] Verificar que el dashboard muestra datos
+- [ ] Verificar dashboard muestra datos
 - [ ] Probar impresión de ticket de cocina
+- [ ] Verificar apple-touch-icon en iOS: `curl https://tudominio.com/apple-touch-icon.png`
 
 ### Primera semana
 
-- [ ] Monitorear logs del servidor (`docker compose logs -f`)
+- [ ] Monitorear logs: `docker compose logs -f app`
 - [ ] Verificar backups de BD (configurados en docker-compose)
 - [ ] Revisar rate limiting en producción
 - [ ] Verificar SSL/TLS (https://www.ssllabs.com/ssltest/)
+- [ ] Monitorear recursos: `docker stats`
 
 ---
 
@@ -205,9 +251,9 @@ vez, y para actualizaciones posteriores usar `npm run deploy:prod` (SSH +
 # Docker Compose: volver a versión anterior
 docker compose down
 git checkout <commit-anterior>
-docker compose up -d
+docker compose up -d --build
 
-# Railway: usar el Dashboard → Deployments → Previous → Promote
+# GitHub Actions: re-ejecutar workflow con commit anterior
 ```
 
 ---
@@ -224,6 +270,9 @@ curl https://tudominio.com/api/health
 
 # Estadísticas del contenedor
 docker stats
+
+# Uso de disco
+docker system df
 ```
 
 ---
@@ -235,8 +284,35 @@ docker stats
 - ✅ **Helmet**: CSP, HSTS, X-Frame-Options activos
 - ✅ **PG Pool**: Máximo 20 conexiones simultáneas
 - ✅ **Cookie HttpOnly**: JWT solo accesible por HTTP
-- ✅ **Docker**: Non-root user + read-only filesystem
+- ✅ **Docker**: Non-root user + read-only filesystem + cap_drop ALL
 - ✅ **CORS**: Solo orígenes en `ALLOWED_ORIGINS`
+- ✅ **CSRF**: Token por sesión
+- ✅ **SSL**: TLS 1.2/1.3 con ciphers OWASP B-grade
+- ✅ **Webhooks**: Falla cerrada (503) si falta secret
+
+---
+
+## 🐳 Comandos Docker Útiles
+
+```bash
+# Build sin cache (útil después de cambiar package.json)
+docker compose build --no-cache app
+
+# Ver logs de un servicio específico
+docker compose logs -f nginx
+
+# Ejecutar comando dentro del contenedor
+docker compose exec app node server/migrate.js
+
+# Respaldar BD
+docker compose exec postgres pg_dump -U postgres juanchos_pizza > backup.sql
+
+# Restaurar BD
+cat backup.sql | docker compose exec -T postgres psql -U postgres juanchos_pizza
+
+# Limpiar todo (volúmenes incluidos)
+docker compose down -v
+```
 
 ---
 

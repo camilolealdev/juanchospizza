@@ -230,6 +230,50 @@ export const clearAuthSession = (): void => {
 // el backend responde 401. Múltiples requests simultáneas que reciben un
 // 401 a la vez NO deben disparar N refrescos paralelos: la primera llama
 // inicia el refresco y las siguientes esperan la misma promesa.
+// ── CSRF (double-submit cookie, ver server/middleware/csrf.js) ────
+// Toda mutación (POST/PUT/PATCH/DELETE) debe llevar el valor de la cookie
+// `csrf-token` en el header `x-csrf-token`. La cookie es legible por JS
+// (httpOnly:false a propósito -- ver csrf.js) así que normalmente alcanza
+// con leerla del navegador; si todavía no existe (primera visita, antes de
+// que algún GET la haya seteado) se pide una vez a GET /api/csrf-token.
+const CSRF_COOKIE_NAME = 'csrf-token';
+const CSRF_HEADER_NAME = 'x-csrf-token';
+const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+const getCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
+// Igual que refreshPromise más abajo: si varias mutaciones concurrentes
+// arrancan sin cookie todavía, la primera pide el token y las demás
+// esperan esa misma promesa en vez de disparar N requests.
+let csrfTokenPromise: Promise<string | null> | null = null;
+
+async function ensureCsrfToken(): Promise<string | null> {
+  const existing = getCookie(CSRF_COOKIE_NAME);
+  if (existing) return existing;
+
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/csrf-token`, { credentials: 'include' });
+        if (!response.ok) return null;
+        const data = await response.json().catch(() => null);
+        // El endpoint también setea la cookie via Set-Cookie -- leerla de ahí
+        // evita depender de que el body y la cookie coincidan siempre.
+        return getCookie(CSRF_COOKIE_NAME) || data?.token || null;
+      } catch {
+        return null;
+      } finally {
+        csrfTokenPromise = null;
+      }
+    })();
+  }
+  return csrfTokenPromise;
+}
+
 let refreshPromise: Promise<boolean> | null = null;
 
 async function tryRefreshToken(): Promise<boolean> {
@@ -283,11 +327,27 @@ const handleResponse = async (response: Response, alreadyRetried = false) => {
 // de identidad que viaja, no hay headers de Authorization que armar acá,
 // el token nunca llega a este archivo (ni puede, no sale del body).
 const apiFetch = async (path: string, options: RequestInit = {}) => {
-  const doFetch = (): Promise<Response> =>
-    fetch(`${API_BASE}${path}`, {
+  const method = (options.method || 'GET').toUpperCase();
+
+  const doFetch = async (): Promise<Response> => {
+    let headers = options.headers;
+    // POST /api/orders (checkout de invitado) es la única mutación exenta
+    // de CSRF server-side (no lleva authMiddleware, ver server/middleware/
+    // csrf.js) -- pedirle igual el token acá no rompe nada (el endpoint
+    // ignora el header si sobra), pero evitamos el roundtrip innecesario.
+    if (MUTATION_METHODS.has(method)) {
+      const token = await ensureCsrfToken();
+      if (token) {
+        headers = new Headers(options.headers);
+        headers.set(CSRF_HEADER_NAME, token);
+      }
+    }
+    return fetch(`${API_BASE}${path}`, {
       ...options,
+      headers,
       credentials: 'include',
     });
+  };
 
   try {
     const response = await doFetch();

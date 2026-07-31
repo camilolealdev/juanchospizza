@@ -72,4 +72,4 @@ jobs:
             git pull origin master
             npm ci
             npm run build
-            pm2 restart juanchospizza || pm2 start npm --name juanchospizza -- run server
+            pm2 restart juanchospizza || pm2 start node --name juanchospizza -- server/index.js

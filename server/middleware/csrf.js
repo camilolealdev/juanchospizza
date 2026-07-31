@@ -38,7 +38,38 @@ const MUTATION_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
 export function csrfProtection(req, res, next) {
   // Excluir rutas públicas
-  if (PUBLIC_PATHS.some(p => req.path.startsWith(p))) {
+  // ⚠️ req.path es RELATIVO al mount point (app.use('/api', csrfProtection)).
+  // Si la URL es /api/consent, req.path = /consent — el startsWith() falla.
+  // Usamos req.originalUrl (path completo siempre) para matchear correctamente.
+  const fullPath = req.baseUrl + req.path; // ej: /api + /consent = /api/consent
+
+  // Excepción puntual: creación de pedido de invitado (checkout público del
+  // menú, server/routes/orders.js POST /api/orders NO lleva authMiddleware
+  // -- no hay sesión/cookie de auth que un atacante pueda "montar", así que
+  // CSRF no aplica). A propósito NO se agrega '/api/orders' a PUBLIC_PATHS:
+  // ese array matchea por PREFIJO (startsWith), y eximiría también
+  // PUT /api/orders/:id y PATCH /api/orders/:id/status, que SÍ requieren
+  // authMiddleware (cookie de sesión) y por lo tanto SÍ deben llevar CSRF.
+  // Match exacto de path+método para no repetir ese bug de prefijo.
+  if (req.method === 'POST' && fullPath === '/api/orders') {
+    return next();
+  }
+
+  // Payment creation endpoints: endpoints de pago público que NO llevan
+  // authMiddleware (checkout sin sesión de usuario), llamados desde
+  // paymentService.ts con fetch directo. Sin auth = sin sesión que
+  // proteger con CSRF.
+  const PAYMENT_PATHS = [
+    '/api/payments/bold/create-link',
+    '/api/payments/mercadopago/create-payment',
+    '/api/payments/wompi/create-transaction',
+    '/api/payments/paypal/create-order',
+  ];
+  if (req.method === 'POST' && PAYMENT_PATHS.some((p) => fullPath === p)) {
+    return next();
+  }
+
+  if (PUBLIC_PATHS.some((p) => fullPath.startsWith(p) || req.originalUrl.startsWith(p))) {
     return next();
   }
 
@@ -61,14 +92,12 @@ export function csrfProtection(req, res, next) {
   const headerToken = req.headers[HEADER_NAME];
 
   if (!cookieToken || !headerToken) {
-    logger.warn({ ip: req.ip, method: req.method, path: req.path },
-      'CSRF: token faltante (cookie o header)');
+    logger.warn({ ip: req.ip, method: req.method, path: req.path }, 'CSRF: token faltante (cookie o header)');
     return res.status(403).json({ error: 'CSRF token requerido' });
   }
 
   if (cookieToken !== headerToken) {
-    logger.warn({ ip: req.ip, method: req.method, path: req.path },
-      'CSRF: token mismatch');
+    logger.warn({ ip: req.ip, method: req.method, path: req.path }, 'CSRF: token mismatch');
     return res.status(403).json({ error: 'CSRF token inválido' });
   }
 

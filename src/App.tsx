@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { UserRole, GastroModule, LocationId } from './types';
 import AdminLayout from './components/AdminLayout';
@@ -174,14 +174,52 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [role]);
 
-  // Deep link landed on directly (bookmark, shared link) while logged out --
-  // prompt for the PIN instead of silently falling back to the public
-  // landing page underneath with no explanation.
+  // ── Acceso al panel vía URL o tecla oculta ─────────────────────
+  //
+  // El botón flotante de admin se eliminó de la vista pública para que
+  // los clientes no tengan acceso visual al panel. El login se activa
+  // mediante:
+  //   1. Navegar a /login     — ruta directa, bookmarkeable
+  //   2. Navegar a /admin     — ruta base del panel
+  //   3. Navegar a /admin/*   — deep-link, muestra login si no hay sesión
+  //   4. Ctrl+Shift+A         — shortcut secreto para staff
+  //
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  isAuthenticatedRef.current = isAuthenticated;
+
   useEffect(() => {
-    if (!isAuthenticated && moduleFromPath()) setShowLogin(true);
-    // Intentionally only on mount: this is a one-time "did we land deep
-    // while logged out" check, not something that should re-fire on every
-    // isAuthenticated flip (login/logout already handle their own state).
+    const isLoginPath = window.location.pathname === '/login';
+    const isAdminBase = window.location.pathname === '/admin';
+    const isAdminDeep = !!moduleFromPath();
+
+    // /login siempre abre el modal (sin redirigir)
+    if (!isAuthenticated && isLoginPath) {
+      setShowLogin(true);
+      // Limpia la URL — /login no es una ruta real, solo un trigger
+      history.replaceState(null, '', '/');
+      return;
+    }
+
+    // /admin o /admin/* mientras no hay sesión → muestra login
+    if (!isAuthenticated && (isAdminBase || isAdminDeep)) {
+      setShowLogin(true);
+    }
+
+    // Ctrl+Shift+A: shortcut oculto para staff
+    // Usamos ref para evitar stale closure de isAuthenticated
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        if (!isAuthenticatedRef.current) {
+          setShowLogin((prev) => !prev);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -307,65 +345,56 @@ const App: React.FC = () => {
   // this wrapper closes the framer-motion gap (P2-7).
   return (
     <MotionConfig reducedMotion="user">
-    <CartProvider>
-      <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
-        {/* Floating admin button - always visible */}
-        <button
-          onClick={() => (isAuthenticated ? logout() : setShowLogin(true))}
-          className="fixed bottom-6 left-6 z-[9999] w-14 h-14 rounded-2xl bg-stone-950/90 backdrop-blur-xl border border-white/10 text-stone-400 hover:text-white hover:border-orange-500/50 flex items-center justify-center shadow-2xl transition-all group"
-          title={isAuthenticated ? 'Cerrar sesión' : 'Panel Administrativo'}
-        >
-          <i
-            className={`fas ${isAuthenticated ? 'fa-right-from-bracket' : 'fa-crown'} text-xl transition-transform group-hover:scale-110`}
-          ></i>
-        </button>
+      <CartProvider>
+        <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
+          {/* Hidden admin access: /login en URL, /admin/* deep-link, Ctrl+Shift+A */}
 
-        {/* Login Modal (lazy-loaded) */}
-        {showLogin && !isAuthenticated && (
-          <Suspense fallback={null}>
-            <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />
-          </Suspense>
-        )}
-
-        {/* Admin CRM Overlay */}
-        {isAuthenticated &&
-          (role === UserRole.ADMIN ||
-            role === UserRole.OPERATOR ||
-            role === UserRole.REPARTIDOR ||
-            role === UserRole.MARKETING) && (
-            <div className="fixed inset-0 z-[9998] animate-fade-in">
-              <AdminLayout
-                module={gastroModule}
-                onModuleChange={navigateToModule}
-                userName={ROLE_DISPLAY_NAMES[role] || role}
-                userRole={role}
-                onLogout={logout}
-                locationId={selectedLocation}
-                onLocationChange={setSelectedLocation}
-              >
-                <Suspense
-                  fallback={
-                    <div className="p-10 text-stone-500 text-sm font-bold uppercase tracking-widest">Cargando...</div>
-                  }
-                >
-                  {renderGastroModule()}
-                </Suspense>
-              </AdminLayout>
-            </div>
+          {/* Login Modal (lazy-loaded) */}
+          {showLogin && !isAuthenticated && (
+            <Suspense fallback={null}>
+              <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />
+            </Suspense>
           )}
 
-        {/* MenuDigital — rendered as inline section via portal into #menu-mount */}
-        {menuMount && createPortal(<MenuDigital variant="section" />, menuMount)}
+          {/* Admin CRM Overlay */}
+          {isAuthenticated &&
+            (role === UserRole.ADMIN ||
+              role === UserRole.OPERATOR ||
+              role === UserRole.REPARTIDOR ||
+              role === UserRole.MARKETING) && (
+              <div className="fixed inset-0 z-[9998] animate-fade-in">
+                <AdminLayout
+                  module={gastroModule}
+                  onModuleChange={navigateToModule}
+                  userName={ROLE_DISPLAY_NAMES[role] || role}
+                  userRole={role}
+                  onLogout={logout}
+                  locationId={selectedLocation}
+                  onLocationChange={setSelectedLocation}
+                >
+                  <Suspense
+                    fallback={
+                      <div className="p-10 text-stone-500 text-sm font-bold uppercase tracking-widest">Cargando...</div>
+                    }
+                  >
+                    {renderGastroModule()}
+                  </Suspense>
+                </AdminLayout>
+              </div>
+            )}
 
-        {/* CartSection — rendered as inline section via portal into #cart-mount */}
-        {cartMount && createPortal(<CartSection />, cartMount)}
+          {/* MenuDigital — rendered as inline section via portal into #menu-mount */}
+          {menuMount && createPortal(<MenuDigital variant="section" />, menuMount)}
 
-        {/* Approved reviews — rendered as inline section via portal into #reviews-mount.
+          {/* CartSection — rendered as inline section via portal into #cart-mount */}
+          {cartMount && createPortal(<CartSection />, cartMount)}
+
+          {/* Approved reviews — rendered as inline section via portal into #reviews-mount.
             Was previously only wired inside dead CustomerView.tsx (never rendered since
             2026-06-05's move to this portal architecture) — moved onto the live surface. */}
-        {reviewsMount && createPortal(<ApprovedReviews />, reviewsMount)}
-      </AuthContext.Provider>
-    </CartProvider>
+          {reviewsMount && createPortal(<ApprovedReviews />, reviewsMount)}
+        </AuthContext.Provider>
+      </CartProvider>
     </MotionConfig>
   );
 };

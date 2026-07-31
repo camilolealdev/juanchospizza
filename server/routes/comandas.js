@@ -2,7 +2,7 @@
 // Asocia mesas con items para el flujo cocina/mesero.
 import express from 'express';
 import { pool } from '../db.js';
-import { authMiddleware, requireRole } from '../auth.js';
+import { authMiddleware, requireRole, requireSameLocation } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import {
   createComandaSchema,
@@ -17,41 +17,53 @@ import { notifyComandaUpdate, notifyTableUpdate } from '../websocket.js';
 const router = express.Router();
 
 // GET /api/comandas — listar comandas activas
-router.get('/api/comandas', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
-  try {
-    const { status, locationId, tableId } = req.query;
-    let query = 'SELECT * FROM comandas';
-    const conditions = [];
-    const params = [];
+router.get(
+  '/api/comandas',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR'),
+  requireSameLocation((req) => req.query.locationId),
+  async (req, res) => {
+    try {
+      const { status, locationId, tableId } = req.query;
+      let query = 'SELECT * FROM comandas';
+      const conditions = [];
+      const params = [];
 
-    if (status) {
-      params.push(status);
-      conditions.push(`status = $${params.length}`);
-    }
-    if (locationId) {
-      params.push(locationId);
-      conditions.push(`"locationId" = $${params.length}`);
-    }
-    if (tableId) {
-      params.push(tableId);
-      conditions.push(`"tableId" = $${params.length}`);
-    }
+      if (status) {
+        params.push(status);
+        conditions.push(`status = $${params.length}`);
+      }
+      if (locationId) {
+        params.push(locationId);
+        conditions.push(`"locationId" = $${params.length}`);
+      }
+      if (tableId) {
+        params.push(tableId);
+        conditions.push(`"tableId" = $${params.length}`);
+      }
 
-    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-    query += ' ORDER BY "openedAt" DESC';
+      if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+      query += ' ORDER BY "openedAt" DESC';
 
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (_e) {
-    res.status(500).json({ error: 'Error al listar comandas' });
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (_e) {
+      res.status(500).json({ error: 'Error al listar comandas' });
+    }
   }
-});
+);
 
 // GET /api/comandas/:id — detalle con items
 router.get('/api/comandas/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const comanda = await pool.query('SELECT * FROM comandas WHERE id = $1', [req.params.id]);
     if (!comanda.rows.length) return res.status(404).json({ error: 'Comanda no encontrada' });
+    // La sede a validar es la de la comanda existente, no una que el
+    // cliente pudiera mandar por query/body -- mismo criterio que
+    // shifts.js al cerrar un turno.
+    if (req.auth.role !== 'ADMIN' && req.auth.locationId && comanda.rows[0].locationId !== req.auth.locationId) {
+      return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+    }
 
     const items = await pool.query('SELECT * FROM comanda_items WHERE "comandaId" = $1 ORDER BY "createdAt"', [
       req.params.id,
@@ -69,6 +81,7 @@ router.post(
   authMiddleware,
   requireRole('ADMIN', 'OPERATOR'),
   validate(createComandaSchema),
+  requireSameLocation((req) => req.body.locationId),
   async (req, res) => {
     try {
       const { tableId, waiterName, guestCount, notes, locationId } = req.body;
@@ -76,6 +89,14 @@ router.post(
       // Verificar que la mesa existe y está disponible
       const tableCheck = await pool.query('SELECT * FROM dining_tables WHERE id = $1', [tableId]);
       if (!tableCheck.rows.length) return res.status(404).json({ error: 'Mesa no encontrada' });
+      // requireSameLocation ya validó que locationId (body) coincide con la
+      // sede del operador -- pero eso no impide que mande un tableId real de
+      // OTRA sede junto con su propio locationId. Sin este chequeo, un
+      // OPERATOR podía ocupar/mutar una mesa de otra sede aunque la comanda
+      // "dijera" ser de la suya.
+      if (tableCheck.rows[0].locationId !== locationId) {
+        return res.status(400).json({ error: 'La mesa no pertenece a la sede indicada' });
+      }
 
       // Marcar la mesa como ocupada
       await pool.query('UPDATE dining_tables SET status = $1 WHERE id = $2', ['occupied', tableId]);
@@ -109,6 +130,12 @@ router.put(
   validate(updateComandaSchema),
   async (req, res) => {
     try {
+      const existing = await pool.query('SELECT "locationId" FROM comandas WHERE id = $1', [req.params.id]);
+      if (!existing.rows.length) return res.status(404).json({ error: 'Comanda no encontrada' });
+      if (req.auth.role !== 'ADMIN' && req.auth.locationId && existing.rows[0].locationId !== req.auth.locationId) {
+        return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+      }
+
       const { guestCount, notes, total } = req.body;
       const updates = [];
       const params = [];
@@ -155,6 +182,14 @@ router.patch(
   validate(closeComandaSchema),
   async (req, res) => {
     try {
+      // La sede a validar viene de la comanda existente en DB, no del
+      // request -- un cliente podría mandar cualquier body en el close.
+      const comanda = await pool.query('SELECT * FROM comandas WHERE id = $1', [req.params.id]);
+      if (!comanda.rows.length) return res.status(404).json({ error: 'Comanda no encontrada' });
+      if (req.auth.role !== 'ADMIN' && req.auth.locationId && comanda.rows[0].locationId !== req.auth.locationId) {
+        return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+      }
+
       const { total, notes } = req.body;
       const closedAt = new Date().toISOString();
 
@@ -166,8 +201,7 @@ router.patch(
       ]);
 
       // Liberar la mesa
-      const comanda = await pool.query('SELECT "tableId" FROM comandas WHERE id = $1', [req.params.id]);
-      if (comanda.rows[0]?.tableId) {
+      if (comanda.rows[0].tableId) {
         await pool.query('UPDATE dining_tables SET status = $1 WHERE id = $2', ['available', comanda.rows[0].tableId]);
       }
 
@@ -177,7 +211,7 @@ router.patch(
       // Notificar WebSocket
       setImmediate(() => {
         notifyComandaUpdate(req.params.id, 'closed');
-        if (comanda.rows[0]?.tableId) {
+        if (comanda.rows[0].tableId) {
           notifyTableUpdate(comanda.rows[0].tableId, 'available');
         }
       });
@@ -198,6 +232,16 @@ router.post(
   async (req, res) => {
     try {
       const { comandaId, productId, productName, quantity, unitPrice, notes } = req.body;
+
+      // La sede a validar es la de la comanda destino, no una que el
+      // cliente pudiera mandar directamente -- este endpoint no recibe
+      // locationId, solo comandaId.
+      const comandaCheck = await pool.query('SELECT "locationId" FROM comandas WHERE id = $1', [comandaId]);
+      if (!comandaCheck.rows.length) return res.status(404).json({ error: 'Comanda no encontrada' });
+      if (req.auth.role !== 'ADMIN' && req.auth.locationId && comandaCheck.rows[0].locationId !== req.auth.locationId) {
+        return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+      }
+
       const subtotal = quantity * unitPrice;
 
       const id = `cmi_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -235,6 +279,13 @@ router.post(
   async (req, res) => {
     try {
       const { comandaId, items } = req.body;
+
+      const comandaCheck = await pool.query('SELECT "locationId" FROM comandas WHERE id = $1', [comandaId]);
+      if (!comandaCheck.rows.length) return res.status(404).json({ error: 'Comanda no encontrada' });
+      if (req.auth.role !== 'ADMIN' && req.auth.locationId && comandaCheck.rows[0].locationId !== req.auth.locationId) {
+        return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+      }
+
       const inserted = [];
 
       for (const item of items) {
@@ -283,6 +334,22 @@ router.patch(
   validate(updateComandaItemSchema),
   async (req, res) => {
     try {
+      // La sede a validar es la de la comanda dueña del item -- hay que
+      // resolverla vía comandaId, el item en sí no tiene locationId propio.
+      const existingItem = await pool.query('SELECT "comandaId" FROM comanda_items WHERE id = $1', [req.params.id]);
+      if (!existingItem.rows.length) return res.status(404).json({ error: 'Item no encontrado' });
+
+      const comandaCheck = await pool.query('SELECT "locationId" FROM comandas WHERE id = $1', [
+        existingItem.rows[0].comandaId,
+      ]);
+      if (
+        req.auth.role !== 'ADMIN' &&
+        req.auth.locationId &&
+        comandaCheck.rows[0]?.locationId !== req.auth.locationId
+      ) {
+        return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+      }
+
       const { quantity, notes, status } = req.body;
       const updates = [];
       const params = [];
@@ -340,6 +407,11 @@ router.delete('/api/comandas/items/:id', authMiddleware, requireRole('ADMIN', 'O
     if (!item.rows.length) return res.status(404).json({ error: 'Item no encontrado' });
 
     const comandaId = item.rows[0].comandaId;
+    const comandaCheck = await pool.query('SELECT "locationId" FROM comandas WHERE id = $1', [comandaId]);
+    if (req.auth.role !== 'ADMIN' && req.auth.locationId && comandaCheck.rows[0]?.locationId !== req.auth.locationId) {
+      return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+    }
+
     await pool.query('DELETE FROM comanda_items WHERE id = $1', [req.params.id]);
 
     // Actualizar total
@@ -364,6 +436,9 @@ router.get('/api/comandas/:id/kitchen-ticket', authMiddleware, requireRole('ADMI
   try {
     const comanda = await pool.query('SELECT * FROM comandas WHERE id = $1', [req.params.id]);
     if (!comanda.rows.length) return res.status(404).json({ error: 'Comanda no encontrada' });
+    if (req.auth.role !== 'ADMIN' && req.auth.locationId && comanda.rows[0].locationId !== req.auth.locationId) {
+      return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+    }
 
     const items = await pool.query(
       `SELECT * FROM comanda_items WHERE "comandaId" = $1 AND status != 'cancelled' ORDER BY "createdAt"`,
@@ -393,6 +468,9 @@ router.post('/api/comandas/:id/split', authMiddleware, requireRole('ADMIN', 'OPE
 
     const comanda = await pool.query('SELECT * FROM comandas WHERE id = $1', [req.params.id]);
     if (!comanda.rows.length) return res.status(404).json({ error: 'Comanda no encontrada' });
+    if (req.auth.role !== 'ADMIN' && req.auth.locationId && comanda.rows[0].locationId !== req.auth.locationId) {
+      return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+    }
 
     const orig = comanda.rows[0];
     const results = [];

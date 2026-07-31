@@ -39,6 +39,15 @@ interface MenuCategoryTab {
 
 const EMPTY_SIZE = { label: '', portions: 0, sabores: 1, price: 0 };
 
+// La tabla `categories` (server/db.js) solo tiene id/name/icon/color -- no hay
+// slug/tipo estable e independiente de la fuente de seed para detectar "es la
+// categoría de pizzas". El id de esa categoría varía según qué seed se corrió:
+// el legacy hardcoded (server/seedData/juanchosMenu.js) usa 'pizzas', el nuevo
+// scripts/seed-menu.sql usa 'cat_pizzas'. Toleramos ambos para no romper el
+// selector de tamaño/sabores si el proyecto corrió el seed nuevo (audit #11).
+const PIZZA_CATEGORY_IDS = new Set(['pizzas', 'cat_pizzas']);
+const isPizzaCategory = (categoryId: string) => PIZZA_CATEGORY_IDS.has(categoryId);
+
 const CROSS_SELL: Record<string, { id: string; name: string; price: number; image: string }[]> = {
   pizzas: [
     {
@@ -117,7 +126,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
           .map((s) => ({ label: s.nombre, portions: s.porciones || 0, sabores: s.incluidos, price: s.precio }));
 
         const pizzaSabores: Sabor[] = rawProducts
-          .filter((p) => p.categoryId === 'pizzas' && p.subcategory !== 'Porción')
+          .filter((p) => isPizzaCategory(p.categoryId) && p.subcategory !== 'Porción')
           .map((p) => ({
             name: p.nombre,
             ingredients: p.descripcion ? p.descripcion.split(',').map((s) => s.trim()) : [],
@@ -130,7 +139,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
         });
 
         const mapped: MenuProduct[] = rawProducts.map((p) => {
-          const isPizzaSabor = p.categoryId === 'pizzas' && p.subcategory !== 'Porción';
+          const isPizzaSabor = isPizzaCategory(p.categoryId) && p.subcategory !== 'Porción';
           const comboDelta = comboDeltaByProduct.get(p.id);
           return {
             id: p.id,
@@ -315,7 +324,11 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
     };
   }, [onClose, showPizzaBuilder, showCart, isOverlay]);
 
-  const crossSellItems = CROSS_SELL[activeCategory] || CROSS_SELL.default;
+  // Mismo problema de seed-source drift que isPizzaCategory: CROSS_SELL está
+  // keyed por el id legacy 'pizzas', así que con cat_pizzas (seed nuevo) caía
+  // silenciosamente al bucket 'default' en vez de mostrar cross-sell de pizza.
+  const crossSellItems =
+    (isPizzaCategory(activeCategory) ? CROSS_SELL.pizzas : CROSS_SELL[activeCategory]) || CROSS_SELL.default;
 
   return (
     <motion.div

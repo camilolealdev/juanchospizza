@@ -8,6 +8,7 @@ import { deliverWebhook } from '../services/webhooks.js';
 import { validate } from '../middleware/validate.js';
 import { notifyNewOrder, notifyOrderUpdate } from '../websocket.js';
 import { createOrderSchema, updateOrderSchema, updateOrderStatusSchema } from '../schemas/orders.js';
+import { computeVerifiedTotal, OrderPricingError } from '../services/orderPricing.js';
 
 const router = express.Router();
 
@@ -93,6 +94,7 @@ router.get('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR', '
 });
 
 router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
+  let client;
   try {
     const {
       orderNumber,
@@ -100,7 +102,12 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
       customerPhone,
       address,
       items,
-      total,
+      // El `total` del cliente nunca se usa para el cobro real ni se persiste
+      // tal cual -- POST /api/orders es checkout de invitado sin auth, así
+      // que cualquiera podía mandar un total arbitrario que terminaba
+      // cobrándose verbatim vía Bold/Wompi (ver docs/AUDIT_2026-07-30.md #2).
+      // Se recalcula abajo desde el catálogo real (products/pizza_sizes)
+      // dentro de la misma transacción del INSERT.
       estimatedTime,
       paymentMethod,
       locationId,
@@ -113,13 +120,27 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
     // lectura ya no necesita JSON.parse porque la columna se auto-parsea.
     const itemsForDb = JSON.stringify(items);
 
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    let verifiedTotal;
+    try {
+      verifiedTotal = await computeVerifiedTotal(client, items);
+    } catch (pricingError) {
+      await client.query('ROLLBACK');
+      if (pricingError instanceof OrderPricingError) {
+        return res.status(400).json({ error: pricingError.message });
+      }
+      throw pricingError;
+    }
+
     // Sanitización básica
     const sanitized = {
       orderNumber,
       customerName,
       customerPhone: customerPhone || null,
       address,
-      total,
+      total: verifiedTotal,
       estimatedTime,
       paymentMethod,
       locationId,
@@ -131,7 +152,7 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
     // valor que ya usamos como verificador para tracking/reviews.
     let resolvedClientId = null;
     if (sanitized.customerPhone) {
-      const clientMatch = await pool.query('SELECT id FROM clients WHERE telefono = $1 LIMIT 1', [
+      const clientMatch = await client.query('SELECT id FROM clients WHERE telefono = $1 LIMIT 1', [
         sanitized.customerPhone,
       ]);
       resolvedClientId = clientMatch.rows[0]?.id || null;
@@ -147,7 +168,7 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
     // correspondiente los mueve a 'paid'/'failed'.
     const paymentStatus = ['cash', 'card'].includes(sanitized.paymentMethod) ? 'paid' : 'pending';
 
-    await pool.query(
+    await client.query(
       `INSERT INTO orders (id, "orderNumber", "customerName", "customerPhone", address, items, total, status, "createdAt", "estimatedTime", "paymentMethod", "clientId", "paymentStatus", "locationId") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [
         id,
@@ -166,6 +187,8 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
         sanitized.locationId,
       ]
     );
+
+    await client.query('COMMIT');
 
     res.status(201).json({
       id,
@@ -212,7 +235,16 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
       paymentMethod: sanitized.paymentMethod,
     });
   } catch (_e) {
+    if (client) {
+      try {
+        await client.query('ROLLBACK');
+      } catch {
+        /* la conexión ya pudo haberse perdido -- no hay nada más que hacer */
+      }
+    }
     res.status(500).json({ error: 'Error creating order' });
+  } finally {
+    if (client) client.release();
   }
 });
 
@@ -403,7 +435,8 @@ async function notifyOrderConfirmation(clientId, customerName, orderNumber, tota
         estimatedTime: String(estimatedTime || 'N/A'),
       },
     });
-  } catch (err) {      logger.error({ err }, '[Email] Error enviando confirmación de pedido');
+  } catch (err) {
+    logger.error({ err }, '[Email] Error enviando confirmación de pedido');
   }
 }
 
@@ -442,7 +475,8 @@ async function notifyOrderStatusChange(order, status) {
         },
       });
     }
-  } catch (err) {      logger.error({ err }, '[Email] Error en notificación de estado');
+  } catch (err) {
+    logger.error({ err }, '[Email] Error en notificación de estado');
   }
 }
 

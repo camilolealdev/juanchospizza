@@ -52,7 +52,7 @@ function createLimiter({ keyPrefix, windowMs, maxAttempts, keyFromReq }) {
       return next();
     }
 
-    const identifier = keyFromReq ? keyFromReq(req) : (req.ip || remoteIp || 'unknown');
+    const identifier = keyFromReq ? keyFromReq(req) : req.ip || remoteIp || 'unknown';
     const redisKey = `rl:${keyPrefix}:${identifier}`;
     const redis = getRedis();
 

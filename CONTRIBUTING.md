@@ -8,51 +8,72 @@ Gracias por tu interés en contribuir. Este documento describe las convenciones 
 | -------- | ------------------------------------------- |
 | Frontend | React 18 + TypeScript + Vite + Tailwind CSS |
 | Backend  | Express.js + Node.js + ESM                  |
-| DB       | PostgreSQL                                  |
-| Tests    | Vitest + Playwright                         |
-| IA       | Google Gemini SDK                           |
+| DB       | PostgreSQL 17                               |
+| Cache    | Redis 8                                     |
+| Proxy    | Nginx 1.31 (Docker)                         |
+| Tests    | Vitest (131+ tests) + Playwright            |
+| IA       | Google Gemini SDK (opcional)                |
 | Infra    | Docker + docker-compose                     |
 
 ## 🧑‍💻 Setup Local
 
 ```bash
 # 1. Clonar
-git clone https://github.com/jastigoga/pizzeria
-cd pizzeria
+git clone https://github.com/tu-repo/juanchospizza.git
+cd juanchospizza
 
-# 2. Instalar
+# 2. Instalar dependencias
 npm install
 
 # 3. Variables de entorno
-cp .env.example .env
-# Completar DATABASE_URL, GEMINI_API_KEY, etc.
+# .env → necesario para docker compose (interpolación de ${VAR})
+# .env.production → env_file del app service
+cp .env.production.example .env.production
+# Editar al menos POSTGRES_PASSWORD y JWT_SECRET
 
-# 4. Base de datos
-docker compose up -d postgres
+# 4. Generar certs SSL locales (para nginx en Docker)
+mkdir -p certs
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout certs/privkey.pem -out certs/fullchain.pem \
+  -subj "/C=CO/ST=Cundinamarca/L=Local/O=Dev/CN=localhost"
 
-# 5. Iniciar desarrollo (frontend + backend)
-npm run dev:all
+# 5. Iniciar todo con Docker
+docker compose up --build -d
+
+# 6. Verificar
+curl -sk https://localhost/api/health
+
+# Alternativa: solo backend en dev (sin Docker)
+# npm run dev:all  → frontend :3000 + backend :3001
+
+# ⚠️ VITE_API_URL build arg: Al construir con Docker, pasar
+# VITE_API_URL=https://tudominio.com como --build-arg (o configurar
+# en docker-compose.yml). Ver DEPLOY.md para detalle.
 ```
 
 ## 🏗️ Estructura del Proyecto
 
 ```
 ├── src/                    # Frontend React
-│   ├── components/         # Componentes compartidos
-│   ├── views/roles/        # Vistas del CRM (17 módulos)
-│   ├── services/           # API client, servicios
+│   ├── components/         # Componentes compartidos + portales
+│   ├── pages/              # Páginas standalone (OrderConfirmation)
+│   ├── services/           # API client, gemini
 │   ├── types/              # Tipos TypeScript
-│   └── context/            # Contextos (Cart, Auth)
+│   ├── context/            # Contextos (Cart, Auth)
+│   └── hooks/              # Custom hooks (useWebSocket)
 ├── server/                 # Backend Express
-│   ├── routes/             # Rutas por recurso (29 archivos)
-│   ├── schemas/            # Validación Zod
-│   ├── middleware/         # Auth, rate limit, service key
-│   ├── workers/            # BullsMQ workers (email, PDF, reports, etc.)
-│   ├── auth.js             # Lógica de autenticación
-│   ├── db.js               # Conexión + initDB
-│   └── migrate.js          # Sistema de migraciones
-├── docs/                   # Documentación
-├── _legacy/                # Código legacy archivado
+│   ├── routes/             # Rutas por recurso (32 archivos)
+│   ├── schemas/            # Validación Zod (20 archivos)
+│   ├── services/           # Email, PDF, webhooks, logger, redis
+│   ├── middleware/          # Auth, rate-limit, error handler, CSRF
+│   ├── auth.js             # Lógica de autenticación JWT
+│   ├── db.js               # Conexión PostgreSQL + initDB
+│   └── migrate.js          # Sistema de migraciones (6 aplicadas)
+├── public/                 # Activos estáticos (favicon, PWA icons, logo)
+├── docs/                   # Documentación técnica y auditorías
+├── e2e/                    # Tests E2E (Playwright)
+├── tools/                  # Scripts auxiliares (generación iconos)
+├── .github/workflows/      # CI/CD pipelines
 └── index.html              # Landing page (entry point)
 ```
 
@@ -83,19 +104,6 @@ git pushall --tags                         # tags también sincronizados
 git push origin master                     # SOLO a origin, después del merge del PR
 ```
 
-### Enforcement local automático
-
-Hay un hook `pre-push` en `.husky/pre-push` que valida cada push:
-
-- **Bloquea** pushes de `master` a `camilo` (operación unsafe por diseño).
-- **Avisa** cuando estás pusheando una feature a `origin` y `camilo` está detrás, sugiriendo `git pushall`.
-
-Para bypass temporal del hook: `git push --no-verify`.
-
-Para reescritura de historia (rebase viejo, cherry-pick), `pushall` no expone `--force-with-lease`: hacerlo manual con `git push <remote> <ref> --force-with-lease && git push <remote> <ref> --force-with-lease`.
-
-Más detalle (rationale, edge cases, diagnóstico de desincronización) en `.ai/claude/CLAUDE.md`.
-
 ## 🔧 Convenciones de Código
 
 ### Naming
@@ -123,6 +131,7 @@ Más detalle (rationale, edge cases, diagnóstico de desincronización) en `.ai/
 - PUT usa updates dinámicos (solo campos presentes en el body)
 - Endpoints públicos: `/api/menu`, `/api/reviews/approved`, `/api/categories`
 - Endpoints auth: usar `authMiddleware` + `requireRole()`
+- No hay `server/workers/` — el procesamiento async se hace síncrono en `server/services/`
 
 ### Frontend
 
@@ -152,10 +161,10 @@ Ejemplos:
 ## 🧪 Testing
 
 ```bash
-# Tests unitarios
+# Tests unitarios (Vitest)
 npm test
 
-# Tests E2E (requiere frontend+backend corriendo)
+# Tests E2E (Playwright — requiere servidor vivo)
 npm run test:e2e
 
 # TypeScript check
@@ -175,31 +184,40 @@ npm run lint
 ## 🐳 Docker
 
 ```bash
-# Build
-npm run docker:build
+# Build y arrancar todos los servicios
+docker compose up --build -d
 
-# Iniciar todos los servicios
-npm run docker:run
+# Ver estado
+docker compose ps
 
-# Logs
-npm run docker:logs
+# Logs en tiempo real
+docker compose logs -f app
+docker compose logs -f nginx
 
-# Detener y limpiar
-npm run docker:clean
+# Detener sin perder datos
+docker compose down
+
+# Detener y limpiar volúmenes (¡pierde datos!)
+docker compose down -v
 ```
+
+> ⚠️ Si el contenedor `app` aparece `unhealthy` pero responde OK a `curl /api/health`, el health check está recibiendo 429 del rate limiter. Verificar que `/api/health` esté definido **antes** de `generalRateLimit` en `server/index.js`. Esta configuración es la correcta desde el fix del 2026-07-29.
 
 ## 🚀 Despliegue
 
-Frontend (Vercel): Se deploya automáticamente desde `main`.
-Backend: Docker en VPS (Railway/Render/Fly.io recomendados).
+El backend corre en **Docker sobre VPS**. Frontend se sirve desde el mismo contenedor Express.
 
 ```bash
-# Staging
-npm run deploy:staging
+# Deploy manual via SSH
+ssh user@tudominio.com
+cd /opt/guido-pizza
+git pull origin master
+docker compose up -d --build
 
-# Producción
-npm run deploy:prod
+# O via GitHub Actions: workflow deploy-prod.yml
 ```
+
+Ver `DEPLOY.md` para guía completa.
 
 ## 📝 Reportar Issues
 

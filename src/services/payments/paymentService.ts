@@ -78,10 +78,13 @@ class PaymentService {
 
   private async processMercadoPago(request: PaymentRequest): Promise<PaymentResponse> {
     try {
-      const { ok, data } = await this.postToBackend<{ error?: string; transactionId?: string; qrCode?: string }>('/api/payments/mercadopago/create-payment', {
-        orderId: request.orderId,
-        customerEmail: request.customerEmail,
-      });
+      const { ok, data } = await this.postToBackend<{ error?: string; transactionId?: string; qrCode?: string }>(
+        '/api/payments/mercadopago/create-payment',
+        {
+          orderId: request.orderId,
+          customerEmail: request.customerEmail,
+        }
+      );
 
       if (!ok) {
         return { success: false, message: data.error || 'MercadoPago no configurado' };
@@ -112,9 +115,12 @@ class PaymentService {
 
   private async processPayPal(request: PaymentRequest): Promise<PaymentResponse> {
     try {
-      const { ok, data } = await this.postToBackend<{ error?: string; paymentUrl?: string }>('/api/payments/paypal/create-order', {
-        orderId: request.orderId,
-      });
+      const { ok, data } = await this.postToBackend<{ error?: string; paymentUrl?: string }>(
+        '/api/payments/paypal/create-order',
+        {
+          orderId: request.orderId,
+        }
+      );
 
       if (!ok) {
         return { success: false, message: data.error || 'PayPal no configurado' };
@@ -132,7 +138,12 @@ class PaymentService {
 
   private async processWompi(request: PaymentRequest): Promise<PaymentResponse> {
     try {
-      const { ok, data } = await this.postToBackend<{ error?: string; approved?: boolean; transactionId?: string; paymentUrl?: string }>('/api/payments/wompi/create-transaction', {
+      const { ok, data } = await this.postToBackend<{
+        error?: string;
+        approved?: boolean;
+        transactionId?: string;
+        paymentUrl?: string;
+      }>('/api/payments/wompi/create-transaction', {
         orderId: request.orderId,
         customerEmail: request.customerEmail,
       });
@@ -153,19 +164,28 @@ class PaymentService {
 
   private async processBold(request: PaymentRequest): Promise<PaymentResponse> {
     try {
-      const { ok, data } = await this.postToBackend<{ error?: string; url?: string; paymentLink?: string }>('/api/payments/bold/create-link', {
+      const { ok, data } = await this.postToBackend<{
+        error?: string;
+        url?: string;
+        paymentLink?: string;
+        reused?: boolean;
+        code?: string;
+      }>('/api/payments/bold/create-link', {
         orderId: request.orderId,
       });
 
       if (!ok) {
-        return { success: false, message: data.error || 'Bold no configurado' };
+        const errorMsg = data.code
+          ? `Bold: ${data.error || 'Error'} (${data.code})`
+          : data.error || 'Bold no configurado';
+        return { success: false, message: errorMsg };
       }
 
       return {
         success: true,
         transactionId: data.paymentLink,
         paymentUrl: data.url,
-        message: 'Redirigiendo a Bold...',
+        message: data.reused ? 'Reusando link de pago existente...' : 'Redirigiendo a Bold...',
       };
     } catch (error) {
       return { success: false, message: 'Error de conexión con Bold' };
@@ -176,9 +196,7 @@ class PaymentService {
     return {
       success: true,
       transactionId: `CASH-${Date.now()}`,
-      message: request.method === 'cash' 
-        ? 'Pago en efectivo al recibir' 
-        : 'Pago con tarjeta al recibir',
+      message: request.method === 'cash' ? 'Pago en efectivo al recibir' : 'Pago con tarjeta al recibir',
     };
   }
 

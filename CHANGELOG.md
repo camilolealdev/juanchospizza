@@ -105,6 +105,130 @@
 
 ---
 
+## [unreleased] — 2026-07-29 — Docker production hardening + PWA icons + payments fixes
+
+### 🔴 CRITICAL: redis.expire() milliseconds vs seconds bug
+
+- **`server/middleware/rateLimit.js`**: `redis.expire(redisKey, windowMs)` where `windowMs` is in **milliseconds** but `redis.expire()` expects **seconds**. The general limiter (windowMs=60000) was setting a TTL of **60000 seconds (~16.6 hours)** instead of 60 seconds. Login limiter (15 min) was setting 900000 seconds (~10.4 days!).
+- **Fix**: `Math.ceil(windowMs / 1000)` — now the correct timeout in seconds.
+- **Impact**: Rate limits never expired. A user hitting the limit would be blocked for hours/days instead of seconds/minutes.
+
+### 🔴 Docker HEALTHCHECK falso positivo (429 por rate limiter)
+
+- **`server/index.js`**: `/api/health` y `/api/metrics` estaban definidos **después** de `app.use(generalRateLimit)`. Docker HEALTHCHECK (`wget http://localhost:3001/api/health` directo, sin pasar por nginx) se comía 2 requests cada 30s del bucket del rate limiter. Durante el PWA audit (Playwright haciendo ~100 requests desde la misma IP Docker), el rate limiter se agotó y el health check recibió HTTP 429 por 35 ciclos consecutivos — Docker marcó el contenedor `unhealthy`.
+- **Fix**: Movidos ambos endpoints **antes** de `app.use(generalRateLimit)`. Agregado comentario detallado explicando el porqué.
+- **nginx.conf**: Ya tenía `/api/health` y `/api/metrics` como locations sin `limit_req` — consistente.
+
+### 🔴 CSP bloqueaba estilos y scripts en producción
+
+- **`server/index.js`**: `styleSrc` en producción solo permitía `'self'` y `fonts.googleapis.com` — React + Tailwind generan estilos inline en runtime, rompiendo TODO el frontend.
+- **`scriptSrc`**: `'unsafe-inline'` solo en desarrollo — `vite-plugin-pwa` injecta scripts inline para SW registration flow.
+- **`fontSrc`**: Faltaba `cdnjs.cloudflare.com` necesario para FontAwesome.
+- **`imgSrc`**: Faltaba `blob:` necesario para OG image preview (canvas-to-blob).
+- **Fix**: `'unsafe-inline'` agregado a ambos `styleSrc` y `scriptSrc` en producción; `blob:` en `imgSrc`; `cdnjs.cloudflare.com` en `fontSrc`.
+
+### 🖼️ PWA Icons (JUL-29)
+
+- **`tools/lighthouse-pwa-check.cjs`**: FIX — `const URL = 'https://localhost'` sombreaba el constructor global `URL` causando "URL is not a constructor" en `new URL(icon.src, APP_URL).href`. Renombrado a `APP_URL`.
+- **Misma file**: `waitUntil: 'networkidle'` cambiado a `waitUntil: 'load'` — WebSocket persistente impide que la red llegue a "idle", matando el timeout del audit.
+- **Console listener**: Movido **antes** de `page.goto()` para capturar errores de carga de página.
+- **SW check**: Cambiado de `navigator.serviceWorker.controller` a `navigator.serviceWorker.getRegistrations()` para detectar SW aunque no esté activo aún.
+- **OG image**: Validación de dimensiones reales (1200×630) vía `fetch + Image()`.
+- **Resultado audit final**: 0 errores de consola, todos los assets HTTP 200, PWA icons verificados, manifest OK, health endpoint OK.
+
+### 🐳 Docker fixes
+
+- **nginx.conf**: Moví `/api/health` y `/api/metrics` fuera del bloque `/api/` para evitar herencia de `limit_req` (nginx 1.31 no soporta `limit_req off;` en locations anidadas)
+- **nginx.conf**: Cambié logs de `/var/log/nginx/*` a `/dev/stdout` + `/dev/stderr` — el contenedor tiene `read_only: true`, no puede escribir en `/var/log`
+- **nginx.conf**: Actualicé `listen 443 ssl http2` → `listen 443 ssl` + `http2 on;` (sintaxis deprecada en nginx 1.25+)
+- **nginx.conf**: Arreglé crash-loop de nginx por no poder escribir `/var/log/nginx/ws.log` (read-only FS)
+- **`.env`**: Creado archivo `.env` para interpolación de `${VARIABLES}` en docker-compose.yml (separado de `.env.production` que es `env_file` del servicio app)
+- **`certs/`**: Generados self-signed SSL certificates para desarrollo local
+
+### 🖼️ PWA Icons
+
+- Creados SVGs de pizza artesanal: `favicon.svg`, `pwa-192x192.svg`, `pwa-512x512.svg`
+- Convertidos a PNG multi-size con `sharp`: `favicon.png` (32×32), `favicon.ico` (32×32), `apple-touch-icon.png` (180×180), `pwa-192x192.png` (192×192), `pwa-512x512.png` (512×512)
+- FIX: `pwa-512x512.svg` — reemplacé entidad HTML `&bull;` por `&#8226;` (no válida en XML/SVG)
+- `tools/generate-pwa-icons.cjs`: script para regenerar PNGs desde SVGs
+- `index.html`: agregados apple-touch-icon, favicon.ico, favicon.png, meta tags `apple-mobile-web-app-capable`
+- `vite.config.ts`: PWA manifest ahora incluye PNG icons con sizes específicos + maskable
+
+### 🔒 Admin panel: acceso oculto (JUL-30)
+
+- **Botón flotante eliminado** (`src/App.tsx`): El botón con ícono de corona `title="Panel Administrativo"` que estaba visible para TODOS los visitantes en la esquina inferior izquierda fue eliminado.
+- **3 formas ocultas de acceso**:
+  - `/login` en la URL → abre el modal de login automáticamente y limpia la URL
+  - `/admin` o `/admin/*` (deep-link) → muestra login si no hay sesión, redirige al dashboard si ya autenticado
+  - `Ctrl+Shift+A` → shortcut secreto para staff (solo funciona cuando NO hay sesión activa)
+- **Stale closure corregido**: Uso de `useRef(isAuthenticated)` para que el shortcut no intente abrir login cuando ya hay sesión.
+- **docker-compose.yml**: Agregado volume mount `./dist:/app/dist:ro` en el servicio `app`. Permite actualizar el frontend compilado sin rebuildear la imagen Docker (útil mientras el build tenga timeout de red).
+
+### 🐳 Docker fixes (JUL-30)
+
+- **🚨 CRÍTICO: `app-network` con `internal: true` bloqueaba internet** (`docker-compose.yml`): La red interna `app-network` tiene `internal: true` lo que **bloquea TODO el tráfico saliente** del contenedor `app` hacia internet. Esto rompía pagos (Bold, MercadoPago, Wompi, PayPal), correos (SendGrid), y AI (Gemini). Fix: agregado `app` también a la red `edge` (no interna) para permitir outbound, manteniendo `app-network` como internal para aislar postgres/redis.
+
+- **Dockerfile:** Eliminado `npm cache clean --force` innecesario después de `npm ci` (no aporta beneficio, desperdicia 2s de build).
+- **docs/DOCKER_DNS_FIX.md:** Verificación DNS cambiada de `ping` (ICMP, bloqueado en Windows) a `wget` (HTTP, más confiable).
+- **`docker-reset.ps1`:** Nuevo script PowerShell que automatiza: matar procesos Node.js/npm zombi, borrar node_modules, limpiar npm cache manualmente, configurar DNS 1.1.1.1/8.8.8.8 en daemon.json, ejecutar ipconfig /flushdns. Ejecutar como Administrador cuando Docker Desktop esté congelado.
+- **docs/DOCKER_DNS_FIX.md:** Creada guía con 4 soluciones para el timeout de npm registry en Docker Desktop Windows (causa raíz: proxy DNS virtual + IPv6).
+
+### 💳 Payments fixes
+
+#### Bold (Colombia) — Auditoría profunda 2026-07-29
+
+- **🔴 CRITICAL: `expiration_date` en nanosegundos** (`server/routes/payments.js`): Bold espera timestamp UNIX en **milisegundos**, no nanosegundos. El código original multiplicaba `(Date.now() + 24h) * 1_000_000` produciendo ~19 dígitos (~año 49710). Fix: `Date.now() + 24 * 60 * 60 * 1000`.
+- **🟡 Nuevo endpoint: `GET /api/payments/bold/status/:paymentLink`**: Consulta el estado de un link Bold contra la API oficial (`GET /online/link/v1/{paymentLink}`). Mapea estados Bold (`ACTIVE`, `PAID`, `REJECTED`, `CANCELLED`, `EXPIRED`) a nuestro `paymentStatus`. Protegido con `authMiddleware` + `requireRole('ADMIN')`. Valida que paymentLink comience con `LNK_`.
+- **🟡 Webhook responde 200 inmediatamente**: Bold espera respuesta HTTP ≤2 segundos. El handler ahora responde `res.sendStatus(200)` **antes** de tocar la DB, y procesa la actualización en `setImmediate()` (no bloqueante). Elimina reintentos de Bold por timeout.
+- **🟡 payer_email desde clients table**: El create-link ahora resuelve el email del cliente desde la tabla `clients` usando `order.clientId`. Bold lo usa para pre-rellenar el checkout y mejorar tasa de conversión.
+- **🟡 Reuso de links existentes**: Antes de crear un link nuevo, verifica si `order.paymentProviderRef` ya existe. Si el link anterior sigue `ACTIVE` o `PROCESSING`, lo reutiliza en vez de crear uno nuevo (evita links huérfanos).
+- **🟢 Retry logic con backoff**: 2 intentos con backoff exponencial (1s, 2s) + `AbortController` con timeout de 10s por intento. Previene fallos por timeout de red transitorio.
+- **🟢 Códigos de error Bold**: Ahora se capturan y retornan los códigos de error específicos de Bold (`AP001`-`AP006`) junto al mensaje de error.
+- **🟢 `Math.floor()` para montos COP**: Cambiado `Math.round()` a `Math.floor()` para evitar discrepancias por decimales en montos de pesos colombianos (COP no tiene sub-unidades).
+- **🟢 Logging estructurado**: Todos los errores Bold ahora incluyen contexto (`orderNumber`, `total`, `errorCode`, `orderId`) para facilitar debugging.
+
+#### Bold — Frontend (`paymentService.ts` + `OrderConfirmationPage.tsx`)
+
+- **Tipo `processBold` actualizado**: Incluye campos `reused?: boolean` y `code?: string`. Mensajes de error mejorados con código Bold: `"Bold: mensaje (AP001)"`.
+- **Mensaje de reuso**: Cuando el link es reutilizado, muestra `"Reusando link de pago existente..."` en vez de `"Redirigiendo a Bold..."`.
+- **`OrderConfirmationPage`**: `poll()` envuelto en `useCallback()` para evitar recreaciones innecesarias. Agregado botón **"↻ Verificar ahora"** para polling manual sin esperar los 5 segundos automáticos. Estado `isVerifying` para feedback visual durante verificación manual.
+- **Polling inteligente**: El polling automático se detiene (`isPolling = false`) cuando el pago se asienta (`paid`, `failed` o `CANCELLED`).
+
+#### Wompi
+
+- Usa URL de producción (`production.wompi.co`) cuando `NODE_ENV=production` + `payment_method.installments: 1` + `redirect_url` → `/confirmacion`
+- Corregido lowercase `'approved'` → uppercase `'APPROVED'` (Wompi usa mayúsculas)
+
+#### MercadoPago
+
+- Endpoint retorna 503 con mensaje claro (método 'pix' no aplica a Colombia). Código comentado listo para PSE/Nequi
+
+### 🚀 CI/CD
+
+- **`.github/workflows/deploy-prod.yml`**: Nuevo workflow de deploy con Docker Compose via SSH (`appleboy/ssh-action`). Pipeline: quality → docker-check → deploy (git pull + compose up -d --build + healthcheck) → smoke test
+- **`.github/workflows/deploy.yml`**: Corregido comando PM2 (sesión anterior)
+
+### ⚙️ Config
+
+- **`server/config.js`**: `GEMINI_API_KEY` ahora opcional (warning en vez de `process.exit(1)`)
+- **`.env.production.example`**: Creado template comprehensive con todas las variables
+
+### 📚 Documentación
+
+- **README.md**: Rewrite completo con badges, tablas de pagos/PWA/Docker, sección seguridad, roadmap
+- **ARCHITECTURE.md**: Agregadas secciones de pagos (Bold/Wompi/MP fixes), nginx changes, .env strategy, PWA icons
+- **DEPLOY.md**: Actualizado con deploy-prod.yml pipeline, certbot standalone/webroot, post-deploy checklist
+- **CONTRIBUTING.md**: Actualizado estructura del proyecto, comandos Docker, eliminadas referencias a workers/ y _legacy/
+
+### 🧪 Validación
+
+- Tests: 131/131 passed
+- TypeScript: 0 errors
+- Docker: 4 servicios (app, nginx, postgres, redis) todos healthy
+- Code review: 3 rondas de `code-reviewer-deepseek-flash` (todos aprobados)
+
+---
+
 ## [unreleased] — 2026-07-21 — Frontend audit fixes (corrected strategy)
 
 > ⚠️ **Corrección importante.** Una sesión AI previa (2026-07-21) generó

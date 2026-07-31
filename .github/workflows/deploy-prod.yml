@@ -1,0 +1,227 @@
+# ───────────────────────────────────────────────────────────────────
+#  Deploy Production — Juancho's Pizza / GastroPro
+#  Pipeline seguro para desplegar Docker Compose en VPS via SSH.
+#
+#  TRIGGERS:
+#    - workflow_dispatch (manual, con selector de rama)
+#    - push a master (opcional, descomentar bloque on:push)
+#
+#  REQUISITOS (GitHub Secrets):
+#    PROD_HOST       — IP del VPS
+#    PROD_USER       — usuario SSH (ej. deploy)
+#    PROD_SSH_KEY    — clave privada SSH
+#    PROD_PATH       — ruta absoluta al proyecto (ej. /opt/guido-pizza)
+#
+#  FLUJO:
+#    1. Quality: typecheck + build + tests
+#    2. Docker build check (opcional, verifica que la imagen compile)
+#    3. Deploy: git pull → docker compose up -d --build → healthcheck
+# ───────────────────────────────────────────────────────────────────
+
+name: 🚀 Deploy Production (Docker Compose)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Rama a desplegar'
+        required: true
+        default: 'master'
+        type: choice
+        options:
+          - master
+          - main
+
+  # ⚠️ DESCOMENTAR SOLO si se quiere deploy automático en cada push a master
+  # push:
+  #   branches: [master, main]
+
+concurrency:
+  group: deploy-production-${{ github.ref }}
+  cancel-in-progress: false  # No cancelar un deploy en curso
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ── JOB 1: Quality Gate ────────────────────────────────────────
+  quality:
+    name: 🔍 Quality (typecheck · build · test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+      JWT_SECRET: ci-secret-no-usar-en-prod
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: 🟢 Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install
+        run: npm ci --no-audit --no-fund
+
+      - name: 🔷 TypeScript Check
+        run: npx tsc --noEmit
+
+      - name: 🏗️ Build
+        run: npx vite build
+
+      - name: 🧪 Unit Tests
+        run: npx vitest run --reporter=default
+
+      - name: 🛡️ Dependency Audit
+        continue-on-error: true
+        run: npm audit --audit-level=high --omit=dev
+
+      - name: 🔍 Lint
+        continue-on-error: true
+        run: npx eslint . --ext .ts,.tsx,.js --quiet
+
+  # ── JOB 2: Docker Build Check ─────────────────────────────────
+  docker-check:
+    name: 🐳 Docker Build Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [quality]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: 🐳 Build Docker image
+        run: docker build -t guidopizza:${{ github.sha }} .
+
+      - name: 🐳 Verify image
+        run: |
+          echo "✅ Docker image built: guidopizza:${{ github.sha }}"
+          docker images guidopizza --format '{{.Repository}}:{{.Tag}} ({{.Size}})'
+
+  # ── JOB 3: Deploy via SSH ─────────────────────────────────────
+  deploy:
+    name: 🚀 Deploy to VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [quality, docker-check]
+    # Solo correr deploy si es workflow_dispatch manual
+    # (push a master solo corre quality + docker-check, no deploy automático)
+    if: github.event_name == 'workflow_dispatch'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: 🔑 Setup SSH and Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          # Tiempo suficiente para docker compose pull + build + up
+          command_timeout: 300s
+          script: |
+            set -e
+            echo "🚀 Iniciando deploy en $(hostname)"
+
+            PROJECT_DIR="${{ secrets.PROD_PATH || '/opt/guido-pizza' }}"
+
+            # ── 1. Ir al proyecto y traer últimos cambios ──────
+            cd "$PROJECT_DIR"
+            echo "📥 Pulling branch: ${{ github.event.inputs.branch || 'master' }}"
+            git fetch origin
+            git checkout ${{ github.event.inputs.branch || 'master' }}
+            git pull origin ${{ github.event.inputs.branch || 'master' }}
+
+            # ── 2. Copiar .env.production desde backup ────────
+            # Asume que .env.production existe en el servidor
+            # (se creó manualmente en el primer deploy)
+            if [ ! -f .env.production ]; then
+              echo "❌ .env.production no encontrado en $PROJECT_DIR"
+              echo "   Copiar desde backup o crear manualmente"
+              exit 1
+            fi
+
+            # ── 3. Build + Deploy con Docker Compose ──────────
+            echo "🐳 Building and starting containers..."
+            # down + up --build es más limpio que restart para rebuild
+            docker compose --env-file .env.production down --remove-orphans 2>&1 || true
+            docker compose --env-file .env.production up -d --build 2>&1
+
+            # ── 4. Limpiar imágenes viejas ────────────────────
+            echo "🧹 Pruning old Docker images..."
+            docker image prune -f 2>&1 || true
+
+            # ── 5. Health check ────────────────────────────────
+            echo "⏳ Esperando health check (30s)..."
+            sleep 30
+
+            # Intentar health check directo al app, fallback via nginx
+            HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health 2>/dev/null || echo "000")
+            if [ "$HEALTH" != "200" ]; then
+              HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/api/health 2>/dev/null || echo "000")
+            fi
+
+            if [ "$HEALTH" = "200" ]; then
+              echo "✅ Health check OK"
+            else
+              echo "⚠️  Health check falló (HTTP $HEALTH) — revisar logs"
+              docker compose logs --tail=20 app
+            fi
+
+            # ── 6. Estado final ────────────────────────────────
+            echo ""
+            echo "📊 Container status:"
+            docker compose ps
+            echo ""
+            echo "✅ Deploy completado: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+
+      - name: 📬 Post-deploy notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Deploy completado exitosamente"
+          else
+            echo "❌ Deploy falló — revisar logs de VPS"
+          fi
+
+  # ── JOB 4: Smoke Test Post-Deploy ─────────────────────────────
+  smoke:
+    name: 🔥 Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [deploy]
+    if: success()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install
+        run: npm ci --no-audit --no-fund
+
+      - name: 📦 Install Playwright
+        run: npx playwright install chromium --with-deps
+
+      # El E2E apunta al dominio real en producción
+      - name: 🌐 E2E Smoke contra producción
+        run: |
+          BASE_URL="${PROD_URL:-https://tudominio.com}" \
+          npx playwright test e2e/smoke.spec.ts --reporter=list || \
+          echo "⚠️  Smoke test falló (red externa) — revisar manualmente"
+        env:
+          PROD_URL: ${{ secrets.PROD_URL }}

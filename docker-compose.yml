@@ -1,6 +1,28 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # URL usada por Vite en build time para WebSocket y fetch API del frontend
+        # En desarrollo local con Docker: https://localhost
+        # En producción: https://juanchospizza.com (o el dominio real)
+        VITE_API_URL: ${VITE_API_URL:-https://localhost}
+      # ── Network para build ────────────────────────────────────
+      # Docker Desktop en Windows tiene un proxy DNS virtual que
+      # falla con etiquetas IPv6 de npm registry. network: host
+      # hace que el build use la red del host directamente,
+      # saltando la virtualización DNS de Docker.
+      # Ver: https://docs.docker.com/engine/reference/commandline/buildx_build/#network
+      network: host
+    dns:
+      # DNS para contenedores en RUNTIME (fallback cuando el proxy
+      # DNS de Docker Desktop o el ISP fallan). NOTA: esto NO afecta
+      # `docker build` — el npm ci durante build usa el DNS del
+      # daemon de Docker. Para arreglar el build en Windows local,
+      # agregar a Docker Desktop > Settings > Docker Engine:
+      # { "dns": ["1.1.1.1", "8.8.8.8"] }
+      - 1.1.1.1
+      - 8.8.8.8
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -23,6 +45,16 @@ services:
       PG_IDLE_TIMEOUT: ${PG_IDLE_TIMEOUT:-30000}
       PG_CONNECT_TIMEOUT: ${PG_CONNECT_TIMEOUT:-5000}
     env_file: .env.production
+    # NOTA: NO bind-montear ./dist ni server/*.js desde el host acá.
+    # El Dockerfile (stage `build`) corre `vite build` y produce /app/dist
+    # dentro de la imagen; el stage `runtime` copia server/ limpio. dist/
+    # está en .gitignore (nunca se commitea) y el pipeline de deploy
+    # (.github/workflows/deploy-prod.yml) NO corre `vite build` en el VPS —
+    # solo hace git pull + `docker compose up -d --build`. Si se bind-montea
+    # ./dist:ro y no existe en el host (VPS nuevo o tras `down` con reset de
+    # paths), Docker crea un directorio VACÍO y lo monta sobre el dist/ que
+    # la imagen sí construyó -> frontend en blanco en producción. El
+    # contenedor debe correr 100% con lo que la imagen ya tiene adentro.
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,6 +83,9 @@ services:
         max-file: "3"
     networks:
       - app-network
+      - edge  # NECESARIO para tráfico saliente a internet (Bold, Gemini, SendGrid, etc.)
+             # app-network tiene internal:true y bloquea outbound. Sin edge,
+             # el contenedor no puede llamar APIs externas.
 
   # worker: removido -- `server/worker.js` no existe. El sistema BullMQ
   # completo (queues/, workers/, redis.js, worker.js) se eliminó del código
@@ -183,14 +218,14 @@ volumes:
   redis_data:
 
 networks:
-  # app-network: internal:true -- app/postgres/redis nunca son alcanzables
-  # directamente desde fuera del host, solo entre sí y desde nginx (que
-  # también está en `edge`).
+  # app-network: internal:true -- app, postgres y redis NO pueden hacer
+  # conexiones salientes a internet. Esto es seguro para postgres y redis.
+  # El servicio `app` también está en `edge` para poder llamar APIs externas
+  # (Bold, Mercado Pago, Gemini, SendGrid, webhooks).
   app-network:
     driver: bridge
     internal: true
-  # edge: red NO interna, solo nginx la usa -- es la única forma de que
-  # Docker publique realmente los puertos 80/443 (`ports:` no funciona en
-  # una red internal:true, ver auditoría 2026-07-26).
+  # edge: red NO interna, solo nginx la usa -- punto de entrada público
+  # del stack (80/443).
   edge:
     driver: bridge

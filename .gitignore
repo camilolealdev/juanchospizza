@@ -64,8 +64,10 @@ server/dist/
 
 # Imágenes generadas por IA
 guido_ai_images.json
-graphify-out/cache/
 nul
+
+# Graphify output (contiene rutas absolutas del sistema local)
+graphify-out/
 # Legacy / archived code
 _legacy/
 

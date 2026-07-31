@@ -14,8 +14,11 @@
 --     native JSON columns.
 --   * No columns or constraints are added beyond this dialect/type
 --     translation -- ids stay plain TEXT (app generates ids like
---     ord_<ts>_<rand>), and there are no FOREIGN KEY constraints because the
---     original SQLite schema never had any.
+--     ord_<ts>_<rand>).
+--   * Tables added later than the original SQLite schema (reviews,
+--     push_subscriptions, GastroPro CRM tables, etc.) do carry FOREIGN KEY
+--     constraints where server/db.js's initDB() defines them -- kept here to
+--     match initDB() exactly, per this file's own stated goal above.
 
 CREATE TABLE IF NOT EXISTS categories (
   id TEXT PRIMARY KEY,
@@ -36,7 +39,25 @@ CREATE TABLE IF NOT EXISTS products (
   popularidad INTEGER,
   vegetariano BOOLEAN,
   "isPremium" BOOLEAN,
-  exclusiva BOOLEAN
+  exclusiva BOOLEAN,
+  subcategory TEXT
+);
+
+-- Tamaños de pizza -- usados tanto por el menú fijo (sabores completos,
+-- sección "Pizza") como por el armador "Crea tu pizza" (base + N
+-- ingredientes incluidos, extras a precio_extra por ingrediente). precio
+-- es el precio ABSOLUTO del tamaño, no un delta -- distinto de
+-- menu_variants (que sí es delta) porque acá no hay "producto base" del
+-- cual partir, el tamaño ES el precio.
+-- No FK dependencies -- puede crearse en cualquier punto antes de que algo
+-- la referencie (nada la referencia hoy).
+CREATE TABLE IF NOT EXISTS pizza_sizes (
+  id TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  precio INTEGER NOT NULL,
+  incluidos INTEGER NOT NULL,
+  porciones INTEGER,
+  activo BOOLEAN DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS ingredients (
@@ -66,8 +87,10 @@ CREATE TABLE IF NOT EXISTS orders (
   "estimatedTime" INTEGER,
   "paymentMethod" TEXT,
   "clientId" TEXT,
-  "paymentStatus" TEXT,
-  "paymentProviderRef" TEXT
+  "paymentStatus" TEXT DEFAULT 'pending',
+  "paymentProviderRef" TEXT,
+  -- Fundación multi-sede: 'nemocon' | 'zipaquira'.
+  "locationId" TEXT DEFAULT 'nemocon'
 );
 
 CREATE TABLE IF NOT EXISTS campaigns (
@@ -99,8 +122,58 @@ CREATE TABLE IF NOT EXISTS clients (
   nivel TEXT DEFAULT 'bronce',
   tags JSON DEFAULT '[]'::json,
   estado TEXT DEFAULT 'activo',
-  cumpleanos DATE
+  cumpleanos DATE,
+  -- ── Ley 1581/2012 (Habeas Data, Colombia) ──────────────────────────
+  "dataTreatmentAuthorized" BOOLEAN DEFAULT FALSE,
+  "marketingAuthorized" BOOLEAN DEFAULT FALSE,
+  "consentAt" TIMESTAMPTZ,
+  "consentIp" VARCHAR(45),
+  "consentUserAgent" TEXT,
+  "consentVersion" VARCHAR(20)
 );
+
+-- Evita clientes duplicados por teléfono (orders.js resuelve el cliente
+-- por telefono con LIMIT 1 sin ORDER BY -- un duplicado fragmenta puntos
+-- de lealtad y puede pegar un pedido al cliente equivocado). Parcial
+-- porque telefono es nullable.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_telefono ON clients(telefono) WHERE telefono IS NOT NULL;
+
+-- ── Ley 1581/2012 (Habeas Data, Colombia) ────────────────────────
+-- Log histórico de cada decisión de consentimiento, para auditoría SIC.
+CREATE TABLE IF NOT EXISTS consent_eventos (
+  id TEXT PRIMARY KEY,
+  "clientId" TEXT REFERENCES clients(id),
+  "consentType" TEXT NOT NULL,
+  granted BOOLEAN NOT NULL,
+  ip VARCHAR(45),
+  "userAgent" TEXT,
+  source TEXT DEFAULT 'web',
+  path TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_consent_eventos_clientId ON consent_eventos("clientId");
+CREATE INDEX IF NOT EXISTS idx_consent_eventos_created ON consent_eventos(created_at);
+
+-- ── Derechos ARCO (Art. 14-15 Ley 1581) ───────────────────────────
+-- Consulta / rectificación / supresión / reclamo, con plazo de 10 días
+-- hábiles de respuesta.
+CREATE TABLE IF NOT EXISTS derechos_solicitudes (
+  id TEXT PRIMARY KEY,
+  "clientId" TEXT REFERENCES clients(id),
+  tipo TEXT NOT NULL,
+  descripcion TEXT,
+  "identificador" TEXT,
+  estado TEXT DEFAULT 'pendiente',
+  "respuesta" TEXT,
+  "respondedBy" TEXT,
+  "respondedAt" TIMESTAMPTZ,
+  "ipOrigen" VARCHAR(45),
+  "userAgent" TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_derechos_clientId ON derechos_solicitudes("clientId");
+CREATE INDEX IF NOT EXISTS idx_derechos_estado ON derechos_solicitudes(estado);
+CREATE INDEX IF NOT EXISTS idx_derechos_created ON derechos_solicitudes(created_at);
 
 CREATE TABLE IF NOT EXISTS inventory_items (
   id TEXT PRIMARY KEY,
@@ -142,8 +215,8 @@ CREATE TABLE IF NOT EXISTS recipes (
 
 CREATE TABLE IF NOT EXISTS recipe_ingredients (
   id TEXT PRIMARY KEY,
-  "recipeId" TEXT,
-  "itemId" TEXT,
+  "recipeId" TEXT REFERENCES recipes(id),
+  "itemId" TEXT REFERENCES inventory_items(id),
   nombre TEXT,
   cantidad REAL DEFAULT 0,
   unidad TEXT DEFAULT 'unidad',
@@ -233,6 +306,7 @@ CREATE TABLE IF NOT EXISTS reviews (
   status TEXT DEFAULT 'pending',
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_orderId ON reviews("orderId");
 
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id TEXT PRIMARY KEY,
@@ -244,11 +318,227 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Roster de staff (múltiples logins por rol, ej. varios cocineros por
+-- turno en cada sede). server/auth.js consulta esta tabla directamente
+-- (username/PIN, password+2FA para super admin).
+CREATE TABLE IF NOT EXISTS employees (
+  id TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  role TEXT NOT NULL,
+  "pinHash" TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  "locationId" TEXT,
+  activo BOOLEAN DEFAULT TRUE,
+  creado TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS shifts (
+  id TEXT PRIMARY KEY,
+  "locationId" TEXT NOT NULL,
+  status TEXT DEFAULT 'closed',
+  "openingCash" INTEGER DEFAULT 0,
+  "closingCash" INTEGER,
+  "expectedCash" INTEGER,
+  difference INTEGER,
+  "openedBy" TEXT REFERENCES employees(id),
+  "closedBy" TEXT,
+  "openedAt" TIMESTAMPTZ DEFAULT NOW(),
+  "closedAt" TIMESTAMPTZ,
+  notas TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_shifts_locationId_status ON shifts("locationId", status);
+CREATE INDEX IF NOT EXISTS idx_shifts_openedBy ON shifts("openedBy");
+
+-- === DINING TABLES ===
+-- Must be created before COMANDAS below -- comandas.tableId FKs to it.
+CREATE TABLE IF NOT EXISTS dining_tables (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  capacity INTEGER DEFAULT 4,
+  area TEXT DEFAULT 'salon',
+  "locationId" TEXT DEFAULT 'nemocon',
+  status TEXT DEFAULT 'available',
+  notes TEXT,
+  qr_code TEXT,
+  active BOOLEAN DEFAULT TRUE,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tables_name_location ON dining_tables (name, "locationId");
+CREATE INDEX IF NOT EXISTS idx_tables_location ON dining_tables("locationId");
+CREATE INDEX IF NOT EXISTS idx_tables_status ON dining_tables(status);
+
+-- === COMANDAS (mesa-based orders for dine-in) ===
+CREATE TABLE IF NOT EXISTS comandas (
+  id TEXT PRIMARY KEY,
+  "tableId" TEXT REFERENCES dining_tables(id),
+  "waiterName" TEXT,
+  status TEXT DEFAULT 'open',
+  "guestCount" INTEGER DEFAULT 1,
+  notes TEXT,
+  total INTEGER DEFAULT 0,
+  "openedAt" TIMESTAMPTZ DEFAULT NOW(),
+  "closedAt" TIMESTAMPTZ,
+  "locationId" TEXT DEFAULT 'nemocon'
+);
+
+CREATE TABLE IF NOT EXISTS comanda_items (
+  id TEXT PRIMARY KEY,
+  "comandaId" TEXT REFERENCES comandas(id),
+  "productId" TEXT,
+  "productName" TEXT NOT NULL,
+  quantity INTEGER DEFAULT 1,
+  "unitPrice" INTEGER DEFAULT 0,
+  subtotal INTEGER DEFAULT 0,
+  notes TEXT,
+  status TEXT DEFAULT 'pending',
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_comandas_tableId ON comandas("tableId");
+CREATE INDEX IF NOT EXISTS idx_comandas_status ON comandas(status);
+CREATE INDEX IF NOT EXISTS idx_comanda_items_comandaId ON comanda_items("comandaId");
+
+-- === PROCUREMENT / PURCHASE ORDERS ===
+CREATE TABLE IF NOT EXISTS purchase_orders (
+  id TEXT PRIMARY KEY,
+  "orderNumber" TEXT,
+  proveedor TEXT,
+  "fechaSolicitud" TIMESTAMPTZ DEFAULT NOW(),
+  "fechaEntrega" TIMESTAMPTZ,
+  items JSON DEFAULT '[]'::json,
+  total INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'pendiente',
+  notas TEXT,
+  "createdBy" TEXT,
+  "locationId" TEXT DEFAULT 'nemocon'
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_purchase_orders_number ON purchase_orders("orderNumber");
+
+-- === INVOICES (DIAN base structure) ===
+-- Ver docs/DIAN_MODULE_STATUS.md para estado completo de la integración.
+CREATE TABLE IF NOT EXISTS invoices (
+  id TEXT PRIMARY KEY,
+  "orderId" TEXT REFERENCES orders(id),
+  "invoiceNumber" TEXT,
+  "tipoDocumento" TEXT DEFAULT 'factura',
+  cufe TEXT,
+  xml TEXT,
+  pdf_url TEXT,
+  status TEXT DEFAULT 'pending',
+  "dianResponse" JSON,
+  "emisorInfo" JSON DEFAULT '{}'::json,
+  "receptorInfo" JSON DEFAULT '{}'::json,
+  notes TEXT,
+  "fechaVencimiento" TIMESTAMPTZ,
+  "tipoOperacion" TEXT DEFAULT '10',
+  moneda TEXT DEFAULT 'COP',
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "locationId" TEXT DEFAULT 'nemocon'
+);
+
+-- === CREDIT / DEBIT NOTES ===
+CREATE TABLE IF NOT EXISTS credit_notes (
+  id TEXT PRIMARY KEY,
+  "invoiceId" TEXT REFERENCES invoices(id),
+  "tipoNota" TEXT DEFAULT 'credito',
+  motivo TEXT,
+  monto INTEGER DEFAULT 0,
+  items JSON DEFAULT '[]'::json,
+  status TEXT DEFAULT 'pending',
+  xml TEXT,
+  cude TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "createdBy" TEXT
+);
+
+-- UNIQUE (no solo INDEX) para prevenir doble factura por orden bajo
+-- requests concurrentes -- ver server/migrate.js migración #7.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_orderId_unique ON invoices("orderId");
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_credit_notes_invoiceId ON credit_notes("invoiceId");
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_status ON purchase_orders(status);
+
+-- === QR MENU config ===
+CREATE TABLE IF NOT EXISTS qr_menu_config (
+  id TEXT PRIMARY KEY,
+  "locationId" TEXT DEFAULT 'nemocon',
+  title TEXT DEFAULT 'Menú',
+  "showPrices" BOOLEAN DEFAULT TRUE,
+  "showImages" BOOLEAN DEFAULT TRUE,
+  "showCombos" BOOLEAN DEFAULT TRUE,
+  "showPromotions" BOOLEAN DEFAULT TRUE,
+  categories JSON DEFAULT '[]'::json,
+  active BOOLEAN DEFAULT TRUE,
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- === CASH REGISTER ===
+CREATE TABLE IF NOT EXISTS cash_register (
+  id TEXT PRIMARY KEY,
+  "locationId" TEXT DEFAULT 'nemocon',
+  "openedAt" TIMESTAMPTZ DEFAULT NOW(),
+  "closedAt" TIMESTAMPTZ,
+  "openedBy" TEXT,
+  "closedBy" TEXT,
+  "initialAmount" INTEGER DEFAULT 0,
+  "expectedAmount" INTEGER DEFAULT 0,
+  "finalAmount" INTEGER,
+  difference INTEGER,
+  status TEXT DEFAULT 'open',
+  notes TEXT
+);
+
+-- === DIGITURNO — Turnos digitales para pedidos en local ===
+CREATE TABLE IF NOT EXISTS digiturno_tickets (
+  id TEXT PRIMARY KEY,
+  "ticketNumber" INTEGER NOT NULL,
+  "orderType" TEXT DEFAULT 'dine-in',
+  status TEXT DEFAULT 'waiting',
+  "locationId" TEXT DEFAULT 'nemocon',
+  "tableId" TEXT REFERENCES dining_tables(id),
+  "tableName" TEXT,
+  "customerName" TEXT,
+  "guestCount" INTEGER DEFAULT 1,
+  source TEXT DEFAULT 'local',
+  items JSON DEFAULT '[]'::json,
+  total INTEGER DEFAULT 0,
+  notes TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "calledAt" TIMESTAMPTZ,
+  "completedAt" TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_digiturno_status ON digiturno_tickets(status);
+CREATE INDEX IF NOT EXISTS idx_digiturno_locationId_status ON digiturno_tickets("locationId", status);
+CREATE INDEX IF NOT EXISTS idx_digiturno_createdAt ON digiturno_tickets("createdAt");
+-- UNIQUE constraint para evitar race condition en números secuenciales.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_digiturno_number_location ON digiturno_tickets("locationId", "ticketNumber");
+
+-- === TIPS ===
+CREATE TABLE IF NOT EXISTS tips (
+  id TEXT PRIMARY KEY,
+  "orderId" TEXT REFERENCES orders(id),
+  amount INTEGER NOT NULL,
+  method TEXT DEFAULT 'cash',
+  "waiterName" TEXT,
+  "locationId" TEXT DEFAULT 'nemocon',
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- === MIGRATION TRACKING (see server/migrate.js runMigrations()) ===
+CREATE TABLE IF NOT EXISTS "_schema_migrations" (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  hash TEXT NOT NULL,
+  applied_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders("createdAt");
 CREATE INDEX IF NOT EXISTS idx_orders_clientId ON orders("clientId");
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_number ON orders("orderNumber");
+CREATE INDEX IF NOT EXISTS idx_orders_locationId ON orders("locationId");
 CREATE INDEX IF NOT EXISTS idx_clients_estado ON clients(estado);
 CREATE INDEX IF NOT EXISTS idx_inventory_categoria ON inventory_items(categoria);
+CREATE INDEX IF NOT EXISTS idx_inventory_nombre ON inventory_items(nombre);
 CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipeId ON recipe_ingredients("recipeId");
 CREATE INDEX IF NOT EXISTS idx_expenses_fecha ON expenses(fecha);
 CREATE INDEX IF NOT EXISTS idx_menu_promotions_activo ON menu_promotions(activo);
