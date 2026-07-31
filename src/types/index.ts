@@ -136,7 +136,8 @@ export interface Order {
   status: OrderStatus;
   createdAt: string;
   estimatedTime: number;
-  paymentMethod: 'cash' | 'card' | 'nequi' | 'daviplata' | 'pse' | 'mercadopago' | 'paypal' | 'wompi' | 'bold' | 'whatsapp';
+  paymentMethod:
+    'cash' | 'card' | 'nequi' | 'daviplata' | 'pse' | 'mercadopago' | 'paypal' | 'wompi' | 'bold' | 'whatsapp';
   locationId?: LocationId;
 }
 
@@ -171,7 +172,28 @@ export type GastroModule =
   | 'comandas'
   | 'compras'
   | 'facturacion'
-  | 'digiturno';
+  | 'digiturno'
+  | 'derechos';
+
+// Solicitud de derechos ARCO (Ley 1581 Art. 14-15) — ver
+// server/routes/consent.js y server/schemas/derechos.js. Estados posibles:
+// 'pendiente' | 'en_proceso' | 'respondida' | 'rechazada'. respondedBy es el
+// id del empleado que respondió (req.auth.sub server-side, no falsificable).
+export interface DerechoSolicitud {
+  id: string;
+  clientId: string | null;
+  tipo: 'consulta' | 'rectificacion' | 'supresion' | 'reclamo';
+  descripcion: string | null;
+  identificador: string | null;
+  estado: 'pendiente' | 'en_proceso' | 'respondida' | 'rechazada';
+  respuesta: string | null;
+  respondedBy: string | null;
+  respondedAt: string | null;
+  ipOrigen: string | null;
+  createdAt: string;
+  clientName?: string | null;
+  clientPhone?: string | null;
+}
 
 export interface Client {
   id: string;
@@ -482,6 +504,7 @@ export interface InventoryItem {
   lote?: string;
   fechaVencimiento?: string;
   ubicacion?: string;
+  locationId?: LocationId;
   activo: boolean;
 }
 
@@ -527,6 +550,7 @@ export interface Expense {
   factura?: string;
   notas?: string;
   recurrente: boolean;
+  locationId?: LocationId;
 }
 
 export interface CashFlow {

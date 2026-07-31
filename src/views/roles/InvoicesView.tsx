@@ -160,7 +160,11 @@ const InvoicesView: React.FC<Props> = ({ locationId }) => {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setError('📋 Ver docs/DIAN_MODULE_STATUS.md para estado completo de la integración DIAN (campos [MANUAL] pendientes).')}
+            onClick={() =>
+              setError(
+                '📋 Ver docs/DIAN_MODULE_STATUS.md para estado completo de la integración DIAN (campos [MANUAL] pendientes).'
+              )
+            }
             className="px-3 py-2 bg-stone-900 hover:bg-stone-800 text-stone-400 rounded-xl text-[10px] font-bold transition-all"
           >
             <i className="fas fa-info-circle mr-1" />
@@ -208,7 +212,7 @@ const InvoicesView: React.FC<Props> = ({ locationId }) => {
             <div className="text-center py-16 text-stone-600">
               <i className="fas fa-file-invoice text-5xl mb-4 opacity-20" />
               <p className="font-bold text-lg mb-1">No hay facturas</p>
-              <p className="text-sm text-stone-700">Creá una desde el botón "Nueva Factura"</p>
+              <p className="text-sm text-stone-700">Creá una desde el botón &quot;Nueva Factura&quot;</p>
             </div>
           )}
 
@@ -221,9 +225,7 @@ const InvoicesView: React.FC<Props> = ({ locationId }) => {
               <div className="p-5 flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
-                    <span className="font-bold text-white text-lg">
-                      {inv.invoiceNumber || inv.id.slice(-8)}
-                    </span>
+                    <span className="font-bold text-white text-lg">{inv.invoiceNumber || inv.id.slice(-8)}</span>
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                         statusColors[inv.status] || 'bg-stone-800 text-stone-500'
@@ -284,7 +286,7 @@ const InvoicesView: React.FC<Props> = ({ locationId }) => {
                   </button>
 
                   {/* Send to DIAN */}
-                  {(inv.status === 'pending') && (
+                  {inv.status === 'pending' && (
                     <button
                       onClick={() => sendToDian(inv.id)}
                       disabled={sendingId === inv.id}
@@ -352,7 +354,11 @@ const InvoicesView: React.FC<Props> = ({ locationId }) => {
                   </div>
                   <pre className="p-5 text-[10px] text-stone-400 font-mono overflow-x-auto max-h-96 overflow-y-auto leading-relaxed">
                     {xmlContent ? (
-                      xmlContent.length > 2000 ? xmlContent.substring(0, 2000) + '\n\n... (truncado)' : xmlContent
+                      xmlContent.length > 2000 ? (
+                        xmlContent.substring(0, 2000) + '\n\n... (truncado)'
+                      ) : (
+                        xmlContent
+                      )
                     ) : (
                       <span className="text-stone-600 italic">XML no generado — creá la factura de nuevo</span>
                     )}
@@ -399,12 +405,8 @@ const InvoicesView: React.FC<Props> = ({ locationId }) => {
                 >
                   {cn.tipoNota === 'credito' ? 'NC - Nota Crédito' : 'ND - Nota Débito'}
                 </span>
-                <span className="font-bold text-white">
-                  ${(cn.monto || 0).toLocaleString('es-CO')}
-                </span>
-                <span className="text-xs text-stone-500">
-                  {new Date(cn.createdAt).toLocaleDateString('es-CO')}
-                </span>
+                <span className="font-bold text-white">${(cn.monto || 0).toLocaleString('es-CO')}</span>
+                <span className="text-xs text-stone-500">{new Date(cn.createdAt).toLocaleDateString('es-CO')}</span>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
                     cn.status === 'accepted'
@@ -434,7 +436,10 @@ const InvoicesView: React.FC<Props> = ({ locationId }) => {
           className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setShowCreate(false)}
         >
-          <div className="w-full max-w-md bg-stone-950 border border-white/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="w-full max-w-md bg-stone-950 border border-white/10 rounded-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-lg font-black text-white mb-5">Nueva Factura Electrónica</h3>
             <div className="space-y-4">
               <div>
@@ -481,9 +486,7 @@ const InvoicesView: React.FC<Props> = ({ locationId }) => {
             className="w-full max-w-2xl bg-stone-950 border border-white/10 rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-black text-white mb-2">
-              Firma Manual — {firmaInvoice.invoiceNumber}
-            </h3>
+            <h3 className="text-lg font-black text-white mb-2">Firma Manual — {firmaInvoice.invoiceNumber}</h3>
             <p className="text-[10px] text-stone-600 mb-5">
               Completá estos campos con los datos devueltos por el proveedor DIAN
             </p>

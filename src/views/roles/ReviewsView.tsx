@@ -30,6 +30,7 @@ const ReviewsView: React.FC = () => {
 
   useEffect(() => {
     load(tab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
   const updateStatus = async (id: string, status: 'approved' | 'rejected') => {

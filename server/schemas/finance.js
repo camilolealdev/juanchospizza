@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { str, strOpt, clampedNumberOpt, requiredPositiveNumber, bool, boolOpt } from './helpers.js';
+import { str, strOpt, strDefault, clampedNumberOpt, requiredPositiveNumber, bool, boolOpt } from './helpers.js';
 
 export const createExpenseSchema = z.object({
   categoria: str(50),
@@ -11,6 +11,7 @@ export const createExpenseSchema = z.object({
   factura: strOpt(100),
   notas: strOpt(500),
   recurrente: bool(),
+  locationId: strDefault(10, 'nemocon'),
 });
 
 export const updateExpenseSchema = z.object({
@@ -23,4 +24,5 @@ export const updateExpenseSchema = z.object({
   factura: strOpt(100),
   notas: strOpt(500),
   recurrente: boolOpt(),
+  locationId: str(10).optional(),
 });

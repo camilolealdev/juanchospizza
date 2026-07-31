@@ -26,10 +26,11 @@ router.get('/api/expenses', authMiddleware, requireRole('ADMIN'), async (req, re
 
 router.post('/api/expenses', authMiddleware, requireRole('ADMIN'), validate(createExpenseSchema), async (req, res) => {
   try {
-    const { categoria, descripcion, monto, fecha, metodo, proveedor, factura, notas, recurrente } = req.body;
+    const { categoria, descripcion, monto, fecha, metodo, proveedor, factura, notas, recurrente, locationId } =
+      req.body;
     const id = `exp_${Date.now()}`;
     await pool.query(
-      `INSERT INTO expenses (id, categoria, descripcion, monto, fecha, metodo, proveedor, factura, notas, recurrente) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      `INSERT INTO expenses (id, categoria, descripcion, monto, fecha, metodo, proveedor, factura, notas, recurrente, "locationId") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
       [
         id,
         categoria,
@@ -41,6 +42,7 @@ router.post('/api/expenses', authMiddleware, requireRole('ADMIN'), validate(crea
         factura,
         notas,
         recurrente,
+        locationId || 'nemocon',
       ]
     );
     res.status(201).json({ id });
@@ -56,7 +58,8 @@ router.put(
   validate(updateExpenseSchema),
   async (req, res) => {
     try {
-      const { categoria, descripcion, monto, fecha, metodo, proveedor, factura, notas, recurrente } = req.body;
+      const { categoria, descripcion, monto, fecha, metodo, proveedor, factura, notas, recurrente, locationId } =
+        req.body;
       // Update dinámico -- la versión anterior (agregada esta misma sesión,
       // fase 2) sobrescribía las 9 columnas siempre, aunque el body solo
       // trajera un campo, pisando el resto con NULL/false.
@@ -97,6 +100,10 @@ router.put(
       if (recurrente !== undefined) {
         params.push(recurrente);
         updates.push(`recurrente = $${params.length}`);
+      }
+      if (locationId !== undefined) {
+        params.push(locationId);
+        updates.push(`"locationId" = $${params.length}`);
       }
 
       if (!updates.length) return res.status(400).json({ error: 'Nada para actualizar' });

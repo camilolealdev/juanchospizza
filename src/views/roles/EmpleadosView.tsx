@@ -54,6 +54,7 @@ const EmpleadosView: React.FC = () => {
 
   useEffect(() => {
     loadEmployees();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openCreate = () => {

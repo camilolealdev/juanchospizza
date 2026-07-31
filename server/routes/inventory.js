@@ -43,10 +43,11 @@ router.post(
         lote,
         fechaVencimiento,
         ubicacion,
+        locationId,
       } = req.body;
       const id = `inv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       await pool.query(
-        `INSERT INTO inventory_items (id, nombre, categoria, "stockActual", "stockMinimo", "stockMaximo", unidad, "costoUnitario", proveedor, lote, "fechaVencimiento", ubicacion) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        `INSERT INTO inventory_items (id, nombre, categoria, "stockActual", "stockMinimo", "stockMaximo", unidad, "costoUnitario", proveedor, lote, "fechaVencimiento", ubicacion, "locationId") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
         [
           id,
           nombre,
@@ -60,6 +61,7 @@ router.post(
           lote,
           fechaVencimiento,
           ubicacion,
+          locationId || 'nemocon',
         ]
       );
       res.status(201).json({ id, nombre });
@@ -87,6 +89,7 @@ router.put(
         lote,
         fechaVencimiento,
         ubicacion,
+        locationId,
         activo,
       } = req.body;
       // Stock actual NO se toca acá a propósito -- eso solo cambia vía
@@ -135,6 +138,10 @@ router.put(
         params.push(ubicacion);
         updates.push(`ubicacion = $${params.length}`);
       }
+      if (locationId !== undefined) {
+        params.push(locationId);
+        updates.push(`"locationId" = $${params.length}`);
+      }
       if (activo !== undefined) {
         params.push(activo);
         updates.push(`activo = $${params.length}`);
@@ -162,7 +169,12 @@ router.post(
   validate(inventoryMovementSchema),
   async (req, res) => {
     try {
-      const { itemId, tipo, cantidad, motivo, referencia, usuario } = req.body;
+      const { itemId, tipo, cantidad, motivo, referencia } = req.body;
+      // [2026-07-30] Backlog: `usuario` era aceptado desde el body — un
+      // staff podía registrar movimientos bajo el nombre de otro (o
+      // cualquier string). Ahora se toma SIEMPRE de req.auth.sub (el id
+      // del empleado autenticado por el JWT) y el valor del body se ignora.
+      const usuario = req.auth?.sub || 'sistema';
       const item = await pool.query('SELECT * FROM inventory_items WHERE id = $1', [itemId]);
       if (!item.rows.length) return res.status(404).json({ error: 'Item not found' });
       const saldoAnterior = item.rows[0].stockActual;

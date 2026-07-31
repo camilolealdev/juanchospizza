@@ -108,6 +108,7 @@ const FinanzasView: React.FC = () => {
 
   useEffect(() => {
     loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (field: keyof typeof nuevoGasto, value: string | number) => {

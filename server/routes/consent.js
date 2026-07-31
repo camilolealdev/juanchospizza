@@ -31,7 +31,7 @@ import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import { postConsentSchema } from '../schemas/consent.js';
-import { derechoBaseSchema } from '../schemas/derechos.js';
+import { derechoBaseSchema, derechoResponseSchema } from '../schemas/derechos.js';
 import { consentRateLimit, derechoRateLimit } from '../middleware/rateLimit.js';
 
 const router = express.Router();
@@ -95,9 +95,12 @@ router.post('/api/consent', consentRateLimit, validate(postConsentSchema), async
     if (clientId) {
       const dataOk = consent_type === 'all' || consent_type === 'privacy_only' ? granted : null;
       const marketingOk =
-        consent_type === 'all' ? granted
-          : consent_type === 'marketing' ? granted
-            : consent_type === 'privacy_only' ? false
+        consent_type === 'all'
+          ? granted
+          : consent_type === 'marketing'
+            ? granted
+            : consent_type === 'privacy_only'
+              ? false
               : null;
 
       const sets = ['"consentAt" = NOW()', '"consentIp" = $2', '"consentUserAgent" = $3', '"consentVersion" = $4'];
@@ -173,10 +176,9 @@ router.post('/api/derecho/:tipo', derechoRateLimit, async (req, res) => {
     // Si la solicitud es de supresión y existe cliente, marcarlo como
     // 'borrado_solicitado' — el equipo debe revisar antes de borrar.
     if (tipo === 'supresion' && clientId) {
-      await pool.query(
-        `UPDATE clients SET estado = 'borrado_solicitado', "consentAt" = NOW() WHERE id = $1`,
-        [clientId]
-      );
+      await pool.query(`UPDATE clients SET estado = 'borrado_solicitado', "consentAt" = NOW() WHERE id = $1`, [
+        clientId,
+      ]);
     }
 
     // Registrar la solicitud.
@@ -185,15 +187,7 @@ router.post('/api/derecho/:tipo', derechoRateLimit, async (req, res) => {
       `INSERT INTO derechos_solicitudes
          (id, "clientId", tipo, descripcion, identificador, "ipOrigen", "userAgent")
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [
-        solicitudId,
-        clientId,
-        tipo,
-        descripcion,
-        email || telefono || null,
-        ip,
-        ua,
-      ]
+      [solicitudId, clientId, tipo, descripcion, email || telefono || null, ip, ua]
     );
 
     res.status(201).json({
@@ -216,35 +210,96 @@ router.post('/api/derecho/:tipo', derechoRateLimit, async (req, res) => {
   }
 });
 
-// ── GET /api/clients/:id/consent-history  (admin) ─────────────────────────
-router.get(
-  '/api/clients/:id/consent-history',
+// ── GET /api/derechos  (admin) ──────────────────────────────────────────
+// Lista TODAS las solicitudes ARCO (consulta/rectificación/supresión/
+// reclamo) con sus estados, para que el admin pueda responderlas dentro
+// del plazo legal de 10 días hábiles (Art. 15 Ley 1581). Filtros
+// opcionales: ?estado=pendiente|en_proceso|respondida|rechazada y
+// ?tipo=consulta|rectificacion|supresion|reclamo.
+router.get('/api/derechos', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+  try {
+    const { estado, tipo } = req.query;
+    const conditions = [];
+    const params = [];
+    if (estado) {
+      params.push(estado);
+      conditions.push(`estado = $${params.length}`);
+    }
+    if (tipo) {
+      params.push(tipo);
+      conditions.push(`tipo = $${params.length}`);
+    }
+    const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
+    const result = await pool.query(
+      `SELECT ds.*, c.nombre AS "clientName", c.telefono AS "clientPhone"
+       FROM derechos_solicitudes ds
+       LEFT JOIN clients c ON c.id = ds."clientId"
+       ${where}
+       ORDER BY ds.created_at DESC LIMIT 500`,
+      params
+    );
+    res.json(result.rows);
+  } catch (_e) {
+    res.status(500).json({ error: 'Error al listar solicitudes ARCO' });
+  }
+});
+
+// ── PATCH /api/derechos/:id  (admin) ─────────────────────────────────────
+// Marca la solicitud como en proceso / respondida / rechazada y registra la
+// respuesta del negocio + quién la respondió (req.auth.sub, no algo
+// falsificable del body) + cuándo — evidencia de cumplimiento del plazo
+// ante la SIC.
+router.patch(
+  '/api/derechos/:id',
   authMiddleware,
   requireRole('ADMIN', 'MARKETING'),
+  validate(derechoResponseSchema),
   async (req, res) => {
     try {
-      const [eventos, solicitudes] = await Promise.all([
-        pool.query(
-          `SELECT id, "consentType", granted, ip, path, created_at FROM consent_eventos
-           WHERE "clientId" = $1 ORDER BY created_at DESC LIMIT 200`,
-          [req.params.id]
-        ),
-        pool.query(
-          `SELECT id, tipo, descripcion, identificador, estado, "respuesta", "respondedBy",
-                  "respondedAt", created_at FROM derechos_solicitudes
-           WHERE "clientId" = $1 ORDER BY created_at DESC LIMIT 200`,
-          [req.params.id]
-        ),
-      ]);
-      res.json({
-        client_id: req.params.id,
-        consent_events: eventos.rows,
-        derechos_solicitudes: solicitudes.rows,
-      });
-    } catch (e) {
-      res.status(500).json({ error: 'Error al consultar historial de consentimiento' });
+      const existing = await pool.query('SELECT id FROM derechos_solicitudes WHERE id = $1', [req.params.id]);
+      if (!existing.rows.length) return res.status(404).json({ error: 'Solicitud no encontrada' });
+
+      const { estado, respuesta } = req.body;
+      const sets = ['estado = $2', '"respondedBy" = $3', '"respondedAt" = NOW()'];
+      const params = [req.params.id, estado, req.auth?.sub || null];
+      if (respuesta !== undefined) {
+        params.push(respuesta);
+        sets.push(`respuesta = $${params.length}`);
+      }
+
+      await pool.query(`UPDATE derechos_solicitudes SET ${sets.join(', ')} WHERE id = $1`, params);
+      const updated = await pool.query('SELECT * FROM derechos_solicitudes WHERE id = $1', [req.params.id]);
+      res.json(updated.rows[0]);
+    } catch (_e) {
+      res.status(500).json({ error: 'Error al actualizar solicitud ARCO' });
     }
   }
 );
+
+// ── GET /api/clients/:id/consent-history  (admin) ─────────────────────────
+router.get('/api/clients/:id/consent-history', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
+  try {
+    const [eventos, solicitudes] = await Promise.all([
+      pool.query(
+        `SELECT id, "consentType", granted, ip, path, created_at FROM consent_eventos
+           WHERE "clientId" = $1 ORDER BY created_at DESC LIMIT 200`,
+        [req.params.id]
+      ),
+      pool.query(
+        `SELECT id, tipo, descripcion, identificador, estado, "respuesta", "respondedBy",
+                  "respondedAt", created_at FROM derechos_solicitudes
+           WHERE "clientId" = $1 ORDER BY created_at DESC LIMIT 200`,
+        [req.params.id]
+      ),
+    ]);
+    res.json({
+      client_id: req.params.id,
+      consent_events: eventos.rows,
+      derechos_solicitudes: solicitudes.rows,
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al consultar historial de consentimiento' });
+  }
+});
 
 export default router;

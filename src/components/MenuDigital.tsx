@@ -282,13 +282,24 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
   }, [cart, customerName, customerPhone, customerAddress, cartTotal]);
 
   const handleWhatsApp = useCallback(async () => {
+    // [2026-07-30] Backlog: window.open DESPUÉS de un await pierde el user
+    // gesture y los popup blockers lo bloquean (audit P2). Se abre la
+    // ventana en blanco SINCRÓNICAMENTE (dentro del gesture del click) y se
+    // navega tras el registro del pedido.
+    const url = `https://wa.me/573117074843?text=${encodeURIComponent(whatsappMessage)}`;
+    const waWin = window.open('', '_blank');
     try {
       await api.createOrder({ ...buildOrderDraft(), paymentMethod: 'whatsapp' });
     } catch {
       // WhatsApp se abre igual aunque falle el registro
     }
-    const url = `https://wa.me/573117074843?text=${encodeURIComponent(whatsappMessage)}`;
-    window.open(url, '_blank');
+    if (waWin) {
+      waWin.location.href = url;
+    } else {
+      // Popup bloqueado por el navegador: último recurso, navegamos en la
+      // misma pestaña (el pedido ya se registró vía createOrder).
+      window.location.href = url;
+    }
   }, [whatsappMessage, buildOrderDraft]);
 
   const scrollTab = useCallback((dir: number) => {

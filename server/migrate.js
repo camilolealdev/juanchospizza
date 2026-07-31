@@ -295,6 +295,29 @@ const MIGRATIONS = [
       `);
     },
   },
+
+  // ── 009: Multi-sede para inventario y gastos + índice compuesto ────
+  // Cierre del backlog 2026-07-30: inventory_items y expenses no tenían
+  // locationId (el resto del CRM multi-sede sí: orders, comandas, shifts,
+  // cash_register, digiturno, purchase_orders, invoices, tips). Sin esto,
+  // los reportes por sede de Finanzas/Inventario mezclaban las dos sedes.
+  // También agrega el índice compuesto (locationId, createdAt) en orders,
+  // la query más frecuente del dashboard/ventas por sede. Para
+  // instalaciones nuevas, initDB() en db.js ya aplica columnas e índices
+  // — la migración queda como no-op idempotente.
+  {
+    id: 9,
+    name: 'Add locationId to inventory_items and expenses, composite index on orders',
+    up: async (pool) => {
+      await pool.query(`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS "locationId" TEXT DEFAULT 'nemocon'`);
+      await pool.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS "locationId" TEXT DEFAULT 'nemocon'`);
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_inventory_locationId ON inventory_items("locationId")');
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_expenses_locationId ON expenses("locationId")');
+      await pool.query(
+        'CREATE INDEX IF NOT EXISTS idx_orders_locationId_createdAt ON orders("locationId", "createdAt")'
+      );
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────

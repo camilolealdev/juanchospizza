@@ -24,7 +24,6 @@ export default config;
 // queremos que el sitio cargue y el equipo vea el warning claramente en
 // DevTools. Dev local sigue funcionando porque .env fija VITE_API_URL.
 if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
-  // eslint-disable-next-line no-console
   console.warn(
     '[config] VITE_API_URL no está definido en producción — las llamadas al backend\n' +
       '          irán al mismo origen del frontend. Si tu backend está en otro\n' +

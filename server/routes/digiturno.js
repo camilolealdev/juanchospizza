@@ -63,72 +63,85 @@ router.get(
 
 // GET /api/digiturno/stats — estadísticas diarias del digiturno
 // Retorna: tickets hoy, servidos hoy, tiempo promedio de espera, etc.
-router.get('/api/digiturno/stats', async (req, res) => {
-  try {
-    const { locationId } = req.query;
+// [2026-07-30] Backlog: este endpoint estaba SIN auth (el resto del
+// digiturno admin sí lo tiene) — cualquiera podía consultar volúmenes
+// de operación de todas las sedes. Ahora exige sesión de staff igual
+// que GET /api/digiturno, con scoping por sede para no-ADMIN.
+router.get(
+  '/api/digiturno/stats',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR'),
+  requireSameLocation((req) => req.query.locationId),
+  async (req, res) => {
+    try {
+      const { locationId } = req.query;
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
 
-    let baseWhere = '"createdAt" >= $1 AND "createdAt" <= $2';
-    const params = [todayStart.toISOString(), todayEnd.toISOString()];
+      let baseWhere = '"createdAt" >= $1 AND "createdAt" <= $2';
+      const params = [todayStart.toISOString(), todayEnd.toISOString()];
 
-    if (locationId) {
-      baseWhere += ` AND "locationId" = $${params.length + 1}`;
-      params.push(locationId);
-    }
+      if (locationId) {
+        baseWhere += ` AND "locationId" = $${params.length + 1}`;
+        params.push(locationId);
+      }
 
-    // Tickets creados hoy
-    const createdToday = await pool.query(`SELECT COUNT(*) AS count FROM digiturno_tickets WHERE ${baseWhere}`, params);
+      // Tickets creados hoy
+      const createdToday = await pool.query(
+        `SELECT COUNT(*) AS count FROM digiturno_tickets WHERE ${baseWhere}`,
+        params
+      );
 
-    // Tickets servidos hoy (status = served)
-    const servedToday = await pool.query(
-      `SELECT COUNT(*) AS count FROM digiturno_tickets WHERE status = 'served' AND ${baseWhere}`,
-      params
-    );
+      // Tickets servidos hoy (status = served)
+      const servedToday = await pool.query(
+        `SELECT COUNT(*) AS count FROM digiturno_tickets WHERE status = 'served' AND ${baseWhere}`,
+        params
+      );
 
-    // Tickets cancelados hoy
-    const cancelledToday = await pool.query(
-      `SELECT COUNT(*) AS count FROM digiturno_tickets WHERE status = 'cancelled' AND ${baseWhere}`,
-      params
-    );
+      // Tickets cancelados hoy
+      const cancelledToday = await pool.query(
+        `SELECT COUNT(*) AS count FROM digiturno_tickets WHERE status = 'cancelled' AND ${baseWhere}`,
+        params
+      );
 
-    // Tiempo promedio de espera (minutos) desde creación hasta llamado/completado
-    // Usa la misma lógica de baseWhere + params que las demás consultas
-    let avgWhere = '"calledAt" IS NOT NULL AND "createdAt" >= $1 AND "createdAt" <= $2';
-    const avgParams = [todayStart.toISOString(), todayEnd.toISOString()];
-    if (locationId) {
-      avgWhere += ` AND "locationId" = $${avgParams.length + 1}`;
-      avgParams.push(locationId);
-    }
-    const avgWait = await pool.query(
-      `SELECT AVG(EXTRACT(EPOCH FROM ("calledAt" - "createdAt")) / 60) AS avg_min
+      // Tiempo promedio de espera (minutos) desde creación hasta llamado/completado
+      // Usa la misma lógica de baseWhere + params que las demás consultas
+      let avgWhere = '"calledAt" IS NOT NULL AND "createdAt" >= $1 AND "createdAt" <= $2';
+      const avgParams = [todayStart.toISOString(), todayEnd.toISOString()];
+      if (locationId) {
+        avgWhere += ` AND "locationId" = $${avgParams.length + 1}`;
+        avgParams.push(locationId);
+      }
+      const avgWait = await pool.query(
+        `SELECT AVG(EXTRACT(EPOCH FROM ("calledAt" - "createdAt")) / 60) AS avg_min
        FROM digiturno_tickets WHERE ${avgWhere}`,
-      avgParams
-    );
+        avgParams
+      );
 
-    // Cola actual
-    let queueQuery = `SELECT COUNT(*) AS count FROM digiturno_tickets WHERE status IN ('waiting', 'preparing', 'ready')`;
-    const queueParams = [];
-    if (locationId) {
-      queueParams.push(locationId);
-      queueQuery += ` AND "locationId" = $1`;
+      // Cola actual
+      let queueQuery = `SELECT COUNT(*) AS count FROM digiturno_tickets WHERE status IN ('waiting', 'preparing', 'ready')`;
+      const queueParams = [];
+      if (locationId) {
+        queueParams.push(locationId);
+        queueQuery += ` AND "locationId" = $1`;
+      }
+      const queueCount = await pool.query(queueQuery, queueParams);
+
+      res.json({
+        ticketsToday: parseInt(createdToday.rows[0]?.count || '0', 10),
+        servedToday: parseInt(servedToday.rows[0]?.count || '0', 10),
+        cancelledToday: parseInt(cancelledToday.rows[0]?.count || '0', 10),
+        averageWaitMinutes: Math.round(parseFloat(avgWait.rows[0]?.avg_min || '0') * 10) / 10,
+        currentQueueCount: parseInt(queueCount.rows[0]?.count || '0', 10),
+      });
+    } catch (_e) {
+      res.status(500).json({ error: 'Error al obtener estadísticas' });
     }
-    const queueCount = await pool.query(queueQuery, queueParams);
-
-    res.json({
-      ticketsToday: parseInt(createdToday.rows[0]?.count || '0', 10),
-      servedToday: parseInt(servedToday.rows[0]?.count || '0', 10),
-      cancelledToday: parseInt(cancelledToday.rows[0]?.count || '0', 10),
-      averageWaitMinutes: Math.round(parseFloat(avgWait.rows[0]?.avg_min || '0') * 10) / 10,
-      currentQueueCount: parseInt(queueCount.rows[0]?.count || '0', 10),
-    });
-  } catch (_e) {
-    res.status(500).json({ error: 'Error al obtener estadísticas' });
   }
-});
+);
 
 // GET /api/digiturno/current — obtener el ticket actual (el más antiguo en preparing)
 router.get(

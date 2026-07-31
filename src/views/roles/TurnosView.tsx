@@ -53,6 +53,7 @@ const TurnosView: React.FC<TurnosViewProps> = ({ locationId }) => {
 
   useEffect(() => {
     loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationId]);
 
   const handleOpen = async () => {

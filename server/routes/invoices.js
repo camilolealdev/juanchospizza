@@ -387,7 +387,12 @@ router.post(
   validate(createCreditNoteSchema),
   async (req, res) => {
     try {
-      const { invoiceId, tipoNota, motivo, monto, items, createdBy } = req.body;
+      const { invoiceId, tipoNota, motivo, monto, items } = req.body;
+      // [2026-07-30] Backlog: `createdBy` era aceptado desde el body — un
+      // staff podía crear notas atribuidas a otro empleado. Ahora se toma
+      // SIEMPRE de req.auth.sub (el id del empleado autenticado por el JWT)
+      // y el valor del body se ignora.
+      const createdBy = req.auth?.sub || null;
 
       // Verificar factura
       const invoice = await pool.query('SELECT * FROM invoices WHERE id = $1', [invoiceId]);

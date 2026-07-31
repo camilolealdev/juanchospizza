@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import logger from './services/logger.js';
 import { pool, initDB } from './db.js';
 import { initPush } from './push.js';
-import { generalRateLimit } from './middleware/rateLimit.js';
+import { generalRateLimit, serviceRateLimit } from './middleware/rateLimit.js';
 import { initServiceKeys, serviceKeyMiddleware } from './middleware/serviceKey.js';
 import { initRedis, isRedisAvailable } from './services/redis.js';
 import { initWebSocket } from './websocket.js';
@@ -179,8 +179,14 @@ app.get('/api/health', async (_req, res) => {
 // pueda scrape sin interferencias)
 app.get('/api/metrics', metricsHandler);
 
-app.use(generalRateLimit);
+// serviceKeyMiddleware corre ANTES del rate limiter para que req.auth.type
+// ya esté seteado cuando el limiter decide qué balde usar -- un bot
+// autenticado (n8n/cron) usa serviceRateLimit (por nombre de servicio, techo
+// alto) en vez de generalRateLimit (por IP, pensado para navegadores).
 app.use(serviceKeyMiddleware);
+app.use((req, res, next) =>
+  req.auth?.type === 'service' ? serviceRateLimit(req, res, next) : generalRateLimit(req, res, next)
+);
 
 // CSRF protection (solo para API, permite health/metrics sin token)
 app.use('/api', csrfProtection);

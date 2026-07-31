@@ -36,6 +36,9 @@ const ComprasView: React.FC<Props> = ({ locationId }) => {
 
   useEffect(() => {
     loadOrders();
+    // loadOrders es redefinida cada render (no memoizada) — incluirla
+    // refirearía el efecto en cada render en vez de al cambiar sede/filtro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationId, statusFilter]);
 
   const createOrder = async () => {

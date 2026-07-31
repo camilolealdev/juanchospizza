@@ -53,7 +53,12 @@ router.post(
   validate(createPurchaseOrderSchema),
   async (req, res) => {
     try {
-      const { proveedor, items, fechaEntrega, notas, locationId, createdBy } = req.body;
+      const { proveedor, items, fechaEntrega, notas, locationId } = req.body;
+      // [2026-07-30] Backlog: `createdBy` era aceptado desde el body — un
+      // staff podía crear órdenes atribuidas a otro empleado (o a un
+      // string cualquiera). Ahora se toma SIEMPRE de req.auth.sub (el id
+      // del empleado autenticado por el JWT) y el valor del body se ignora.
+      const createdBy = req.auth?.sub || null;
       const id = `po_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const orderNumber = `PO-${String(Date.now()).slice(-6)}`;
       const total = items.reduce((sum, it) => sum + it.cantidad * it.precioUnitario, 0);
@@ -69,7 +74,7 @@ router.post(
           total,
           fechaEntrega || null,
           notas || null,
-          createdBy || null,
+          createdBy,
           locationId,
         ]
       );

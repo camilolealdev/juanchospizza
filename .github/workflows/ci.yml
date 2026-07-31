@@ -5,7 +5,7 @@
 #   Push to master → build + Docker image + deploy signal
 #
 # Convenciones:
-#   - Node 20, caché npm
+#   - Node 22 (LTS) — alineado con el Dockerfile, caché npm
 #   - audit no bloqueante (solo high+)
 #   - Docker build multi-stage
 
@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
 
 jobs:
   # ── JOB 1: Lint + Typecheck + Build + Test ──────────────────
@@ -47,9 +47,12 @@ jobs:
       - name: 📦 Install
         run: npm ci --no-audit --no-fund
 
+      # [2026-07-30] Backlog: lint estricto — se eliminó --quiet (ocultaba
+      # warnings) y continue-on-error (dejaba pasar regresiones). npm run
+      # lint usa --max-warnings 0 + --report-unused-disable-directives, la
+      # misma configuración que exige el pre-commit local.
       - name: 🔍 Lint
-        run: npx eslint . --ext .ts,.tsx,.js --quiet
-        continue-on-error: true
+        run: npm run lint
 
       - name: 🔷 Typecheck
         run: npx tsc --noEmit
@@ -86,8 +89,32 @@ jobs:
   e2e:
     name: E2E Smoke Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     needs: [quality]
+    env:
+      DATABASE_URL: postgres://test:test@localhost:5432/test
+      JWT_SECRET: ci-test-secret-do-not-use-in-prod
+      NODE_ENV: test
+
+    # Postgres real para los tests e2e: api-smoke pega a /api/health,
+    # /api/metrics y /api/digiturno/queue; full-audit navega todos los
+    # módulos del CRM (requiere login → employees en DB). El webServer de
+    # playwright arranca `npm run dev:all` (Vite + Express) en CI, así que
+    # el backend necesita una DB real disponible.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v4
@@ -107,8 +134,11 @@ jobs:
       - name: 🏗️ Build
         run: npx vite build
 
-      - name: 🧪 Run E2E smoke tests
-        run: npx playwright test --reporter=list e2e/smoke.spec.ts e2e/api-smoke.spec.ts
+      # [2026-07-30] Backlog: full-audit.spec.ts (26 tests, audit de
+      # consola + navegación de módulos) nunca corría en CI — solo en
+      # local. Se agrega al mismo run de playwright.
+      - name: 🧪 Run E2E tests
+        run: npx playwright test --reporter=list e2e/smoke.spec.ts e2e/api-smoke.spec.ts e2e/full-audit.spec.ts
 
       - name: 📊 Upload Playwright report
         if: always()

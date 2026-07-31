@@ -188,6 +188,8 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   lote TEXT,
   "fechaVencimiento" TIMESTAMPTZ,
   ubicacion TEXT,
+  -- Fundación multi-sede: misma política que orders.
+  "locationId" TEXT DEFAULT 'nemocon',
   activo BOOLEAN DEFAULT TRUE
 );
 
@@ -233,7 +235,8 @@ CREATE TABLE IF NOT EXISTS expenses (
   proveedor TEXT,
   factura TEXT,
   notas TEXT,
-  recurrente BOOLEAN DEFAULT FALSE
+  recurrente BOOLEAN DEFAULT FALSE,
+  "locationId" TEXT DEFAULT 'nemocon'
 );
 
 CREATE TABLE IF NOT EXISTS loyalty_points (
@@ -536,10 +539,15 @@ CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders("createdAt");
 CREATE INDEX IF NOT EXISTS idx_orders_clientId ON orders("clientId");
 CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_number ON orders("orderNumber");
 CREATE INDEX IF NOT EXISTS idx_orders_locationId ON orders("locationId");
+-- Índice compuesto (sede, fecha) para el dashboard/ventas por sede -- las
+-- queries más frecuentes filtran por sede Y rango de fecha juntos.
+CREATE INDEX IF NOT EXISTS idx_orders_locationId_createdAt ON orders("locationId", "createdAt");
 CREATE INDEX IF NOT EXISTS idx_clients_estado ON clients(estado);
 CREATE INDEX IF NOT EXISTS idx_inventory_categoria ON inventory_items(categoria);
 CREATE INDEX IF NOT EXISTS idx_inventory_nombre ON inventory_items(nombre);
+CREATE INDEX IF NOT EXISTS idx_inventory_locationId ON inventory_items("locationId");
 CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipeId ON recipe_ingredients("recipeId");
 CREATE INDEX IF NOT EXISTS idx_expenses_fecha ON expenses(fecha);
+CREATE INDEX IF NOT EXISTS idx_expenses_locationId ON expenses("locationId");
 CREATE INDEX IF NOT EXISTS idx_menu_promotions_activo ON menu_promotions(activo);
 CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status);

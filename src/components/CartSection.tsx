@@ -64,6 +64,19 @@ const CartSection: React.FC = () => {
       showToast('Completa todos los datos del pedido');
       return;
     }
+    // [2026-07-30] Backlog: window.open DESPUÉS de un await pierde el user
+    // gesture y los popup blockers lo bloquean (audit P2). Se arma el
+    // mensaje y se abre la ventana en blanco SINCRÓNICAMENTE (dentro del
+    // gesture del click) antes del await; se navega tras el registro.
+    let msg = `🍕 *Nuevo Pedido Juancho's Pizza*\n\n*Cliente:* ${customerName}\n*Dirección:* ${customerAddress}\n\n`;
+    cart.forEach((item, i) => {
+      msg += `*${i + 1}. ${item.name}* x${item.quantity} — $${(item.price * item.quantity).toLocaleString()}\n`;
+      if (item.details) msg += `   _${item.details}_\n`;
+    });
+    msg += `\n*Total: $${cartTotal.toLocaleString()}*\n\n⏱️ _Tiempo estimado: 25-35 min_`;
+    const url = `https://wa.me/573117074843?text=${encodeURIComponent(msg)}`;
+    const waWin = window.open('', '_blank');
+
     setIsProcessing(true);
     try {
       await api.createOrder({ ...buildOrderDraft(), paymentMethod: 'whatsapp' });
@@ -73,14 +86,13 @@ const CartSection: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
-    let msg = `🍕 *Nuevo Pedido Juancho's Pizza*\n\n*Cliente:* ${customerName}\n*Dirección:* ${customerAddress}\n\n`;
-    cart.forEach((item, i) => {
-      msg += `*${i + 1}. ${item.name}* x${item.quantity} — $${(item.price * item.quantity).toLocaleString()}\n`;
-      if (item.details) msg += `   _${item.details}_\n`;
-    });
-    msg += `\n*Total: $${cartTotal.toLocaleString()}*\n\n⏱️ _Tiempo estimado: 25-35 min_`;
-    const url = `https://wa.me/573117074843?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
+    if (waWin) {
+      waWin.location.href = url;
+    } else {
+      // Popup bloqueado por el navegador: último recurso, navegamos en la
+      // misma pestaña (el pedido ya se registró vía createOrder).
+      window.location.href = url;
+    }
   };
 
   return (

@@ -184,10 +184,14 @@ export async function initDB() {
         lote TEXT,
         "fechaVencimiento" TIMESTAMPTZ,
         ubicacion TEXT,
+        "locationId" TEXT DEFAULT 'nemocon',
         activo BOOLEAN DEFAULT TRUE
       )
     `);
+    // Backfill multi-sede para bases ya existentes (misma política que orders)
+    await pool.query(`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS "locationId" TEXT DEFAULT 'nemocon'`);
     await pool.query('CREATE INDEX IF NOT EXISTS idx_inventory_nombre ON inventory_items(nombre)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_inventory_locationId ON inventory_items("locationId")');
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inventory_movements (
@@ -238,9 +242,11 @@ export async function initDB() {
         proveedor TEXT,
         factura TEXT,
         notas TEXT,
-        recurrente BOOLEAN DEFAULT FALSE
+        recurrente BOOLEAN DEFAULT FALSE,
+        "locationId" TEXT DEFAULT 'nemocon'
       )
     `);
+    await pool.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS "locationId" TEXT DEFAULT 'nemocon'`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS loyalty_points (
@@ -424,9 +430,13 @@ export async function initDB() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_inventory_categoria ON inventory_items(categoria)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipeId ON recipe_ingredients("recipeId")');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_expenses_fecha ON expenses(fecha)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_expenses_locationId ON expenses("locationId")');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_menu_promotions_activo ON menu_promotions(activo)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_locationId ON orders("locationId")');
+    // Índice compuesto (sede, fecha) para el dashboard/ventas por sede --
+    // las queries más frecuentes filtran por sede Y rango de fecha juntos.
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_orders_locationId_createdAt ON orders("locationId", "createdAt")');
 
     // === DINING TABLES ===
     // Must be created before COMANDAS below -- comandas.tableId FKs to it,

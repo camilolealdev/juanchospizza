@@ -13,6 +13,7 @@ export const createInventoryItemSchema = z.object({
   lote: strOpt(50),
   fechaVencimiento: strOpt(30),
   ubicacion: strOpt(100),
+  locationId: strDefault(10, 'nemocon'),
 });
 
 // stockActual deliberadamente excluido -- solo cambia vía /inventory/movement.
@@ -27,6 +28,7 @@ export const updateInventoryItemSchema = z.object({
   lote: strOpt(50),
   fechaVencimiento: strOpt(30),
   ubicacion: strOpt(100),
+  locationId: str(10).optional(),
   activo: boolOpt(),
 });
 

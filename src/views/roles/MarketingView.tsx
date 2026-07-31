@@ -38,6 +38,7 @@ const MarketingView: React.FC = () => {
 
   useEffect(() => {
     loadCampaigns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const campaignStats = campaigns.map((c) => ({ name: c.name.substring(0, 15), conv: c.conversions }));

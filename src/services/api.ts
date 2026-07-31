@@ -122,6 +122,7 @@ export interface InventoryItem {
   lote?: string;
   fechaVencimiento?: string;
   ubicacion?: string;
+  locationId?: string;
   activo?: boolean;
 }
 type InventoryItemPayload = Partial<InventoryItem>;
@@ -1195,6 +1196,26 @@ export const api = {
   async getDigiturnoStats(locationId?: string) {
     const qs = locationId ? `?locationId=${locationId}` : '';
     return apiFetch(`/api/digiturno/stats${qs}`);
+  },
+
+  // ---- HABEAS DATA / DERECHOS ARCO (admin) ----
+  // Solicitudes ARCO (consulta/rectificación/supresión/reclamo, Ley 1581
+  // Art. 14-15) registradas desde el banner de consentimiento. El staff
+  // las responde acá dentro del plazo de 10 días hábiles.
+  async getDerechos(params?: { estado?: string; tipo?: string }) {
+    const query = new URLSearchParams();
+    if (params?.estado) query.set('estado', params.estado);
+    if (params?.tipo) query.set('tipo', params.tipo);
+    const qs = query.toString();
+    return apiFetch(`/api/derechos${qs ? `?${qs}` : ''}`);
+  },
+
+  async respondDerecho(id: string, data: { estado: string; respuesta?: string }) {
+    return apiFetch(`/api/derechos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
   },
 
   // ---- PRINT ----

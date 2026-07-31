@@ -271,11 +271,11 @@ const MenuInteligente: React.FC = () => {
     }
   };
 
-  // loadAll is redefined every render (not memoized) -- including it would
-  // refire this on every render instead of once on mount.
-
   useEffect(() => {
     loadAll();
+    // loadAll is redefined every render (not memoized) -- including it would
+    // refire this on every render instead of once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const reloadProductos = () =>
@@ -486,7 +486,13 @@ const MenuInteligente: React.FC = () => {
   const openEditTamano = (s: PizzaMenuSize) => {
     setModalMode('edit');
     setModalEntity('tamano');
-    setTf({ nombre: s.nombre, precio: s.precio, incluidos: s.incluidos, porciones: s.porciones || 0, activo: s.activo });
+    setTf({
+      nombre: s.nombre,
+      precio: s.precio,
+      incluidos: s.incluidos,
+      porciones: s.porciones || 0,
+      activo: s.activo,
+    });
     setEditTamanoId(s.id);
     setModalOpen(true);
   };
@@ -805,9 +811,7 @@ const MenuInteligente: React.FC = () => {
       return (
         <div className="space-y-5">
           <div>
-            <label className="text-[9px] font-black text-stone-500 uppercase tracking-widest mb-2 block">
-              Nombre
-            </label>
+            <label className="text-[9px] font-black text-stone-500 uppercase tracking-widest mb-2 block">Nombre</label>
             <input
               value={tf.nombre}
               onChange={(e) => setTf((v) => ({ ...v, nombre: e.target.value }))}

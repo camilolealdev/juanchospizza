@@ -62,7 +62,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test.afterEach(async ({}, testInfo) => {
+test.afterEach(async (_fixtures, testInfo) => {
   const errors = ALL_CONSOLE_ENTRIES.filter((e) => e.type === 'error');
   const warnings = ALL_CONSOLE_ENTRIES.filter((e) => e.type === 'warning');
   if (

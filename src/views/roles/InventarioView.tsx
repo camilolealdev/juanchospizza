@@ -75,6 +75,7 @@ const InventarioView: React.FC = () => {
 
   useEffect(() => {
     loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const alertasCount = inventory.filter((i) => i.stockActual < i.stockMinimo).length;

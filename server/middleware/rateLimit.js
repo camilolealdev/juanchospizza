@@ -96,6 +96,20 @@ export const generalRateLimit = createLimiter({
   maxAttempts: MAX_GENERAL,
 });
 
+// ── Servicios autenticados (n8n/cron vía x-service-key): 1000 req / 1 min ──
+// Todo el tráfico de un bot/servicio sale de la MISMA IP (el servidor que
+// lo corre), así que el límite general por IP lo golpearía con volumen
+// normal de uso, no por estar realmente sobrecargando nada. Se identifica
+// por nombre de servicio (req.auth.serviceName, seteado por
+// serviceKeyMiddleware) en vez de por IP -- requiere que
+// serviceKeyMiddleware corra ANTES que este limiter (ver server/index.js).
+export const serviceRateLimit = createLimiter({
+  keyPrefix: 'service',
+  windowMs: WINDOW_GENERAL_MS,
+  maxAttempts: 1000,
+  keyFromReq: (req) => req.auth?.serviceName || req.ip || 'unknown-service',
+});
+
 // ── Login: 10 intentos / 15 min por IP ────────────────────────────
 export const loginRateLimit = createLimiter({
   keyPrefix: 'login',
