@@ -12,10 +12,14 @@ import { createDigiturnoSchema, updateDigiturnoStatusSchema, updateDigiturnoSche
 const router = express.Router();
 
 // Helper: obtener el siguiente número de ticket para una sede
+// Resetea a 1 cada día (WHERE createdAt >= inicio de hoy) para que
+// los tickets empiecen en 1 cada jornada y no crezcan indefinidamente.
 async function getNextTicketNumber(locationId) {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
   const result = await pool.query(
-    'SELECT COALESCE(MAX("ticketNumber"), 0) + 1 AS next FROM digiturno_tickets WHERE "locationId" = $1',
-    [locationId]
+    'SELECT COALESCE(MAX("ticketNumber"), 0) + 1 AS next FROM digiturno_tickets WHERE "locationId" = $1 AND "createdAt" >= $2',
+    [locationId, todayStart.toISOString()]
   );
   return result.rows[0].next;
 }

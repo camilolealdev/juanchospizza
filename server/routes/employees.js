@@ -139,16 +139,32 @@ router.patch(
   }
 );
 
-// Real DELETE, not soft-delete -- nothing else references employees.id yet
-// (this table isn't wired into orders/auth), so there's no history to lose.
-// activo already covers "deactivate but keep the record" for callers who want that.
+// Soft-delete: marcar como inactivo en vez de borrar el registro. Los
+// empleados inactivos dejan de poder iniciar sesión (auth.js chequea
+// activo) pero el registro histórico se conserva para referencias FK
+// (shifts.openedBy, refresh_tokens.employeeId) y auditoría.
+// El PUT general ya permite reactivar (PUT activo=true) manualmente.
 router.delete('/api/employees/:id', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
-    const result = await pool.query('DELETE FROM employees WHERE id = $1', [req.params.id]);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Empleado no encontrado' });
+    const result = await pool.query('UPDATE employees SET activo = false WHERE id = $1 AND activo = true', [
+      req.params.id,
+    ]);
+    if (result.rowCount === 0) {
+      // Puede ser que ya esté inactivo o que no exista. Distinguir para
+      // dar mejor feedback al admin.
+      const exists = await pool.query('SELECT id, activo FROM employees WHERE id = $1', [req.params.id]);
+      if (exists.rows.length === 0) {
+        return res.status(404).json({ error: 'Empleado no encontrado' });
+      }
+      return res.status(409).json({ error: 'El empleado ya está inactivo' });
+    }
+    console.log(`[Employees] Soft-delete: empleado ${req.params.id} marcado como inactivo`);
     res.status(204).end();
   } catch (e) {
-    res.status(500).json({ error: 'Error deleting employee' });
+    // UPDATE no toca PK así que FK constraints (shifts.openedBy,
+    // refresh_tokens.employeeId) nunca se violan. Si algo falla acá
+    // es error real de DB, no de integridad referencial.
+    res.status(500).json({ error: 'Error al desactivar empleado' });
   }
 });
 

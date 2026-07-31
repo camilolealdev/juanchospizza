@@ -273,6 +273,28 @@ const MIGRATIONS = [
       await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_orderId_unique ON invoices("orderId")');
     },
   },
+
+  // ── 008: processed_webhooks (idempotencia de webhooks de pago) ────
+  // Previene doble procesamiento cuando Bold/MercadoPago/Wompi reintentan
+  // un webhook. El INSERT con ON CONFLICT es la barrera atómica: dos
+  // handlers concurrentes con el mismo (provider, sourceId) no pueden
+  // pasar ambos. Para instalaciones nuevas, initDB() en db.js ya crea
+  // esta tabla — la migración queda como no-op idempotente.
+  {
+    id: 8,
+    name: 'Create processed_webhooks table for payment webhook idempotency',
+    up: async (pool) => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS processed_webhooks (
+          provider TEXT NOT NULL,
+          "sourceId" TEXT NOT NULL,
+          "processedAt" TIMESTAMPTZ DEFAULT NOW(),
+          "orderId" TEXT,
+          PRIMARY KEY (provider, "sourceId")
+        )
+      `);
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────

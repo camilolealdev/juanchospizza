@@ -19,7 +19,7 @@ Gracias por tu interés en contribuir. Este documento describe las convenciones 
 
 ```bash
 # 1. Clonar
-git clone https://github.com/tu-repo/juanchospizza.git
+git clone https://github.com/camilolealdev/juanchospizza.git
 cd juanchospizza
 
 # 2. Instalar dependencias
@@ -79,30 +79,14 @@ curl -sk https://localhost/api/health
 
 ## 🚀 Git workflow
 
-El repo está sincronizado en **dos remotos públicos**:
-
-- `origin` → `jastigoga/pizzeria` (canónico, con PRs y `master` oficial)
-- `camilo` → `camilolealdev/juanchospizza` (fork personal / mirror)
-
-**Regla principal:** usar `git pushall <branch>` para ramas de feature (sincroniza ambos). **NO usar `git push` plano** — solo subiría a `origin` y los commits divergen con el tiempo entre los dos remotos.
-
-**La rama `master` SOLO va a `origin`** (deliberadamente — `camilo` no lleva `master` por diseño, los PRs viven solo allí).
-
-### Setup inicial (idempotente; aplicar después del primer clone)
+`origin` (`camilolealdev/juanchospizza`) es el **único remoto activo** — push normal, sin alias especiales:
 
 ```bash
-git remote -v                                                                # debe listar origin + camilo
-git config alias.pushall '!f() { git push origin "$@" && git push camilo "$@"; }; f'
-git branch --set-upstream-to=origin/<branch> <branch>                        # tracking para git pull
+git push origin feat/foo
+git push origin master
 ```
 
-### Workflow diario
-
-```bash
-git pushall feat/foo                       # sincroniza ambos remotos (caso normal)
-git pushall --tags                         # tags también sincronizados
-git push origin master                     # SOLO a origin, después del merge del PR
-```
+`jastigoga/pizzeria` es un repo anterior del proyecto, abandonado desde 2026-07-27 (sin colaboradores externos reales ni trabajo abierto — ver `docs/AUDIT_2026-07-30.md` para el análisis completo). Se mantiene solo como remoto de solo lectura para referencia histórica; no recibe pushes.
 
 ## 🔧 Convenciones de Código
 

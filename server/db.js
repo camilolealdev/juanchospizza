@@ -650,6 +650,22 @@ export async function initDB() {
       )
     `);
 
+    // === PROCESSED WEBHOOKS (idempotencia) ===
+    // Evita procesar dos veces el mismo webhook cuando el proveedor
+    // reintenta una notificación (Bold reintenta por hasta 24h, MP y
+    // Wompi tienen ventanas de reintento similares). El INSERT con ON
+    // CONFLICT DO NOTHING es atómico: dos llamadas simultáneas con el
+    // mismo (provider, source_id) no pueden procesar dos veces.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS processed_webhooks (
+        provider TEXT NOT NULL,
+        "sourceId" TEXT NOT NULL,
+        "processedAt" TIMESTAMPTZ DEFAULT NOW(),
+        "orderId" TEXT,
+        PRIMARY KEY (provider, "sourceId")
+      )
+    `);
+
     logger.info('Database initialized with GastroPro CRM tables');
 
     // ── Migraciones versionadas ────────────────────────────────

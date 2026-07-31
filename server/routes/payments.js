@@ -29,6 +29,23 @@ async function confirmOrderPayment(pool, orderRow, newPaymentStatus) {
   }
 }
 
+// ── Idempotencia de webhooks ─────────────────────────────────────
+// INSERT atómico con ON CONFLICT DO NOTHING: dos handlers concurrentes
+// con el mismo (provider, sourceId) no pueden procesar dos veces.
+// Retorna true si es la primera vez (procesar), false si ya fue procesado.
+async function ensureWebhookIdempotent(pool, provider, sourceId, orderId) {
+  try {
+    const result = await pool.query(
+      'INSERT INTO processed_webhooks (provider, "sourceId", "orderId") VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING *',
+      [provider, sourceId, orderId || null]
+    );
+    return result.rows.length > 0;
+  } catch (err) {
+    console.warn(`[Idempotency] Error en check para ${provider}/${sourceId}: ${err.message}`);
+    return true; // fail-open: si la DB falla, procesar igual
+  }
+}
+
 // Envía webhook cuando se confirma/rechaza un pago
 function notifyPaymentWebhook(order, status) {
   const url = process.env.PAYMENT_WEBHOOK_URL || process.env.WEBHOOK_URL;
@@ -446,6 +463,15 @@ router.post('/api/payments/mercadopago/webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // ── Idempotencia: x-request-id es único por notificación MP ──
+    // Usar paymentId como fallback si x-request-id no está disponible.
+    const mpNotificationId = xRequestId || paymentId;
+    const sourceId = `mp_${mpNotificationId}`;
+    if (!(await ensureWebhookIdempotent(pool, 'mercadopago', sourceId))) {
+      console.log(`[MP Webhook] ${sourceId} ya procesado, saltando`);
+      return res.sendStatus(200);
+    }
+
     // Nunca confiar en el status del body del webhook: se consulta la API
     // de MercadoPago de forma autoritativa con el access token del server.
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
@@ -485,6 +511,19 @@ router.post('/api/payments/wompi/webhook', async (req, res) => {
     }
     if (!verifyWompiChecksum(event, process.env.WOMPI_EVENTS_SECRET)) {
       console.error('Wompi webhook: checksum inválido, ignorado');
+      return res.sendStatus(200);
+    }
+
+    // ── Idempotencia: cada evento Wompi tiene un id único ───────
+    // Wompi no siempre incluye event.id en el payload. Cuando falta,
+    // se usa un hash compuesto de (transaction.id + status + timestamp)
+    // para diferenciar eventos PENDING vs APPROVED de la misma transacción.
+    const wompiEventId = String(
+      event.id || event.event?.id || `${transaction.id}_${transaction.status}_${event.timestamp || ''}` || ''
+    );
+    const sourceId = `wompi_${wompiEventId}`;
+    if (!(await ensureWebhookIdempotent(pool, 'wompi', sourceId, transaction.reference))) {
+      console.log(`[Wompi Webhook] ${sourceId} ya procesado, saltando`);
       return res.sendStatus(200);
     }
 
@@ -630,6 +669,16 @@ router.post('/api/payments/bold/webhook', async (req, res) => {
 
         if (!reference) {
           console.warn('[Bold Webhook] No se encontró referencia en el payload');
+          return;
+        }
+
+        // ── Idempotencia: usar event.id (CloudEvents ID único) ────
+        // Cada webhook de Bold tiene un id único en el formato CloudEvents.
+        // Si el evento no trae id, usar reference como fallback.
+        const eventId = String(body.id || body.event_id || reference);
+        const sourceId = `bold_${eventId}`;
+        if (!(await ensureWebhookIdempotent(pool, 'bold', sourceId, reference))) {
+          console.log(`[Bold Webhook] ${sourceId} ya procesado, saltando`);
           return;
         }
 
