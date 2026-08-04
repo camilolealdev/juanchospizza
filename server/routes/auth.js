@@ -2,6 +2,7 @@ import express from 'express';
 import { login, refreshToken } from '../auth.js';
 import { buildAuthCookie, buildClearAuthCookie, readAuthCookie } from '../auth.js';
 import { loginRateLimit } from '../middleware/rateLimit.js';
+import logger from '../services/logger.js';
 
 const router = express.Router();
 
@@ -23,8 +24,14 @@ router.post('/api/auth/login', loginRateLimit, async (req, res) => {
     });
 
     if (result.error) {
+      // Auditoría de seguridad #2 (revisión de arquitectura): antes ningún
+      // login fallido ni exitoso quedaba registrado -- imposible detectar
+      // brute-force dirigido a una cuenta o auditar accesos después del hecho.
+      logger.warn({ username, ip: req.ip }, 'Login fallido');
       return res.status(401).json({ error: result.error });
     }
+
+    logger.info({ username, role: result.role, ip: req.ip }, 'Login exitoso');
 
     // La cookie HttpOnly es la ÚNICA fuente de verdad -- el token nunca
     // sale en el body de la respuesta. Devolverlo ahí anulaba la protección
@@ -38,7 +45,8 @@ router.post('/api/auth/login', loginRateLimit, async (req, res) => {
       username: result.username,
       expiresIn: result.expiresIn,
     });
-  } catch (_e) {
+  } catch (e) {
+    logger.warn({ username: req.body?.username, ip: req.ip, err: e.message }, 'Login: error inesperado');
     res.status(401).json({ error: 'Credenciales inválidas' });
   }
 });

@@ -3,6 +3,7 @@ import { pool } from '../db.js';
 import { authMiddleware, requireRole, hashPin, generateSalt } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import { createEmployeeSchema, updateEmployeeSchema, setPasswordSchema } from '../schemas/employees.js';
+import logger from '../services/logger.js';
 
 const router = express.Router();
 
@@ -123,6 +124,25 @@ router.patch(
   validate(setPasswordSchema),
   async (req, res) => {
     try {
+      // Auditoría de seguridad #1 (revisión de arquitectura): antes CUALQUIER
+      // ADMIN podía resetear la password de CUALQUIER otro empleado -- incluido
+      // otro ADMIN o el super admin -- sin re-autenticarse y sin dejar rastro.
+      // Toma de cuenta silenciosa. Ahora: (a) un ADMIN no super-admin no puede
+      // tocar la password de una cuenta isSuperAdmin salvo que sea la suya
+      // propia, y (b) todo reset queda logueado (actor + target).
+      const target = await pool.query('SELECT id, "isSuperAdmin" FROM employees WHERE id = $1', [req.params.id]);
+      if (target.rowCount === 0) return res.status(404).json({ error: 'Empleado no encontrado' });
+
+      const actorId = req.auth?.sub;
+      const isSelfReset = actorId === req.params.id;
+      if (target.rows[0].isSuperAdmin && !isSelfReset) {
+        logger.warn(
+          { actorId, targetId: req.params.id, ip: req.ip },
+          'Intento bloqueado: reset de password de super admin por otra cuenta'
+        );
+        return res.status(403).json({ error: 'Solo el super admin puede cambiar su propia contraseña' });
+      }
+
       const { password } = req.body;
       const passwordSalt = generateSalt();
       const passwordHash = hashPin(password, passwordSalt);
@@ -132,6 +152,7 @@ router.patch(
         req.params.id,
       ]);
       if (result.rowCount === 0) return res.status(404).json({ error: 'Empleado no encontrado' });
+      logger.info({ actorId, targetId: req.params.id, isSelfReset, ip: req.ip }, 'Contraseña de empleado actualizada');
       res.status(204).end();
     } catch (e) {
       res.status(500).json({ error: 'Error setting password' });

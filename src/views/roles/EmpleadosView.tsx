@@ -218,6 +218,7 @@ const EmpleadosView: React.FC = () => {
                 <button
                   onClick={() => openResetPassword(emp)}
                   title="Restablecer contraseña"
+                  data-testid={`reset-password-trigger-${emp.id}`}
                   className="text-stone-700 hover:text-orange-500 transition-colors"
                 >
                   <i className="fas fa-key"></i>
@@ -385,6 +386,7 @@ const EmpleadosView: React.FC = () => {
               <input
                 type="password"
                 autoFocus
+                data-testid="reset-password-input"
                 className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-orange-500 transition-colors"
                 value={resetPasswordValue}
                 onChange={(e) => {
@@ -399,16 +401,22 @@ const EmpleadosView: React.FC = () => {
               <p className="text-stone-600 text-[10px] mt-2">
                 Mínimo 10 caracteres, con al menos una letra y un número.
               </p>
-              {resetPasswordError && <p className="text-red-500 text-xs font-bold mt-3">{resetPasswordError}</p>}
+              {resetPasswordError && (
+                <p data-testid="reset-password-error" className="text-red-500 text-xs font-bold mt-3">
+                  {resetPasswordError}
+                </p>
+              )}
             </div>
             <div className="flex justify-end gap-4 mt-10">
               <button
+                data-testid="reset-password-cancel"
                 className="px-8 py-4 rounded-2xl border border-stone-700 text-xs font-black uppercase tracking-widest text-stone-500 hover:border-stone-500 transition-colors"
                 onClick={() => setResetPasswordEmp(null)}
               >
                 Cancelar
               </button>
               <button
+                data-testid="reset-password-submit"
                 disabled={resetPasswordSubmitting}
                 className="px-8 py-4 rounded-2xl bg-orange-600 hover:bg-orange-500 text-xs font-black uppercase tracking-widest transition-colors shadow-xl disabled:opacity-50"
                 onClick={submitResetPassword}
