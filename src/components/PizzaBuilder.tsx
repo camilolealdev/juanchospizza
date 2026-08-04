@@ -327,6 +327,8 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ variant, productId = 'pizza
                 <button
                   key={s.id}
                   type="button"
+                  data-testid="pizza-size"
+                  aria-pressed={active}
                   onClick={() => selectSize(s.id)}
                   className={`w-full text-left rounded-2xl border-2 p-3 transition-all ${
                     active ? 'border-[#C0392B] bg-[#C0392B]/5' : 'border-[#8B572A]/10 hover:border-[#C0392B]/30'
@@ -419,7 +421,7 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ variant, productId = 'pizza
             const hasMore = !searchQuery && ings.length > MAX_VISIBLE;
             const checkedCount = ings.filter((i) => selectedIds.has(i.id)).length;
             return (
-              <div key={key}>
+              <div key={key} data-testid="pizza-ingredient-group">
                 <p className="text-[10px] uppercase tracking-widest text-[#8B572A]/70 font-bold mb-2 flex items-center gap-1.5">
                   <i className={`fas ${GROUP_ICONS[key]}`} style={{ color: GROUP_COLORS[key] }} />
                   {GROUP_LABELS[key]}
@@ -521,7 +523,7 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ variant, productId = 'pizza
             : 'Elige un tamaño'}
         </p>
 
-        <ul className="space-y-1 max-h-28 overflow-y-auto mb-4 text-xs">
+        <ul data-testid="pizza-summary-list" className="space-y-1 max-h-28 overflow-y-auto mb-4 text-xs">
           {selectedNames.length === 0 ? (
             <li className="text-center text-[#8B572A]/40 italic py-2">Elige tus ingredientes</li>
           ) : (
@@ -574,6 +576,7 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ variant, productId = 'pizza
           </button>
           <button
             type="button"
+            data-testid="pizza-add-btn"
             onClick={handleAdd}
             disabled={!selectedSize || selectedIds.size === 0}
             className="flex-1 py-3 rounded-2xl bg-[#C0392B] text-white text-xs font-black uppercase tracking-widest hover:bg-[#962D22] transition-all shadow-[0_8px_20px_rgba(192,57,43,.3)] disabled:opacity-40 disabled:cursor-not-allowed"

@@ -216,20 +216,20 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
   test('09 - CTP builder sizes', async ({ page }) => {
     await page.locator('.nav-links a[data-nav-page="crea-tu-pizza"]').click();
     await page.waitForTimeout(500);
-    // CTP has 4 sizes: Small, Junior, Mediana, Familiar
-    const sizeBtns = page.locator('.ctp-size');
+    // CTP has 4 sizes, loaded from GET /api/pizza-sizes: Small, Junior, Mediana, Familiar
+    const sizeBtns = page.getByTestId('pizza-size');
     await expect(sizeBtns).toHaveCount(4);
     await sizeBtns.filter({ hasText: 'Familiar' }).click();
-    await expect(sizeBtns.filter({ hasText: 'Familiar' })).toHaveClass(/active/);
+    await expect(sizeBtns.filter({ hasText: 'Familiar' })).toHaveAttribute('aria-pressed', 'true');
     await sizeBtns.filter({ hasText: 'Small' }).click();
-    await expect(sizeBtns.filter({ hasText: 'Small' })).toHaveClass(/active/);
+    await expect(sizeBtns.filter({ hasText: 'Small' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('10 - CTP ingredient groups', async ({ page }) => {
     await page.locator('.nav-links a[data-nav-page="crea-tu-pizza"]').click();
     await page.waitForTimeout(500);
     // CTP has 4 ingredient groups with chips
-    const groups = page.locator('.ctp-group');
+    const groups = page.getByTestId('pizza-ingredient-group');
     await expect(groups).toHaveCount(4);
     await expect(groups.filter({ hasText: 'Carnes' })).toBeVisible();
     await expect(groups.filter({ hasText: 'Vegetales' })).toBeVisible();
@@ -241,26 +241,25 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
     await page.locator('.nav-links a[data-nav-page="crea-tu-pizza"]').click();
     await page.waitForTimeout(500);
     step('Select size');
-    await page.locator('.ctp-size').filter({ hasText: 'Mediana' }).click();
+    await page.getByTestId('pizza-size').filter({ hasText: 'Mediana' }).click();
     step('Toggle ingredient chips');
-    const chip = page.locator('.ctp-chip').filter({ hasText: 'Champiñones' });
+    const chip = page.getByTestId('pizza-ingredient-chip').filter({ hasText: 'Champiñones' });
     await chip.click();
-    await expect(chip).toHaveClass(/ctp-chip/);
-    await expect(chip.locator('input')).toBeChecked();
+    await expect(chip).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('12 - CTP ingredient + add to cart', async ({ page }) => {
     await page.locator('.nav-links a[data-nav-page="crea-tu-pizza"]').click();
     await page.waitForTimeout(500);
     step('Select Small size');
-    await page.locator('.ctp-size').filter({ hasText: 'Small' }).click();
+    await page.getByTestId('pizza-size').filter({ hasText: 'Small' }).click();
     step('Select ingredients');
-    await page.locator('.ctp-chip').filter({ hasText: 'Jamón' }).click();
-    await page.locator('.ctp-chip').filter({ hasText: 'Queso extra' }).click();
-    await expect(page.locator('#ctpAddBtn')).toBeEnabled({ timeout: 2000 });
+    await page.getByTestId('pizza-ingredient-chip').filter({ hasText: 'Jamón' }).click();
+    await page.getByTestId('pizza-ingredient-chip').filter({ hasText: 'Queso extra' }).click();
+    await expect(page.getByTestId('pizza-add-btn')).toBeEnabled({ timeout: 2000 });
     step('Verify summary shows ingredients');
-    await expect(page.locator('#ctpSummaryList')).toContainText('Jamón');
-    await expect(page.locator('#ctpSummaryList')).toContainText('Queso extra');
+    await expect(page.getByTestId('pizza-summary-list')).toContainText('Jamón');
+    await expect(page.getByTestId('pizza-summary-list')).toContainText('Queso extra');
   });
 
   test('13 - Domicilios WhatsApp CTA', async ({ page }) => {
