@@ -1,35 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole } from '../types';
 import { lockBodyScroll, unlockBodyScroll } from '../utils/useBodyScrollLock';
 
 interface LoginModalProps {
-  onLogin: (role: UserRole, pin?: string, password?: string) => Promise<boolean>;
+  onLogin: (username: string, pin?: string, password?: string) => Promise<boolean>;
   onClose: () => void;
 }
 
-// Solo ADMIN puede ser la cuenta isSuperAdmin, que el backend exige con
-// password + PIN (ver server/auth.js). El resto de roles sigue siendo
-// PIN-solo -- no tiene sentido pedirle contraseña a la terminal
-// compartida de cocina/repartidor.
-const ROLES: { role: UserRole; label: string }[] = [
-  { role: UserRole.ADMIN, label: 'Administrador' },
-  { role: UserRole.OPERATOR, label: 'Cocina' },
-  { role: UserRole.REPARTIDOR, label: 'Repartidor' },
-  { role: UserRole.MARKETING, label: 'Marketing' },
+// Antes este modal solo dejaba elegir uno de 4 ROLES fijos, que App.tsx
+// traducía a un usuario hardcodeado (admin/cocina/repartidor/marketing) --
+// las 4 cuentas semilla de la migración #001. Cualquier empleado creado
+// individualmente después vía el CRM (EmpleadosView.tsx "Nuevo Empleado",
+// con su propio username/PIN) no tenía forma de loguearse acá: la pantalla
+// no sabía pedir un usuario específico, solo un rol genérico.
+//
+// Ahora el campo es el usuario real (texto libre); estos presets son solo
+// un atajo de UI para las 4 cuentas compartidas de siempre, no una lista
+// cerrada -- cualquier username real funciona igual escribiéndolo.
+const ROLE_PRESETS: { username: string; label: string }[] = [
+  { username: 'admin', label: 'Administrador' },
+  { username: 'cocina', label: 'Cocina' },
+  { username: 'repartidor', label: 'Repartidor' },
+  { username: 'marketing', label: 'Marketing' },
 ];
 
 const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose }) => {
-  const [selectedRole, setSelectedRole] = useState('');
+  const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const showPasswordField = selectedRole === UserRole.ADMIN;
+  // Visible en cuanto hay un usuario -- opcional salvo que la cuenta lo
+  // exija (server/auth.js decide eso por empleado, no esta UI por rol).
+  const showPasswordField = username.trim().length > 0;
 
   // ── WCAG 2.4.3: Focus Trap ─────────────────────────────────────
   // Escape cierra el modal. El focus permanece dentro del modal mientras
-  // esté abierto (Tab cíclico). Al abrir, auto-focus al rol <select>.
+  // esté abierto (Tab cíclico). Al abrir, auto-focus al campo de usuario.
   // lockBodyScroll es ref-counted para coexistir con MenuDigital cuando
   // ambos modales están abiertos simultáneamente.
   useEffect(() => {
@@ -59,10 +66,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose }) => {
     };
     window.addEventListener('keydown', handleKeyDown, true);
 
-    // Auto-focus al rol <select> al abrir
+    // Auto-focus al campo de usuario al abrir
     const id = window.setTimeout(() => {
-      const roleSelect = document.getElementById('login-role') as HTMLSelectElement | null;
-      roleSelect?.focus();
+      const usernameInput = document.getElementById('login-username') as HTMLInputElement | null;
+      usernameInput?.focus();
     }, 50);
 
     lockBodyScroll();
@@ -76,13 +83,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedRole || !pin) {
-      setError('Selecciona un rol e ingresa el PIN');
+    // PIN ya no es obligatorio incondicionalmente -- una cuenta con
+    // contraseña configurada (server/auth.js) puede loguearse solo con
+    // password, sin PIN. Basta con usuario + al menos una de las dos.
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername || (!pin && !password)) {
+      setError('Ingresa tu usuario y el PIN o la contraseña');
       return;
     }
     setIsSubmitting(true);
     try {
-      const success = await onLogin(selectedRole as UserRole, pin, showPasswordField ? password : undefined);
+      const success = await onLogin(trimmedUsername, pin || undefined, password || undefined);
       if (!success) setError('Credenciales incorrectas');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo conectar con el servidor');
@@ -113,27 +124,42 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose }) => {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label
-              htmlFor="login-role"
+              htmlFor="login-username"
               className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block"
             >
-              Rol
+              Usuario
             </label>
-            <select
-              id="login-role"
-              value={selectedRole}
+            <input
+              id="login-username"
+              type="text"
+              autoComplete="username"
+              value={username}
               onChange={(e) => {
-                setSelectedRole(e.target.value);
+                setUsername(e.target.value);
                 setError('');
               }}
+              placeholder="tu.usuario"
               className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold focus:border-orange-600/50 outline-none transition-colors"
-            >
-              <option value="">Seleccionar rol</option>
-              {ROLES.map((r) => (
-                <option key={r.role} value={r.role}>
+            />
+            <div className="flex flex-wrap gap-2 mt-3">
+              {ROLE_PRESETS.map((r) => (
+                <button
+                  key={r.username}
+                  type="button"
+                  onClick={() => {
+                    setUsername(r.username);
+                    setError('');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                    username === r.username
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-stone-900 text-stone-500 border border-white/10 hover:text-white hover:border-orange-600/40'
+                  }`}
+                >
                   {r.label}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           {showPasswordField && (
@@ -142,7 +168,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose }) => {
                 htmlFor="login-password"
                 className="text-[10px] text-stone-500 uppercase font-bold tracking-widest mb-2 block"
               >
-                Contraseña
+                Contraseña (opcional)
               </label>
               <input
                 id="login-password"
@@ -152,7 +178,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose }) => {
                   setPassword(e.target.value);
                   setError('');
                 }}
-                placeholder="Contraseña de administrador"
+                placeholder="Solo si tu cuenta la tiene configurada"
                 autoComplete="current-password"
                 className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold focus:border-orange-600/50 outline-none transition-colors"
               />

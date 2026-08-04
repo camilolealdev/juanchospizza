@@ -40,6 +40,17 @@ const EmpleadosView: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
 
+  // Reemplaza el window.prompt() que tenía esto antes -- prompt()/alert()
+  // no son confiables en modo standalone de PWA (este sitio es instalable,
+  // vite-plugin-pwa) ni dentro de algunos webviews: pueden no aparecer o
+  // devolver null en silencio, así que un ADMIN que intentaba resetear una
+  // contraseña no veía error ni confirmación, solo nada -- exactamente el
+  // "no puedo generar contraseña para validar" reportado.
+  const [resetPasswordEmp, setResetPasswordEmp] = useState<Employee | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [resetPasswordError, setResetPasswordError] = useState('');
+  const [resetPasswordSubmitting, setResetPasswordSubmitting] = useState(false);
+
   const loadEmployees = () => {
     setLoading(true);
     api
@@ -74,14 +85,28 @@ const EmpleadosView: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleResetPassword = async (emp: Employee) => {
-    const password = window.prompt(`Nueva contraseña para ${emp.nombre} (mínimo 10 caracteres, con letra y número):`);
-    if (!password) return;
+  const openResetPassword = (emp: Employee) => {
+    setResetPasswordEmp(emp);
+    setResetPasswordValue('');
+    setResetPasswordError('');
+  };
+
+  const submitResetPassword = async () => {
+    if (!resetPasswordEmp) return;
+    if (resetPasswordValue.length < 10 || !/[a-zA-Z]/.test(resetPasswordValue) || !/[0-9]/.test(resetPasswordValue)) {
+      setResetPasswordError('Mínimo 10 caracteres, con al menos una letra y un número.');
+      return;
+    }
+    setResetPasswordSubmitting(true);
     try {
-      await api.setEmployeePassword(emp.id, password);
+      await api.setEmployeePassword(resetPasswordEmp.id, resetPasswordValue);
       showToast('Contraseña actualizada.');
+      setResetPasswordEmp(null);
+      setResetPasswordValue('');
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Error actualizando la contraseña.');
+      setResetPasswordError(e instanceof Error ? e.message : 'Error actualizando la contraseña.');
+    } finally {
+      setResetPasswordSubmitting(false);
     }
   };
 
@@ -191,7 +216,7 @@ const EmpleadosView: React.FC = () => {
                   <i className="fas fa-pen"></i>
                 </button>
                 <button
-                  onClick={() => handleResetPassword(emp)}
+                  onClick={() => openResetPassword(emp)}
                   title="Restablecer contraseña"
                   className="text-stone-700 hover:text-orange-500 transition-colors"
                 >
@@ -336,6 +361,59 @@ const EmpleadosView: React.FC = () => {
                 onClick={handleSubmit}
               >
                 {editingId ? 'Guardar' : 'Crear Empleado'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resetPasswordEmp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setResetPasswordEmp(null)}
+        >
+          <div
+            className="bg-stone-900 p-10 rounded-[3rem] border border-stone-700 shadow-2xl max-w-md w-full mx-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-2xl font-brand mb-2">Restablecer contraseña</h3>
+            <p className="text-stone-500 text-sm mb-8">{resetPasswordEmp.nombre}</p>
+            <div>
+              <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-2">
+                Nueva contraseña
+              </label>
+              <input
+                type="password"
+                autoFocus
+                className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-orange-500 transition-colors"
+                value={resetPasswordValue}
+                onChange={(e) => {
+                  setResetPasswordValue(e.target.value);
+                  setResetPasswordError('');
+                }}
+                placeholder="Mínimo 10 caracteres"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') submitResetPassword();
+                }}
+              />
+              <p className="text-stone-600 text-[10px] mt-2">
+                Mínimo 10 caracteres, con al menos una letra y un número.
+              </p>
+              {resetPasswordError && <p className="text-red-500 text-xs font-bold mt-3">{resetPasswordError}</p>}
+            </div>
+            <div className="flex justify-end gap-4 mt-10">
+              <button
+                className="px-8 py-4 rounded-2xl border border-stone-700 text-xs font-black uppercase tracking-widest text-stone-500 hover:border-stone-500 transition-colors"
+                onClick={() => setResetPasswordEmp(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={resetPasswordSubmitting}
+                className="px-8 py-4 rounded-2xl bg-orange-600 hover:bg-orange-500 text-xs font-black uppercase tracking-widest transition-colors shadow-xl disabled:opacity-50"
+                onClick={submitResetPassword}
+              >
+                {resetPasswordSubmitting ? 'Guardando...' : 'Guardar contraseña'}
               </button>
             </div>
           </div>

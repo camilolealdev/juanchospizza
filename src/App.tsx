@@ -56,15 +56,6 @@ export const useAuth = () => useContext(AuthContext);
 // principal con el diálogo de inicio de sesión.
 const LoginModal = lazy(() => import('./components/LoginModal'));
 
-// Only roles that have a login option in the UI map to a backend username.
-// The pizzeria's real users (see server/auth.js) are fixed per-role accounts.
-const ROLE_TO_USERNAME: Partial<Record<UserRole, string>> = {
-  [UserRole.ADMIN]: 'admin',
-  [UserRole.OPERATOR]: 'cocina',
-  [UserRole.REPARTIDOR]: 'repartidor',
-  [UserRole.MARKETING]: 'marketing',
-};
-
 // Cosmetic display names only, kept separate from auth now that credentials
 // are verified against the real backend rather than a local test list.
 const ROLE_DISPLAY_NAMES: Partial<Record<UserRole, string>> = {
@@ -291,10 +282,13 @@ const App: React.FC = () => {
     );
   }
 
-  const login = async (selectedRole: UserRole, pin?: string, password?: string): Promise<boolean> => {
-    const username = ROLE_TO_USERNAME[selectedRole];
-    // password solo lo pide LoginModal para ADMIN -- el resto de roles sigue
-    // mandando solo PIN, backend decide qué exige según la cuenta.
+  // username es el usuario real ingresado en LoginModal -- ya no se deriva
+  // de un rol elegido en un <select> (antes limitaba el login a las 4
+  // cuentas semilla fijas admin/cocina/repartidor/marketing; un empleado
+  // creado individualmente en el CRM, con su propio username, no podía
+  // loguearse porque la UI no tenía forma de seleccionarlo). El rol real
+  // sigue viniendo SIEMPRE del backend (result.role), nunca de la UI.
+  const login = async (username: string, pin?: string, password?: string): Promise<boolean> => {
     if (!username || (!pin && !password)) return false;
     // No try/catch swallowing here on purpose -- a network failure (backend
     // unreachable) needs to reach LoginModal's own catch with its real
@@ -302,7 +296,7 @@ const App: React.FC = () => {
     const result = await api.login(username, pin, password);
     if (!result?.role) return false;
     setAuthSession({ role: result.role, username: result.username });
-    const resolvedRole = isKnownRole(result.role) ? result.role : selectedRole;
+    const resolvedRole = isKnownRole(result.role) ? result.role : UserRole.CLIENT;
     setRole(resolvedRole);
     setIsAuthenticated(true);
     setShowLogin(false);
