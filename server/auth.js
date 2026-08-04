@@ -99,6 +99,35 @@ function verifyHash(secret, salt, storedHex) {
   return inputBuf.length === storedBuf.length && crypto.timingSafeEqual(inputBuf, storedBuf);
 }
 
+// ── Anti brute-force: costo de hash constante + lockout por cuenta ────
+// server/middleware/rateLimit.js ya limita /api/auth/login por IP vía
+// Redis, pero eso deja dos huecos reales que ese limiter no puede cerrar:
+// (1) es fail-open si Redis cae (server/middleware/rateLimit.js linea ~85)
+//     -- durante esa ventana el login queda sin ningún límite.
+// (2) es por IP, no por cuenta -- un atacante rotando IP puede fuerza-
+//     bruta el PIN de 4 dígitos (10.000 combinaciones) de UNA cuenta
+//     puntual sin que el contador de ninguna IP individual se dispare.
+// Este contador vive en la fila de `employees` (migración #010), así que
+// sigue aplicando aunque Redis esté caído y es por cuenta, no por IP.
+//
+// También cierra timing de enumeración de usuario: antes un username
+// inexistente retornaba de inmediato (miss barato de índice) mientras uno
+// real corría al menos un PBKDF2-100k antes de rechazar -- la diferencia
+// de tiempo delataba qué usernames existen. runDummyHash() corre el mismo
+// costo cuando no hay fila real contra la que comparar.
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000;
+
+// Fijos a propósito -- nunca se comparan contra nada real, solo existen
+// para que verifyHash() haga el mismo trabajo de PBKDF2 que haría con una
+// fila real.
+const DUMMY_SALT = 'a'.repeat(32);
+const DUMMY_HASH = hashPin('dummy-password-for-timing', DUMMY_SALT);
+
+function runDummyHash() {
+  verifyHash('dummy-attempt', DUMMY_SALT, DUMMY_HASH);
+}
+
 // credentials: { pin, password } -- password solo se evalúa si el empleado
 // tiene uno configurado (passwordHash no nulo) o es super admin (lo exige).
 export async function authenticate(username, credentials) {
@@ -106,12 +135,24 @@ export async function authenticate(username, credentials) {
   const { pin, password } = credentials || {};
 
   const result = await pool.query(
-    'SELECT id, role, "pinHash", salt, "passwordHash", "passwordSalt", "isSuperAdmin", "locationId" FROM employees WHERE username = $1 AND activo = true',
+    'SELECT id, role, "pinHash", salt, "passwordHash", "passwordSalt", "isSuperAdmin", "locationId", "failedLoginAttempts", "lockedUntil" FROM employees WHERE username = $1 AND activo = true',
     [String(username).trim().toLowerCase()]
   );
   const employee = result.rows[0];
-  if (!employee) return null;
+  if (!employee) {
+    runDummyHash();
+    return null;
+  }
 
+  // ponytail: ventana fija (no exponencial) -- si se observa abuso real
+  // (reintentos cronometrados justo al expirar el lock), subir a backoff
+  // creciente por intento en vez de un lock plano de 15min.
+  if (employee.lockedUntil && new Date(employee.lockedUntil).getTime() > Date.now()) {
+    runDummyHash();
+    return null;
+  }
+
+  let ok;
   if (employee.isSuperAdmin) {
     if (!employee.passwordHash) {
       // Bootstrap: la migración #004 deja passwordHash NULL a propósito
@@ -121,22 +162,39 @@ export async function authenticate(username, credentials) {
       // asignarle un password vía PATCH /api/employees/:id/password. Solo
       // PIN alcanza hasta que se configure uno; a partir de ahí, esta
       // rama nunca se vuelve a tomar, exige los dos secretos.
-      if (!pin || !verifyHash(pin, employee.salt, employee.pinHash)) return null;
+      ok = !!pin && verifyHash(pin, employee.salt, employee.pinHash);
     } else {
       // Dos secretos, no uno u otro.
-      if (!password || !pin) return null;
-      if (!verifyHash(password, employee.passwordSalt, employee.passwordHash)) return null;
-      if (!verifyHash(pin, employee.salt, employee.pinHash)) return null;
+      ok =
+        !!password &&
+        !!pin &&
+        verifyHash(password, employee.passwordSalt, employee.passwordHash) &&
+        verifyHash(pin, employee.salt, employee.pinHash);
     }
   } else if (employee.passwordHash) {
     // Empleado con password real configurado: la contraseña es el
     // credencial primario, ya no el PIN.
-    if (!password || !verifyHash(password, employee.passwordSalt, employee.passwordHash)) return null;
+    ok = !!password && verifyHash(password, employee.passwordSalt, employee.passwordHash);
   } else {
     // Sin password -- PIN de 4 dígitos alcanza (roles de terminal
     // compartida: cocina, repartidor).
-    if (!pin || !verifyHash(pin, employee.salt, employee.pinHash)) return null;
+    ok = !!pin && verifyHash(pin, employee.salt, employee.pinHash);
   }
+
+  if (!ok) {
+    const attempts = (employee.failedLoginAttempts || 0) + 1;
+    const lock = attempts >= MAX_FAILED_ATTEMPTS;
+    await pool.query('UPDATE employees SET "failedLoginAttempts" = $1, "lockedUntil" = $2 WHERE id = $3', [
+      // Al bloquear, el contador vuelve a 0 -- al expirar el lock, la
+      // cuenta arranca con un cupo fresco de intentos (ventana fija).
+      lock ? 0 : attempts,
+      lock ? new Date(Date.now() + LOCKOUT_MS) : null,
+      employee.id,
+    ]);
+    return null;
+  }
+
+  await pool.query('UPDATE employees SET "failedLoginAttempts" = 0, "lockedUntil" = NULL WHERE id = $1', [employee.id]);
 
   const now = Math.floor(Date.now() / 1000);
   return generateToken(

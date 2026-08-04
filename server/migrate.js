@@ -318,6 +318,22 @@ const MIGRATIONS = [
       );
     },
   },
+
+  // ── 010: Lockout de cuenta por intentos fallidos de login ─────────
+  // server/middleware/rateLimit.js limita login por IP vía Redis, pero es
+  // fail-open si Redis cae y no distingue cuentas -- un atacante rotando
+  // IP puede fuerza-bruta el PIN de 4 dígitos de una cuenta puntual sin
+  // tope real. Este contador vive en la fila del empleado (no en Redis),
+  // así que sigue aplicando aunque Redis esté caído. Ver server/auth.js
+  // `authenticate()` para la lógica de incremento/lock/reset.
+  {
+    id: 10,
+    name: 'Add failedLoginAttempts/lockedUntil to employees for per-account lockout',
+    up: async (pool) => {
+      await pool.query('ALTER TABLE employees ADD COLUMN IF NOT EXISTS "failedLoginAttempts" INTEGER DEFAULT 0');
+      await pool.query('ALTER TABLE employees ADD COLUMN IF NOT EXISTS "lockedUntil" TIMESTAMPTZ');
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────
