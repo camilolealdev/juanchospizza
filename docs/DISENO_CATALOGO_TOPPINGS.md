@@ -5,6 +5,26 @@
 > commit de la auditoría `docs/AUDIT_2026-07-30.md` ítem #2). Este documento
 > planifica el cierre completo del gap como trabajo de seguimiento programado,
 > no como parche de emergencia.
+>
+> **Actualización 2026-08-04 — el camino real que se tomó fue distinto:** en
+> vez de migrar los 113 ingredientes hardcodeados de `pizza-builder.js` hacia
+> la tabla `ingredients` (§3.1 más abajo) y agregar tamaños `tipo='armador'`
+> a `pizza_sizes` (§3.2), el commit `470a48a` reemplazó los 3 armadores
+> duplicados por un único `src/components/PizzaBuilder.tsx` que consume
+> **el catálogo ya sembrado** (23 ingredientes de
+> `server/seedData/juanchosMenu.js`, tamaños `Small/Junior/Mediana/Familiar`
+> de `pizza_sizes` sin columna `tipo` nueva) en vez de migrar el catálogo
+> gourmet de 113 items. Es una solución más simple que evita la migración de
+> datos descrita en la sección 6, a costa de reducir el catálogo visible al
+> cliente de 113 a 23 ingredientes. El piso de precio server-side (§1,
+> `orderPricing.js`) se actualizó para leer `pizza_sizes.precio` real en vez
+> de la constante `BASE_PRICE`/`SIZE_FACTORS` vieja. La limitación de fondo
+> que este diseño buscaba cerrar -- toppings sin validar individualmente,
+> solo un piso por tamaño -- **sigue abierta**: el payload `toppings`
+> estructurado de la sección 4 nunca se implementó. Este documento queda
+> como referencia de un enfoque alternativo (más completo, más caro) si en
+> el futuro se decide exponer el catálogo completo de 113 ingredientes de
+> nuevo.
 
 ## 1. Resumen del problema actual
 

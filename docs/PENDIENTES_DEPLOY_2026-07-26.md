@@ -80,3 +80,23 @@ De la auditoría ISO 27001 y la revisión de 6 especialistas, esto se identific�
 - `DEPLOY.md`: URL de clone real, flujo de certbot correcto para nginx containerizado, checklist con rotación de PINs.
 - `docs/DR_RUNBOOK.md`: sintaxis `docker compose` v2 en todos los comandos.
 - 4 commits pusheados a `origin/master` (`eac028c`..`62826eb`).
+
+---
+
+## Seguimiento posterior (actualizado 2026-08-04)
+
+Este documento quedó congelado en 2026-07-26; ver `docs/AUDIT_2026-07-30.md`
+(sección 0, agregada 2026-08-04) para el estado real más reciente. Resumen
+de lo que cambió desde acá:
+
+- El bind-mount de `./dist` en `docker-compose.yml` (mencionado como riesgo
+  de deploy en este doc) se corrigió en `73e08da` (2026-07-30).
+- El armador "Crea tu Pizza" se unificó en un solo componente React
+  (`470a48a`, 2026-08-03) con su propio piso de precio server-side
+  corregido (`orderPricing.js`) y su e2e reconectado (`6057ac6`,
+  2026-08-04).
+- **Sigue sin resolverse**: el bloqueante de "Docker Desktop no estaba
+  corriendo" de este mismo doc (línea 21) — se intentó de nuevo el
+  2026-08-04 y el daemon no terminó de levantar (WSL backend `docker-desktop`
+  atascado en "Stopped"). El `docker compose up -d` real contra este stack
+  sigue sin ejecutarse de punta a punta en ninguna sesión hasta la fecha.
