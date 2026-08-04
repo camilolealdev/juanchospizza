@@ -63,23 +63,39 @@ describe('computeVerifiedTotal', () => {
     expect(await computeVerifiedTotal(client, [])).toBe(0);
   });
 
-  it('clamps the "pizza-builder" custom item to the known per-size floor when the client price is below it', async () => {
-    const client = fakeClient({ products: [], sizes: [] });
+  it('clamps the "pizza-builder" custom item to the real pizza_sizes floor for its size when the client price is below it', async () => {
+    const client = fakeClient({
+      products: [],
+      sizes: [{ id: 'familiar', nombre: 'Familiar', precio: 88000 }],
+    });
 
-    const items = [{ productId: 'pizza-builder', size: 'Grande', quantity: 1, price: 500 }];
+    const items = [{ productId: 'pizza-builder', size: 'Familiar', quantity: 1, price: 500 }];
     const total = await computeVerifiedTotal(client, items);
 
-    // Grande floor = 25000 * 1.8 = 45000 -- el precio de $500 del cliente se descarta
-    expect(total).toBe(45000);
+    // Floor viene de pizza_sizes.precio real (88000), no de una constante vieja
+    // -- el precio de $500 del cliente se descarta.
+    expect(total).toBe(88000);
   });
 
   it('keeps the client price for "pizza-builder" items when it is already above the floor', async () => {
-    const client = fakeClient({ products: [], sizes: [] });
+    const client = fakeClient({
+      products: [],
+      sizes: [{ id: 'small', nombre: 'Small', precio: 30000 }],
+    });
 
-    const items = [{ productId: 'pizza-builder', size: 'Personal', quantity: 1, price: 62000 }];
+    const items = [{ productId: 'pizza-builder', size: 'Small', quantity: 1, price: 62000 }];
     const total = await computeVerifiedTotal(client, items);
 
     expect(total).toBe(62000);
+  });
+
+  it('falls back to the legacy floor for "pizza-builder" items when pizza_sizes has no matching row', async () => {
+    const client = fakeClient({ products: [], sizes: [] });
+
+    const items = [{ productId: 'pizza-builder', size: 'Unknown Size', quantity: 1, price: 500 }];
+    const total = await computeVerifiedTotal(client, items);
+
+    expect(total).toBe(25000);
   });
 
   it('sums multiple items correctly', async () => {

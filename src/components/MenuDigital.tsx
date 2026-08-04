@@ -9,6 +9,7 @@ import type { Product, Category } from '../types';
 import { generateOrderNumber } from '../utils/orderNumber';
 import { lockBodyScroll, unlockBodyScroll } from '../utils/useBodyScrollLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import PizzaBuilder from './PizzaBuilder';
 
 interface MenuProduct {
   id: string;
@@ -36,8 +37,6 @@ interface MenuCategoryTab {
   label: string;
   icon: string;
 }
-
-const EMPTY_SIZE = { label: '', portions: 0, sabores: 1, price: 0 };
 
 // La tabla `categories` (server/db.js) solo tiene id/name/icon/color -- no hay
 // slug/tipo estable e independiente de la fuente de seed para detectar "es la
@@ -86,10 +85,9 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
   const [showCart, setShowCart] = useState(false);
   const [showPizzaBuilder, setShowPizzaBuilder] = useState<string | null>(null);
 
-  useFocusTrap(!!showPizzaBuilder, () => setShowPizzaBuilder(null));
+  // El focus-trap/Escape del pizza builder ahora vive dentro de
+  // PizzaBuilder.tsx (variant="modal") -- acá solo queda el del carrito.
   useFocusTrap(showCart, () => setShowCart(false), '#md-cart-title');
-  const [selectedSize, setSelectedSize] = useState(EMPTY_SIZE);
-  const [selectedSabores, setSelectedSabores] = useState<string[]>([]);
   const [showSuccess, setShowSuccess] = useState('');
   const [showCrossSell, setShowCrossSell] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
@@ -103,9 +101,6 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
   // lee la CRM (MenuInteligente.tsx) para que ambas superficies no se desincronicen.
   const [products, setProducts] = useState<MenuProduct[]>([]);
   const [categories, setCategories] = useState<MenuCategoryTab[]>([]);
-  const [pizzaSizes, setPizzaSizes] = useState<{ label: string; portions: number; sabores: number; price: number }[]>(
-    []
-  );
   const [menuLoading, setMenuLoading] = useState(true);
 
   useEffect(() => {
@@ -160,7 +155,6 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
 
         setProducts(mapped);
         setCategories(rawCategories.map((c: Category) => ({ id: c.id, label: c.name, icon: `fa-${c.icon}` })));
-        setPizzaSizes(sizeOptions);
         if (rawCategories[0])
           setActiveCategory((prev) =>
             rawCategories.some((c: Category) => c.id === prev) ? prev : rawCategories[0].id
@@ -220,23 +214,9 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
     [contextAddToCart]
   );
 
-  const openPizzaBuilder = useCallback(
-    (product: MenuProduct) => {
-      setShowPizzaBuilder(product.id);
-      setSelectedSize(pizzaSizes[1] || pizzaSizes[0] || EMPTY_SIZE);
-      setSelectedSabores(product.baseSabor ? [product.baseSabor] : []);
-    },
-    [pizzaSizes]
-  );
-
-  const handleAddPizza = useCallback(() => {
-    if (!showPizzaBuilder) return;
-    const product = products.find((p) => p.id === showPizzaBuilder);
-    if (!product || selectedSabores.length === 0) return;
-    const details = `${selectedSize.label} · ${selectedSabores.join(', ')}`;
-    addToCart(product, selectedSize.label, details);
-    setShowPizzaBuilder(null);
-  }, [showPizzaBuilder, selectedSize, selectedSabores, addToCart, products]);
+  const openPizzaBuilder = useCallback((product: MenuProduct) => {
+    setShowPizzaBuilder(product.id);
+  }, []);
 
   const whatsappMessage = useMemo(() => {
     const items = cart
@@ -257,8 +237,8 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
       name: item.name,
       // Acá estaba el bug B2: hardcode PizzaSize.PERSONAL descartaba la
       // selección real. Ahora respetamos item.size (populado por
-      // MenuDigital.handleAddPizza y el bridge __pizzaBuilderAddToCart) o
-      // caemos al legacy enum solo si el cart item es pre-pivot.
+      // PizzaBuilder.handleAdd vía CartContext.addToCart) o caemos al
+      // legacy enum solo si el cart item es pre-pivot.
       size: item.size || PizzaSize.PERSONAL,
       quantity: item.quantity,
       price: item.price,
@@ -569,136 +549,20 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
         )}
       </div>
 
-      {/* Pizza Builder Modal */}
+      {/* Pizza Builder Modal -- componente único, compartido con la página
+        estática "Crea tu Pizza" (ver src/components/PizzaBuilder.tsx) */}
       <AnimatePresence mode="wait">
         {showPizzaBuilder &&
           (() => {
             const product = products.find((p) => p.id === showPizzaBuilder);
             if (!product) return null;
             return (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-overlay bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-                onClick={() => setShowPizzaBuilder(null)}
-              >
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  onClick={(e) => e.stopPropagation()}
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="md-pizza-builder-title"
-                  className="w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-[#8B572A]/10"
-                >
-                  <div className="relative h-48 bg-[#F4EFEA]">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-                    <button
-                      onClick={() => setShowPizzaBuilder(null)}
-                      aria-label="Cerrar personalización"
-                      className="absolute top-4 right-4 z-sticky w-9 h-9 rounded-xl bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-all"
-                    >
-                      <i className="fas fa-times text-xs" aria-hidden="true"></i>
-                    </button>
-                    <div className="absolute bottom-4 left-4 z-sticky">
-                      <h2
-                        id="md-pizza-builder-title"
-                        className="text-2xl font-black text-white drop-shadow-lg"
-                        style={{ fontFamily: "'Bitter', serif" }}
-                      >
-                        {product.name}
-                      </h2>
-                    </div>
-                  </div>
-                  <div className="p-6 max-h-[60vh] overflow-y-auto">
-                    {/* Size Selector */}
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#8B572A]/60 mb-3 block">
-                      Tamaño
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
-                      {pizzaSizes.map((s) => (
-                        <button
-                          key={s.label}
-                          onClick={() => setSelectedSize(s)}
-                          className={`p-4 sm:p-3 rounded-2xl border-2 text-center transition-all ${
-                            selectedSize.label === s.label
-                              ? 'border-[#C0392B] bg-[#C0392B]/5 text-[#C0392B]'
-                              : 'border-[#8B572A]/10 text-[#8B572A]/40 hover:border-[#8B572A]/20'
-                          }`}
-                        >
-                          <div className="text-xs font-black">{s.label}</div>
-                          <div className="text-[9px] font-semibold mt-0.5">{s.portions} porc</div>
-                          <div className="text-[9px] font-semibold">
-                            {s.sabores} sabor{s.sabores > 1 ? 'es' : ''}
-                          </div>
-                          <div className="text-xs font-black mt-1 text-[#C0392B]">${s.price.toLocaleString()}</div>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Sabor Selector */}
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#8B572A]/60 mb-3 block">
-                      Sabores {selectedSize.sabores > 1 ? `(elige ${selectedSize.sabores})` : '(elige 1)'}
-                      <span className="ml-2 text-[#C0392B]">
-                        {selectedSabores.length}/{selectedSize.sabores}
-                      </span>
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
-                      {(product.sabores || []).map((sabor) => {
-                        const isBase = sabor.name === product.baseSabor;
-                        const isSelected = selectedSabores.includes(sabor.name);
-                        const isMaxed = selectedSabores.length >= selectedSize.sabores && !isSelected;
-                        const isDisabled = !isBase && isMaxed && !isSelected;
-                        return (
-                          <button
-                            key={sabor.name}
-                            onClick={() => {
-                              if (isBase) return;
-                              if (isSelected) setSelectedSabores((prev) => prev.filter((s) => s !== sabor.name));
-                              else if (!isMaxed) setSelectedSabores((prev) => [...prev, sabor.name]);
-                            }}
-                            disabled={isDisabled}
-                            className={`p-3 rounded-2xl border-2 text-left transition-all ${
-                              isSelected
-                                ? 'border-[#C0392B] bg-[#C0392B]/5'
-                                : isDisabled
-                                  ? 'border-[#8B572A]/5 opacity-40'
-                                  : 'border-[#8B572A]/10 hover:border-[#8B572A]/20'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-black ${
-                                  isSelected ? 'bg-[#C0392B] text-white' : 'bg-[#8B572A]/10 text-[#8B572A]/40'
-                                }`}
-                              >
-                                {isSelected ? <i className="fas fa-check"></i> : <i className="fas fa-pizza-slice"></i>}
-                              </div>
-                              <div>
-                                <div className="text-sm font-bold text-[#1A1A1A]">{sabor.name}</div>
-                                <div className="text-[9px] text-[#8B572A]/60">{sabor.ingredients.join(' · ')}</div>
-                                {isBase && <span className="text-[8px] font-bold text-[#C0392B]">Sabor base</span>}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Add Button */}
-                    <button
-                      onClick={handleAddPizza}
-                      disabled={selectedSabores.length === 0}
-                      className="w-full py-4 bg-[#C0392B] text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-[#962D22] transition-all shadow-lg shadow-[#C0392B]/30 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <i className="fas fa-plus mr-2"></i>Agregar al pedido · ${selectedSize.price.toLocaleString()}
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
+              <PizzaBuilder
+                variant="modal"
+                productId={product.id}
+                productName={product.name}
+                onClose={() => setShowPizzaBuilder(null)}
+              />
             );
           })()}
       </AnimatePresence>

@@ -4,9 +4,11 @@ import { UserRole, GastroModule, LocationId } from './types';
 import AdminLayout from './components/AdminLayout';
 import MenuDigital from './components/MenuDigital';
 import CartSection from './components/CartSection';
+import PizzaBuilder from './components/PizzaBuilder';
 import { CartProvider } from './context/CartContext';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import ApprovedReviews from './components/ApprovedReviews';
+import TrackOrderModal from './components/TrackOrderModal';
 import { useWebSocket } from './hooks/useWebSocket';
 import api, { AUTH_UNAUTHORIZED_EVENT, getStoredRole, getStoredUsername, setAuthSession } from './services/api';
 import { MotionConfig } from 'framer-motion';
@@ -138,6 +140,7 @@ const App: React.FC = () => {
   // AUTH_UNAUTHORIZED_EVENT → esto se corrige solo (ver el listener abajo).
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getStoredUsername());
   const [showLogin, setShowLogin] = useState(false);
+  const [showTrackOrder, setShowTrackOrder] = useState(false);
   const [gastroModule, setGastroModuleState] = useState<GastroModule>(() => {
     const storedRole = getStoredRole();
     const initialRole = isKnownRole(storedRole) ? storedRole : UserRole.CLIENT;
@@ -155,6 +158,20 @@ const App: React.FC = () => {
   const menuMount = typeof document !== 'undefined' ? document.getElementById('menu-mount') : null;
   const cartMount = typeof document !== 'undefined' ? document.getElementById('cart-mount') : null;
   const reviewsMount = typeof document !== 'undefined' ? document.getElementById('reviews-mount') : null;
+  const pizzaBuilderMount = typeof document !== 'undefined' ? document.getElementById('pizza-builder-mount') : null;
+
+  // "¿Ya pediste? Rastrea tu pedido" solo vivía dentro del panel del carrito
+  // (CartSection.tsx) -- un cliente sin nada en el carrito no tenía forma de
+  // llegar ahí. #navTrackOrderBtn (index.html, junto al ícono del carrito)
+  // es un <button> vanilla fuera del árbol de React; este efecto lo conecta
+  // al mismo TrackOrderModal que ya usa CartSection, sin duplicar lógica.
+  useEffect(() => {
+    const btn = document.getElementById('navTrackOrderBtn');
+    if (!btn) return;
+    const handler = () => setShowTrackOrder(true);
+    btn.addEventListener('click', handler);
+    return () => btn.removeEventListener('click', handler);
+  }, []);
 
   // Keeps gastroModule and the URL in sync both ways: calling this pushes
   // /admin/<module>, and browser back/forward (popstate below) calls
@@ -360,6 +377,9 @@ const App: React.FC = () => {
             </Suspense>
           )}
 
+          {/* Track Order Modal -- abierto desde #navTrackOrderBtn (nav estático) */}
+          {showTrackOrder && <TrackOrderModal onClose={() => setShowTrackOrder(false)} />}
+
           {/* Admin CRM Overlay */}
           {isAuthenticated &&
             (role === UserRole.ADMIN ||
@@ -389,6 +409,12 @@ const App: React.FC = () => {
 
           {/* MenuDigital — rendered as inline section via portal into #menu-mount */}
           {menuMount && createPortal(<MenuDigital variant="section" />, menuMount)}
+
+          {/* PizzaBuilder — same component used by MenuDigital's "Personalizar"
+            modal, rendered full-page via portal into #pizza-builder-mount for
+            the static "Crea tu Pizza" nav entry. Replaces the old vanilla
+            #ctp-builder + the hidden "advanced" builder (both removed). */}
+          {pizzaBuilderMount && createPortal(<PizzaBuilder variant="section" />, pizzaBuilderMount)}
 
           {/* CartSection — rendered as inline section via portal into #cart-mount */}
           {cartMount && createPortal(<CartSection />, cartMount)}

@@ -37,12 +37,6 @@ const CartContext = createContext<CartContextType>({
 
 export const useCart = () => useContext(CartContext);
 
-declare global {
-  interface Window {
-    __pizzaBuilderAddToCart?: (name: string, details?: string, size?: string) => void;
-  }
-}
-
 const CART_ITEMS_KEY = 'juanchos_cart_items';
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -84,42 +78,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = useCallback(() => {
     setCart([]);
-  }, []);
-
-  // Expose global bridge for vanilla pizza builder (accepts optional details/ingredients)
-  useEffect(() => {
-    window.__pizzaBuilderAddToCart = (name: string, details?: string, size?: string) => {
-      // Read actual price from the DOM (set by vanilla pizza builder)
-      const priceEl = document.getElementById('priceDisplay');
-      const priceText = priceEl?.textContent || '$0';
-      const price = parseInt(priceText.replace(/[^0-9]/g, '')) || 30000;
-
-      // Use passed details (which now includes ingredients) or fall back to dough name
-      const doughEl = document.getElementById('doughName');
-      const dough = doughEl?.textContent || 'Personalizada';
-      const itemDetails = details || `Pizza artesanal · ${dough}`;
-      // IMPORTANTE: no defaultear size a 'small' acá (decisión del code-review).
-      // public/pizza-builder.js ya pasa siempre currentSize ('Personal'/
-      // 'Mediana'/'Grande') al llamar este puente, pero si algún caller nuevo
-      // lo olvida, mejor que item.size quede undefined y buildOrderDraft caiga
-      // al fallback legacy (PizzaSize.PERSONAL) que mentir con un size falso.
-      const itemSize = size;
-
-      const id = 'pizza-builder-' + Date.now();
-      setCart((prev) => {
-        const next = [
-          ...prev,
-          { id, productId: 'pizza-builder', name, price, quantity: 1, details: itemDetails, size: itemSize },
-        ];
-        const count = next.reduce((s, i) => s + i.quantity, 0);
-        localStorage.setItem('juanchos_cart', count.toString());
-        window.dispatchEvent(new CustomEvent('cart-updated', { detail: count }));
-        return next;
-      });
-    };
-    return () => {
-      delete window.__pizzaBuilderAddToCart;
-    };
   }, []);
 
   return (

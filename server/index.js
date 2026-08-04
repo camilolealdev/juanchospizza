@@ -85,7 +85,7 @@ app.use(
         // componentes de React renderizan event handlers inline. Migrar a
         // 'strict-dynamic' + nonce sería más seguro, pero requiere cambios en
         // la arquitectura SSR que están fuera del scope actual.
-        scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com', "'unsafe-inline'"],
+        scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://connect.facebook.net', "'unsafe-inline'"],
         styleSrc: [
           "'self'",
           'https://fonts.googleapis.com',
@@ -110,6 +110,8 @@ app.use(
           'https://api.mercadopago.com',
           'https://sandbox.wompi.co',
           'https://production.wompi.co',
+          'https://www.facebook.com',
+          'https://connect.facebook.net',
         ],
         frameSrc: ["'self'", 'https://checkout.bold.co', 'https://www.mercadopago.com.co', 'https://www.google.com'],
         objectSrc: ["'none'"],

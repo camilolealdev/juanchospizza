@@ -23,27 +23,33 @@
 //
 // Known limitation (documented, not silently papered over): the "armador"
 // build-your-own-pizza flow (productId === PIZZA_BUILDER_PRODUCT_ID, see
-// public/pizza-builder.js + window.__pizzaBuilderAddToCart in
-// src/context/CartContext.tsx) computes its price entirely client-side from
-// an ingredient catalog (INGREDIENTS/BASE_PRICE/SIZE_FACTORS) that only
-// exists in that static JS file -- it is not backed by any DB table, and the
-// order item it sends carries no structured topping ids, only a free-text
-// `details` string built from ingredient names. There is nothing server-side
-// to validate individual toppings against, so we cannot fully recompute that
-// price. What we *can* do, and do here, is refuse to let it drop below the
-// known per-size floor (BASE_PRICE * SIZE_FACTORS, i.e. a plain pizza with no
-// paid extras for that size) -- this closes the "guest pays $500 for a
-// custom Grande with 10 toppings" version of the exploit. Fully closing the
-// remaining gap (under-declaring toppings on a custom pizza) requires moving
-// the armador ingredient catalog into the DB; that's a bigger change and
+// src/components/PizzaBuilder.tsx) sends a free-text `details` string built
+// from ingredient names, not structured topping ids. There is nothing
+// server-side to validate individual toppings against, so we cannot fully
+// recompute that price. What we *can* do, and do here, is refuse to let it
+// drop below the known per-size floor (the real `pizza_sizes.precio` for
+// `item.size`, i.e. a plain pizza with no paid extras for that size) --
+// this closes the "guest pays $500 for a custom Familiar with 10 toppings"
+// version of the exploit. Fully closing the remaining gap (under-declaring
+// toppings on a custom pizza) requires moving the armador ingredient catalog
+// into the DB as structured toppings; see docs/DISENO_CATALOGO_TOPPINGS.md,
 // tracked as follow-up, not in scope for this fix.
+//
+// The floor MUST come from the live `pizza_sizes` table (via `sizePriceByKey`
+// below), not a hardcoded constant: PizzaBuilder.tsx fetches its sizes from
+// GET /api/pizza-sizes, so its size names/prices change whenever the seed
+// does (e.g. server/seedData/juanchosMenu.js currently seeds Small/Junior/
+// Mediana/Familiar at 30000/42000/52000/88000 -- nothing like the old
+// Personal/Mediana/Grande @ 25000 base this used to hardcode). A stale
+// hardcoded floor silently undershoots the real base price for every size
+// it doesn't recognize, which is worse than having no floor at all: it looks
+// like protection while actually approving a guest total below the cheapest
+// legitimate size. BUILDER_LEGACY_FLOOR below is only a last-resort fallback
+// for when `pizza_sizes` has no matching row at all (e.g. empty table).
 
 const PIZZA_BUILDER_PRODUCT_ID = 'pizza-builder';
 
-// Mirrors public/pizza-builder.js BASE_PRICE / SIZE_FACTORS exactly. Keep in
-// sync if that file's pricing constants ever change.
-const BUILDER_BASE_PRICE = 25000;
-const BUILDER_SIZE_FACTORS = { Personal: 1.0, Mediana: 1.52, Grande: 1.8 };
+const BUILDER_LEGACY_FLOOR = 25000;
 
 const MAX_ITEM_QUANTITY = 500;
 
@@ -52,11 +58,6 @@ export class OrderPricingError extends Error {
     super(message);
     this.name = 'OrderPricingError';
   }
-}
-
-function builderFloorPrice(size) {
-  const factor = BUILDER_SIZE_FACTORS[size] ?? BUILDER_SIZE_FACTORS.Personal;
-  return Math.round(BUILDER_BASE_PRICE * factor);
 }
 
 // Recomputes the true total for `items` from current catalog prices, run
@@ -95,8 +96,10 @@ export async function computeVerifiedTotal(client, items) {
     if (item?.productId === PIZZA_BUILDER_PRODUCT_ID) {
       // Sin catálogo server-side de toppings (ver nota arriba): se acepta el
       // precio del cliente, pero nunca por debajo del piso conocido para el
-      // tamaño elegido (una pizza personalizada sin extras pagos).
-      const floor = builderFloorPrice(item.size);
+      // tamaño elegido (una pizza personalizada sin extras pagos). El piso
+      // sale de la misma tabla pizza_sizes real, no de una constante vieja.
+      const sizeKey = item?.size ? String(item.size).toLowerCase() : null;
+      const floor = (sizeKey && sizePriceByKey.get(sizeKey)) ?? BUILDER_LEGACY_FLOOR;
       unitPrice = Math.max(Number(item.price) || 0, floor);
     } else {
       const product = productsById.get(item?.productId);
