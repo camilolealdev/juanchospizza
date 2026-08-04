@@ -14,25 +14,46 @@ import { lockBodyScroll, unlockBodyScroll } from '../utils/useBodyScrollLock';
 //   variant="modal"    -> botón "Personalizar" de una pizza en el menú
 const EXTRA_INGREDIENTE_PRECIO = 3500;
 
-const GROUP_ORDER = ['carne', 'vegetal', 'fruta', 'extra'] as const;
+// Cubre las 9 categorías reales del tipo Ingredient (src/types/index.ts) --
+// antes solo carne/vegetal/fruta/extra estaban acá, así que un ingrediente
+// disponible:true con categoria='queso'/'salsa'/'base'/'dulce'/'especia'
+// (confirmado en scripts/seed-menu.sql, ej. Mozzarella di Búfala D.O.P.)
+// desaparecía en silencio del armador: `if (g[key])` era un no-op para
+// cualquier categoría no listada, sin warning ni fallback.
+const GROUP_ORDER = ['carne', 'vegetal', 'queso', 'salsa', 'fruta', 'dulce', 'base', 'especia', 'extra'] as const;
 type GroupKey = (typeof GROUP_ORDER)[number];
 
 const GROUP_LABELS: Record<GroupKey, string> = {
   carne: 'Carnes',
   vegetal: 'Vegetales',
+  queso: 'Quesos',
+  salsa: 'Salsas',
   fruta: 'Frutas & Dulces',
+  dulce: 'Dulces',
+  base: 'Masa',
+  especia: 'Especias',
   extra: 'Extras',
 };
 const GROUP_ICONS: Record<GroupKey, string> = {
   carne: 'fa-drumstick-bite',
   vegetal: 'fa-carrot',
+  queso: 'fa-cheese',
+  salsa: 'fa-droplet',
   fruta: 'fa-cookie',
+  dulce: 'fa-candy-cane',
+  base: 'fa-pizza-slice',
+  especia: 'fa-pepper-hot',
   extra: 'fa-plus-circle',
 };
 const GROUP_COLORS: Record<GroupKey, string> = {
   carne: '#962D22',
   vegetal: '#6B8E23',
+  queso: '#F9DC5C',
+  salsa: '#C0392B',
   fruta: '#db2777',
+  dulce: '#c026d3',
+  base: '#8B572A',
+  especia: '#ea580c',
   extra: '#ea580c',
 };
 
@@ -193,11 +214,21 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ variant, productId = 'pizza
 
   const selectedSize = useMemo(() => sizes.find((s) => s.id === selectedSizeId) || null, [sizes, selectedSizeId]);
 
+  const emptyGroups = (): Record<GroupKey, Ingredient[]> =>
+    GROUP_ORDER.reduce((acc, key) => ({ ...acc, [key]: [] }), {} as Record<GroupKey, Ingredient[]>);
+
   const grouped = useMemo(() => {
-    const g: Record<GroupKey, Ingredient[]> = { carne: [], vegetal: [], fruta: [], extra: [] };
+    const g = emptyGroups();
     ingredients.forEach((ing) => {
       const key = ing.categoria as GroupKey;
-      if (g[key]) g[key].push(ing);
+      if (g[key]) {
+        g[key].push(ing);
+      } else if (import.meta.env.DEV) {
+        // Categoría fuera de las 9 conocidas -- ver comentario en GROUP_ORDER.
+        // No la descartamos silenciosamente: avisamos en dev para que se
+        // note antes de llegar a producción invisible.
+        console.warn(`PizzaBuilder: ingrediente "${ing.nombre}" con categoria desconocida "${ing.categoria}"`);
+      }
     });
     return g;
   }, [ingredients]);
@@ -205,7 +236,7 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ variant, productId = 'pizza
   const filteredGrouped = useMemo(() => {
     const q = normalizeText(searchQuery);
     if (!q) return grouped;
-    const filtered: Record<GroupKey, Ingredient[]> = { carne: [], vegetal: [], fruta: [], extra: [] };
+    const filtered = emptyGroups();
     GROUP_ORDER.forEach((key) => {
       filtered[key] = grouped[key].filter((ing) => normalizeText(ing.nombre).includes(q));
     });
@@ -414,7 +445,11 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ variant, productId = 'pizza
         <div className="space-y-4 max-h-[26rem] overflow-y-auto pr-1">
           {GROUP_ORDER.map((key) => {
             const ings = filteredGrouped[key];
-            if (searchQuery && ings.length === 0) return null;
+            // Sin ítems -- ni buscando (0 resultados) ni en general (grupo
+            // sin ingredientes disponibles, ej. "Masa"/"Especias" en el seed
+            // actual). Antes solo se ocultaba buscando; un grupo vacío por
+            // datos quedaba como header fantasma sin chips debajo.
+            if (ings.length === 0) return null;
             const collapsed = collapsedGroups[key];
             const MAX_VISIBLE = 10;
             const visible = searchQuery || collapsed ? ings : ings.slice(0, MAX_VISIBLE);

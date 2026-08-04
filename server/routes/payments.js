@@ -582,6 +582,26 @@ router.get('/api/payments/bold/status/:paymentLink', authMiddleware, requireRole
     if (boldStatus === 'PAID') paymentStatus = 'paid';
     else if (['REJECTED', 'CANCELLED', 'EXPIRED'].includes(boldStatus)) paymentStatus = 'failed';
 
+    // Antes este endpoint solo LEÍA el estado, nunca lo persistía -- un pedido
+    // huérfano (Bold falló a mitad de pago, o el cliente cerró la pestaña sin
+    // completar) se quedaba paymentStatus='pending' para siempre, porque el
+    // webhook de Bold no dispara para links nunca completados/expirados, y
+    // este chequeo manual del ADMIN no arreglaba nada. Ahora, si el estado en
+    // Bold ya es definitivo (paid/failed) y difiere del que tenemos, lo
+    // persistimos acá mismo -- este endpoint se vuelve la vía de reconciliación
+    // manual que antes no existía.
+    if (paymentStatus !== 'pending') {
+      try {
+        const orderMatch = await pool.query('SELECT * FROM orders WHERE "paymentProviderRef" = $1', [paymentLink]);
+        const orderRow = orderMatch.rows[0];
+        if (orderRow && orderRow.paymentStatus !== paymentStatus) {
+          await confirmOrderPayment(pool, orderRow, paymentStatus);
+        }
+      } catch (reconcileErr) {
+        console.error('[Bold] Error reconciliando estado de pedido:', reconcileErr.message);
+      }
+    }
+
     res.json({
       boldStatus,
       paymentStatus,

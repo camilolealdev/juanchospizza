@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import BoldCheckoutButton from './payments/BoldCheckoutButton';
@@ -18,6 +18,22 @@ const CartSection: React.FC = () => {
 
   const canCheckout = !!customerName && !!customerAddress && !!customerPhone;
 
+  // Antes orderNumber se generaba de nuevo en CADA llamada a buildOrderDraft()
+  // (se invoca en cada render, ej. `orderDraft={buildOrderDraft()}` como prop
+  // inline) -- no servía como idempotency key: un retry de red tras un POST
+  // /api/orders fallido mandaba un orderNumber DISTINTO, esquivando el índice
+  // único de la DB y arriesgando un pedido (y cobro de Bold) duplicado. Ahora
+  // se genera una sola vez por intento de checkout y se regenera solo cuando
+  // el carrito se vacía (pedido completado), para el próximo pedido.
+  const [orderNumber, setOrderNumber] = useState(() => generateOrderNumber());
+  const prevCartLenRef = useRef(cart.length);
+  useEffect(() => {
+    if (prevCartLenRef.current > 0 && cart.length === 0) {
+      setOrderNumber(generateOrderNumber());
+    }
+    prevCartLenRef.current = cart.length;
+  }, [cart.length]);
+
   const buildOrderDraft = (): OrderDraft => {
     const items: OrderItem[] = cart.map((item) => ({
       id: item.id,
@@ -33,13 +49,6 @@ const CartSection: React.FC = () => {
       price: item.price,
       details: item.details,
     }));
-
-    // [2026-07-21] Frontend audit P0 #8: orderNumber con crypto.randomUUID,
-    // extraído a src/utils/orderNumber.ts para no duplicar entre
-    // MenuDigital y CartSection. El server genera el orderNumber
-    // canónico en /api/orders POST; este helper es sólo el prefijo
-    // display que aparece en WhatsApp antes de confirmar.
-    const orderNumber = generateOrderNumber();
 
     return {
       orderNumber,

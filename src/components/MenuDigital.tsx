@@ -102,9 +102,18 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
   const [products, setProducts] = useState<MenuProduct[]>([]);
   const [categories, setCategories] = useState<MenuCategoryTab[]>([]);
   const [menuLoading, setMenuLoading] = useState(true);
+  // Antes el catch dejaba products/categories vacíos sin marcar nada más --
+  // "sin productos para este filtro" y "la API falló" se veían exactamente
+  // igual (mismo empty-state genérico), perpetuando el bug de grid vacío en
+  // producción sin forma de distinguir la causa ni de reintentar. Mismo
+  // patrón que ya usa PizzaBuilder.tsx (loadError + reintento).
+  const [menuLoadError, setMenuLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setMenuLoading(true);
+    setMenuLoadError(false);
     (async () => {
       try {
         const [rawProducts, rawCategories, sizes, variants] = await Promise.all([
@@ -160,7 +169,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
             rawCategories.some((c: Category) => c.id === prev) ? prev : rawCategories[0].id
           );
       } catch {
-        // arrays quedan vacíos -- el empty-state de abajo ya cubre esto
+        if (!cancelled) setMenuLoadError(true);
       } finally {
         if (!cancelled) setMenuLoading(false);
       }
@@ -168,7 +177,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   const {
     cart,
@@ -179,6 +188,19 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
     updateQuantity,
     clearCart,
   } = useCart();
+
+  // Mismo fix que CartSection.tsx: orderNumber estable por intento de
+  // checkout, no regenerado en cada llamada a buildOrderDraft() (antes
+  // rompía la idempotencia -- un retry de red mandaba un orderNumber
+  // distinto, esquivando el índice único de la DB).
+  const [orderNumber, setOrderNumber] = useState(() => generateOrderNumber());
+  const prevCartLenRef = useRef(cart.length);
+  useEffect(() => {
+    if (prevCartLenRef.current > 0 && cart.length === 0) {
+      setOrderNumber(generateOrderNumber());
+    }
+    prevCartLenRef.current = cart.length;
+  }, [cart.length]);
 
   const filteredProducts = useMemo(() => {
     let items = products.filter((p) => p.category === activeCategory);
@@ -245,11 +267,6 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
       details: item.details,
     }));
 
-    // [2026-07-21] Frontend audit P0 #8: helper extraído a
-    // src/utils/orderNumber.ts para no duplicar entre MenuDigital y
-    // CartSection (audit Major #1 del reviewer).
-    const orderNumber = generateOrderNumber();
-
     return {
       orderNumber,
       customerName,
@@ -259,7 +276,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
       total: cartTotal,
       estimatedTime: 30,
     };
-  }, [cart, customerName, customerPhone, customerAddress, cartTotal]);
+  }, [cart, customerName, customerPhone, customerAddress, cartTotal, orderNumber]);
 
   const handleWhatsApp = useCallback(async () => {
     // [2026-07-30] Backlog: window.open DESPUÉS de un await pierde el user
@@ -541,7 +558,21 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
             <p className="text-[#8B572A]/50 font-bold text-sm">Cargando menú…</p>
           </div>
         )}
-        {!menuLoading && filteredProducts.length === 0 && (
+        {!menuLoading && menuLoadError && (
+          <div className="text-center py-20">
+            <i className="fas fa-triangle-exclamation text-4xl text-[#C0392B]/40 mb-4"></i>
+            <p className="text-[#8B572A]/70 font-bold text-sm mb-4">
+              No pudimos cargar el menú. Revisa tu conexión e intenta de nuevo.
+            </p>
+            <button
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="px-6 py-3 bg-[#C0392B] text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[#962D22] transition-all"
+            >
+              <i className="fas fa-rotate-right mr-2"></i>Reintentar
+            </button>
+          </div>
+        )}
+        {!menuLoading && !menuLoadError && filteredProducts.length === 0 && (
           <div className="text-center py-20">
             <i className="fas fa-search text-4xl text-[#8B572A]/20 mb-4"></i>
             <p className="text-[#8B572A]/50 font-bold text-sm">No encontramos productos con ese filtro</p>

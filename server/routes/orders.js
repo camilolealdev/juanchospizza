@@ -33,8 +33,14 @@ router.get('/api/orders', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPA
     // pago online todavía sin confirmar por el webhook del proveedor.
     // Efectivo/tarjeta (pago contra-entrega) siempre pasan, sin importar
     // paymentStatus, porque nunca dependen de una confirmación externa.
+    // 'whatsapp' se agrega acá por el mismo motivo: ese pedido se negocia
+    // fuera de la app (el cliente paga contra-entrega o transferencia
+    // coordinada por chat), no hay webhook de proveedor que vaya a marcarlo
+    // paymentStatus='paid' -- antes de este fix quedaba paymentStatus='pending'
+    // para siempre y este filtro lo escondía de cocina/ops indefinidamente,
+    // aunque el pedido existiera en la DB.
     if (paidOnly === 'true') {
-      conditions.push(`("paymentStatus" = 'paid' OR "paymentMethod" IN ('cash', 'card'))`);
+      conditions.push(`("paymentStatus" = 'paid' OR "paymentMethod" IN ('cash', 'card', 'whatsapp'))`);
     }
 
     let query = 'SELECT * FROM orders';
@@ -234,12 +240,27 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
       status,
       paymentMethod: sanitized.paymentMethod,
     });
-  } catch (_e) {
+  } catch (e) {
     if (client) {
       try {
         await client.query('ROLLBACK');
       } catch {
         /* la conexión ya pudo haberse perdido -- no hay nada más que hacer */
+      }
+    }
+    // orderNumber ahora es una idempotency key real (ver src/components/
+    // CartSection.tsx y MenuDigital.tsx: se genera una sola vez por intento
+    // de checkout, ya no en cada render). Un retry de red que reenvía el
+    // mismo POST choca acá contra idx_orders_number (server/db.js) en vez
+    // de crear un pedido duplicado -- devolvemos el pedido YA creado por el
+    // intento anterior (200) en lugar de un 500 genérico que el cliente
+    // interpretaría como "no se creó" y podría reintentar de nuevo.
+    if (e.code === '23505') {
+      try {
+        const existing = await pool.query('SELECT * FROM orders WHERE "orderNumber" = $1', [req.body?.orderNumber]);
+        if (existing.rows[0]) return res.status(200).json(existing.rows[0]);
+      } catch {
+        /* si ni siquiera esto funciona, cae al 500 genérico de abajo */
       }
     }
     res.status(500).json({ error: 'Error creating order' });
