@@ -2,7 +2,7 @@ import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole, requireSameLocation } from '../auth.js';
 import { validate } from '../middleware/validate.js';
-import { openShiftSchema, closeShiftSchema } from '../schemas/shifts.js';
+import { openShiftSchema, closeShiftSchema, updateShiftSchema } from '../schemas/shifts.js';
 
 const router = express.Router();
 
@@ -148,5 +148,71 @@ router.patch(
     }
   }
 );
+
+// PUT /api/shifts/:id — actualiza SOLO metadatos (notas). Nunca montos:
+// openingCash/closingCash/expectedCash/difference los manejan únicamente
+// abrir y cerrar, porque la reconciliación de caja deriva de ellos;
+// permitir editarlos acá invalidaría el arqueo.
+router.put(
+  '/api/shifts/:id',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR'),
+  validate(updateShiftSchema),
+  async (req, res) => {
+    try {
+      const { notas } = req.body;
+      const shiftResult = await pool.query('SELECT * FROM shifts WHERE id = $1', [req.params.id]);
+      if (!shiftResult.rows.length) return res.status(404).json({ error: 'Turno no encontrado' });
+      // Mismo criterio de sede que close: se lee de la fila, no del request.
+      if (
+        req.auth?.role !== 'ADMIN' &&
+        req.auth?.locationId &&
+        shiftResult.rows[0].locationId !== req.auth.locationId
+      ) {
+        return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+      }
+
+      const updates = [];
+      const params = [];
+      if (notas !== undefined) {
+        params.push(notas);
+        updates.push(`notas = $${params.length}`);
+      }
+      if (!updates.length) return res.status(400).json({ error: 'Nada para actualizar' });
+
+      params.push(req.params.id);
+      await pool.query(`UPDATE shifts SET ${updates.join(', ')} WHERE id = $${params.length}`, params);
+
+      const result = await pool.query('SELECT * FROM shifts WHERE id = $1', [req.params.id]);
+      res.json(result.rows[0]);
+    } catch (_e) {
+      res.status(500).json({ error: 'Error updating shift' });
+    }
+  }
+);
+
+// DELETE /api/shifts/:id — descarta un turno ABIERTO (ej. apertura por
+// error antes de registrar ventas). Un turno es un registro financiero
+// (openingCash, closingCash, difference; el cierre atribuye las ventas por
+// ventana openedAt→NOW): solo ADMIN puede descartarlo, y un turno cerrado
+// NO se puede eliminar — responder 409 protege la integridad del arqueo.
+// El check de sede se conserva como defensa en profundidad.
+router.delete('/api/shifts/:id', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+  try {
+    const shiftResult = await pool.query('SELECT * FROM shifts WHERE id = $1', [req.params.id]);
+    if (!shiftResult.rows.length) return res.status(404).json({ error: 'Turno no encontrado' });
+    const shift = shiftResult.rows[0];
+    if (shift.status === 'closed') {
+      return res.status(409).json({ error: 'No se puede eliminar un turno cerrado (registro financiero)' });
+    }
+    if (req.auth?.role !== 'ADMIN' && req.auth?.locationId && shift.locationId !== req.auth.locationId) {
+      return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+    }
+    await pool.query('DELETE FROM shifts WHERE id = $1', [req.params.id]);
+    res.json({ id: req.params.id, deleted: true });
+  } catch (_e) {
+    res.status(500).json({ error: 'Error deleting shift' });
+  }
+});
 
 export default router;

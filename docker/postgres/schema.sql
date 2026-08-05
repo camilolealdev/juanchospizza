@@ -526,6 +526,20 @@ CREATE TABLE IF NOT EXISTS tips (
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- === PROCESSED WEBHOOKS (idempotencia de webhooks de pago) ===
+-- Registro de cada webhook ya procesado (provider + sourceId) para que un
+-- reintento del proveedor de pagos no duplique la orden. Debe existir en un
+-- bootstrap fresco: sin esta tabla, la idempotencia de pagos se pierde en un
+-- deploy con volumen nuevo (gap AUDIT_2026-07-30). Espejo exacto de
+-- server/db.js initDB() y de la migración #008 de server/migrate.js.
+CREATE TABLE IF NOT EXISTS processed_webhooks (
+  provider TEXT NOT NULL,
+  "sourceId" TEXT NOT NULL,
+  "processedAt" TIMESTAMPTZ DEFAULT NOW(),
+  "orderId" TEXT,
+  PRIMARY KEY (provider, "sourceId")
+);
+
 -- === MIGRATION TRACKING (see server/migrate.js runMigrations()) ===
 CREATE TABLE IF NOT EXISTS "_schema_migrations" (
   id INTEGER PRIMARY KEY,

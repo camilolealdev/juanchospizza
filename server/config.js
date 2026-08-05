@@ -21,9 +21,17 @@ const config = {
 
 function validateConfig() {
   const errors = [];
-  if (!config.database.url) errors.push('DATABASE_URL');
+  // Leer de process.env en tiempo de llamada (no del objeto config capturado
+  // al importar) para que la validación siempre vea el env actual.
+  if (!process.env.DATABASE_URL) errors.push('DATABASE_URL');
+  // FRONTEND_URL obligatorio en producción — si falta, las pasarelas de pago
+  // redirigirían al literal 'undefined' (rompiendo el checkout). Fail-fast al
+  // boot es mejor que discover-on-deploy.
+  if (config.nodeEnv === 'production' && !process.env.FRONTEND_URL) {
+    errors.push('FRONTEND_URL');
+  }
   if (errors.length > 0) {
-    logger.error({ errors }, 'Config validation failed: missing required vars');
+    logger.fatal({ errors }, 'Config validation failed: missing required vars');
     process.exit(1);
   }
   if (!config.gemini.apiKey) {

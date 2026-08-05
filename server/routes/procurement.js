@@ -1,44 +1,63 @@
 // Procurement / Purchase Orders — compras a proveedores
 import express from 'express';
 import { pool } from '../db.js';
-import { authMiddleware, requireRole } from '../auth.js';
+import { authMiddleware, requireRole, requireSameLocation } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import { createPurchaseOrderSchema, updatePurchaseOrderSchema } from '../schemas/procurement.js';
 
 const router = express.Router();
 
+// Auditoría de arquitectura (alto): únicas 2 rutas de este archivo con
+// OPERATOR (el resto es ADMIN-only, sin gap real) -- antes un OPERATOR
+// podía consultar/listar órdenes de compra de la otra sede simplemente
+// omitiendo o cambiando locationId en la query string.
+function effectiveLocationId(req) {
+  if (req.auth?.role === 'ADMIN') return req.query.locationId || null;
+  return req.auth?.locationId || req.query.locationId || null;
+}
+
 // GET /api/procurement — listar órdenes de compra
-router.get('/api/procurement', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
-  try {
-    const { status, locationId } = req.query;
-    let query = 'SELECT * FROM purchase_orders';
-    const conditions = [];
-    const params = [];
+router.get(
+  '/api/procurement',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR'),
+  requireSameLocation((req) => req.query.locationId),
+  async (req, res) => {
+    try {
+      const { status } = req.query;
+      const locationId = effectiveLocationId(req);
+      let query = 'SELECT * FROM purchase_orders';
+      const conditions = [];
+      const params = [];
 
-    if (status) {
-      params.push(status);
-      conditions.push(`status = $${params.length}`);
+      if (status) {
+        params.push(status);
+        conditions.push(`status = $${params.length}`);
+      }
+      if (locationId) {
+        params.push(locationId);
+        conditions.push(`"locationId" = $${params.length}`);
+      }
+
+      if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+      query += ' ORDER BY "fechaSolicitud" DESC';
+
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (_e) {
+      res.status(500).json({ error: 'Error al listar órdenes de compra' });
     }
-    if (locationId) {
-      params.push(locationId);
-      conditions.push(`"locationId" = $${params.length}`);
-    }
-
-    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-    query += ' ORDER BY "fechaSolicitud" DESC';
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (_e) {
-    res.status(500).json({ error: 'Error al listar órdenes de compra' });
   }
-});
+);
 
 // GET /api/procurement/:id
 router.get('/api/procurement/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM purchase_orders WHERE id = $1', [req.params.id]);
     if (!result.rows.length) return res.status(404).json({ error: 'Orden no encontrada' });
+    if (req.auth?.role !== 'ADMIN' && req.auth?.locationId && result.rows[0].locationId !== req.auth.locationId) {
+      return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
+    }
     res.json(result.rows[0]);
   } catch (_e) {
     res.status(500).json({ error: 'Error al obtener orden' });

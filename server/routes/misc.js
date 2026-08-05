@@ -5,16 +5,6 @@ import { CATEGORIES, PRODUCTS, PIZZA_SIZES, INGREDIENTS } from '../seedData/juan
 
 const router = express.Router();
 
-// Health check — sin exponer detalles
-router.get('/api/health', async (req, res) => {
-  try {
-    await pool.query('SELECT 1');
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  } catch (_e) {
-    res.status(503).json({ status: 'error', timestamp: new Date().toISOString() });
-  }
-});
-
 // Seed data endpoint -- carga/actualiza la carta real (categorías, productos,
 // tamaños de pizza, ingredientes del armador) desde server/seedData/juanchosMenu.js.
 // Idempotente vía ON CONFLICT DO UPDATE: re-correrlo actualiza precios/textos
@@ -78,7 +68,8 @@ router.post('/api/seed', authMiddleware, requireRole('ADMIN'), async (req, res) 
       );
     }
 
-    for (const i of INGREDIENTS) {      // `disponible` se omite del UPDATE SET a propósito: el seed solo siembra
+    for (const i of INGREDIENTS) {
+      // `disponible` se omite del UPDATE SET a propósito: el seed solo siembra
       // el catálogo (qué ingredientes EXISTEN), no debe revivir ingredientes que
       // el admin marcó como agotados (disponible=false) tras un incidente de
       // stock. Para volver a habilitar uno agotado, el flujo correcto es la UI
@@ -90,8 +81,17 @@ router.post('/api/seed', authMiddleware, requireRole('ADMIN'), async (req, res) 
            nombre = $2, descripcion = $3, precio_extra = $4, categoria = $5, vegetariano = $6,
            vegano = $7, premium = $8, dulce = $9, "defaultIng" = $11`,
         [
-          i.id, i.nombre, i.descripcion, i.precio_extra, i.categoria, i.vegetariano,
-          i.vegano, i.premium, i.dulce, i.disponible, i.defaultIng,
+          i.id,
+          i.nombre,
+          i.descripcion,
+          i.precio_extra,
+          i.categoria,
+          i.vegetariano,
+          i.vegano,
+          i.premium,
+          i.dulce,
+          i.disponible,
+          i.defaultIng,
         ]
       );
     }

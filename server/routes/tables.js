@@ -7,6 +7,17 @@ import { notifyTableUpdate } from '../websocket.js';
 
 const router = express.Router();
 
+// Sede efectiva (High #5 de AUDIT_2026-07-30): requireSameLocation por sí solo
+// NO alcanza — solo bloquea si el request TRAE explícitamente un locationId
+// distinto al del token; si el OPERATOR omite locationId, deja pasar y la
+// ruta listaría las mesas de TODAS las sedes. Mismo hueco que inventory.js
+// documenta y corrige: acá forzamos la sede del token server-side para roles
+// no-ADMIN en vez de confiar en el query param.
+function effectiveLocationId(req) {
+  if (req.auth?.role === 'ADMIN') return req.query.locationId || null;
+  return req.auth?.locationId || req.query.locationId || null;
+}
+
 // GET /api/tables — listar mesas (con filtros)
 router.get(
   '/api/tables',
@@ -15,7 +26,10 @@ router.get(
   requireSameLocation((req) => req.query.locationId),
   async (req, res) => {
     try {
-      const { locationId, area, status } = req.query;
+      const { area, status } = req.query;
+      // Sede efectiva: un OPERATOR sin locationId en el query sigue viendo
+      // SOLO su sede (no todas).
+      const locationId = effectiveLocationId(req);
       let query = 'SELECT * FROM dining_tables';
       const conditions = [];
       const params = [];
@@ -59,7 +73,8 @@ router.get(
   requireSameLocation((req) => req.query.locationId),
   async (req, res) => {
     try {
-      const { locationId } = req.query;
+      // Sede efectiva, mismo criterio que GET /api/tables.
+      const locationId = effectiveLocationId(req);
       let query = 'SELECT * FROM dining_tables WHERE active IS DISTINCT FROM false';
       const params = [];
       if (locationId) {
@@ -226,6 +241,29 @@ router.put('/api/tables/:id', authMiddleware, requireRole('ADMIN'), validate(upd
     });
   } catch (_e) {
     res.status(500).json({ error: 'Error updating table' });
+  }
+});
+
+// DELETE /api/tables/:id — baja lógica (active = false) en vez de borrar
+// la fila: comandas y el plano del restaurante referencian las mesas, y un
+// borrado físico rompería ese historial. Solo ADMIN, mismo criterio que
+// POST/PUT. La mesa sale del floor-plan y de los listados por defecto.
+router.delete('/api/tables/:id', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+  try {
+    const result = await pool.query(
+      'UPDATE dining_tables SET active = false WHERE id = $1 RETURNING id, name, status',
+      [req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Mesa no encontrada' });
+
+    res.json({ id: req.params.id, active: false });
+
+    // Notificar WebSocket para que el plano se actualice en vivo
+    setImmediate(() => {
+      notifyTableUpdate(req.params.id, result.rows[0].status);
+    });
+  } catch (_e) {
+    res.status(500).json({ error: 'Error deleting table' });
   }
 });
 

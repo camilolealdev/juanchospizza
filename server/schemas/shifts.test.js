@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { openShiftSchema, closeShiftSchema } from './shifts.js';
+import { openShiftSchema, closeShiftSchema, updateShiftSchema } from './shifts.js';
 
 describe('openShiftSchema', () => {
   it('accepts a valid open request', () => {
@@ -21,6 +21,32 @@ describe('openShiftSchema', () => {
 
   it('rejects a negative openingCash', () => {
     expect(openShiftSchema.safeParse({ locationId: 'nemocon', openingCash: -100 }).success).toBe(false);
+  });
+});
+
+describe('updateShiftSchema', () => {
+  it('accepts notas opcionales', () => {
+    const result = updateShiftSchema.safeParse({ notas: 'Arqueo corregido' });
+    expect(result.success).toBe(true);
+    expect(result.data.notas).toBe('Arqueo corregido');
+  });
+
+  it('accepts un body vacío (todas las columnas opcionales)', () => {
+    expect(updateShiftSchema.safeParse({}).success).toBe(true);
+  });
+
+  it('permite limpiar notas con null', () => {
+    const result = updateShiftSchema.safeParse({ notas: null });
+    expect(result.success).toBe(true);
+    expect(result.data.notas).toBeNull();
+  });
+
+  it('rejects notas que exceden 500 chars', () => {
+    expect(updateShiftSchema.safeParse({ notas: 'x'.repeat(501) }).success).toBe(false);
+  });
+
+  it('rejects notas que no es string', () => {
+    expect(updateShiftSchema.safeParse({ notas: 123 }).success).toBe(false);
   });
 });
 

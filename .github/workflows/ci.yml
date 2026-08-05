@@ -1,12 +1,13 @@
 # PizzaCRM — GitHub Actions CI/CD
 # ────────────────────────────────────────────────────────────
 # Pipeline completo:
-#   PR → lint + typecheck + build + tests + audit
+#   PR → lint + typecheck + build + tests + coverage gate + audit
 #   Push to master → build + Docker image + deploy signal
 #
 # Convenciones:
 #   - Node 22 (LTS) — alineado con el Dockerfile, caché npm
 #   - audit no bloqueante (solo high+)
+#   - coverage: job dedicado con umbrales en vitest.config.ts (B-P5)
 #   - Docker build multi-stage
 
 name: PizzaCRM CI/CD
@@ -67,7 +68,38 @@ jobs:
         continue-on-error: true
         run: npm audit --audit-level=high --omit=dev
 
-  # ── JOB 2: Docker Build ─────────────────────────────────────
+  # ── JOB 2: Coverage Gate ────────────────────────────────────
+  # [2026-08-04] B-P5: gate de cobertura en cada push/PR. Los umbrales
+  # viven en vitest.config.ts (coverage.thresholds) — si la cobertura cae
+  # del mínimo, vitest sale con exit 1 y el job falla (bloquea el merge).
+  # Los tests unitarios mockean la DB, así que no necesita Postgres.
+  # Baseline: 66.34% stmts (umbral 60).
+  coverage:
+    name: Coverage Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [quality]
+    env:
+      DATABASE_URL: postgres://test:test@localhost:5432/test
+      JWT_SECRET: ci-test-secret-do-not-use-in-prod
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install
+        run: npm ci --no-audit --no-fund
+
+      - name: 📊 Coverage Gate
+        run: npm run test:coverage
+
+  # ── JOB 3: Docker Build ─────────────────────────────────────
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -85,7 +117,7 @@ jobs:
           echo "✅ Docker image built: guidopizza:${{ github.sha }}"
           docker images guidopizza --format '{{.Repository}}:{{.Tag}} ({{.Size}})'
 
-  # ── JOB 3: E2E Smoke Tests ─────────────────────────────────
+  # ── JOB 4: E2E Smoke Tests ─────────────────────────────────
   e2e:
     name: E2E Smoke Tests
     runs-on: ubuntu-latest

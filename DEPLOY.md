@@ -218,7 +218,7 @@ docker compose up -d --build
 
 ### Inmediato (primeros 10 min)
 
-- [ ] `curl https://tudominio.com/api/health` → `{"status":"ok"}`
+- [ ] `curl https://tudominio.com/api/health` → `{"status":"healthy", ... "services":{"database":"connected","redis":"connected"}}` (la forma real del health en `server/index.js`, que incluye uptime y estado de DB/Redis)
 - [ ] Login como ADMIN funciona
 - [ ] Login como OPERATOR funciona
 - [ ] Menú digital carga correctamente

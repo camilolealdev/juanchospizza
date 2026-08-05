@@ -1,6 +1,6 @@
 import express from 'express';
 import { pool } from '../db.js';
-import { authMiddleware, requireRole } from '../auth.js';
+import { authMiddleware, requireRole, requireSameLocation } from '../auth.js';
 import { validate } from '../middleware/validate.js';
 import { z } from 'zod';
 import { str, strOpt, clampedNumber } from '../schemas/helpers.js';
@@ -178,10 +178,16 @@ router.get('/api/tips', authMiddleware, requireRole('ADMIN'), async (req, res) =
 });
 
 // POST /api/tips — registrar propina
+// Auditoría de arquitectura (alto): esta era la única ruta OPERATOR de este
+// archivo (el resto es ADMIN-only, que requireSameLocation ya no-opea por
+// diseño) -- antes aceptaba locationId del body sin validar que coincidiera
+// con la sede del operador, dejando registrar/atribuir propinas a la otra
+// sede.
 router.post(
   '/api/tips',
   authMiddleware,
   requireRole('ADMIN', 'OPERATOR'),
+  requireSameLocation((req) => req.body.locationId),
   validate(
     z.object({
       orderId: str(50),
@@ -193,7 +199,14 @@ router.post(
   ),
   async (req, res) => {
     try {
-      const { orderId, amount, method, waiterName, locationId } = req.body;
+      const { orderId, amount, method, waiterName } = req.body;
+      // Si el operador omite locationId, el schema por defecto lo mandaba
+      // SIEMPRE a 'nemocon' sin importar la sede real del token -- mismo
+      // hueco de "parámetro omitido" que auth.js documenta para
+      // requireSameLocation. Para no-ADMIN, la sede efectiva sale del
+      // token, no de un default hardcodeado.
+      const locationId =
+        req.auth?.role === 'ADMIN' ? req.body.locationId || 'nemocon' : req.auth?.locationId || req.body.locationId;
       const id = `tip_${Date.now()}`;
 
       await pool.query(

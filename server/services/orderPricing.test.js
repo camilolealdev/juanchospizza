@@ -25,9 +25,11 @@ describe('computeVerifiedTotal', () => {
     expect(total).toBe(60000); // 30000 * 2, no el $1 que mandó el cliente
   });
 
-  it('uses pizza_sizes.precio (absolute) as the unit price when item.size matches a known size', async () => {
+  it('uses pizza_sizes.precio (absolute) as the unit price when item.size matches a known size, for an actual pizza flavor product', async () => {
     const client = fakeClient({
-      products: [{ id: 'p1', basePrice: 20000 }], // basePrice del producto base, ignorado si el tamaño matchea
+      // categoryId:'pizzas' es lo que hace que este producto realmente
+      // tenga tallas -- ver hasRealSizes() en orderPricing.js.
+      products: [{ id: 'p1', basePrice: 20000, categoryId: 'pizzas' }], // basePrice del producto base, ignorado si el tamaño matchea
       sizes: [{ id: 'familiar', nombre: 'Familiar', precio: 55000 }],
     });
 
@@ -35,6 +37,24 @@ describe('computeVerifiedTotal', () => {
     const total = await computeVerifiedTotal(client, items);
 
     expect(total).toBe(55000);
+  });
+
+  // Auditoría de arquitectura (critico #1): antes sizePriceByKey era un mapa
+  // GLOBAL sin scope por producto -- un item con size='Familiar' para un
+  // producto que NUNCA tuvo tallas (ej. un combo caro, o una gaseosa)
+  // igual matcheaba contra pizza_sizes y cobraba el precio de la pizza en
+  // vez del basePrice real del producto. Regresión: esto debe seguir
+  // cobrando basePrice sin importar qué size mande el cliente.
+  it('ignores item.size for a product that is not a pizza flavor, even if it accidentally matches a real pizza_sizes name', async () => {
+    const client = fakeClient({
+      products: [{ id: 'combo-familiar', basePrice: 150000, categoryId: 'especiales' }],
+      sizes: [{ id: 'small', nombre: 'Small', precio: 30000 }],
+    });
+
+    const items = [{ productId: 'combo-familiar', name: 'Combo Familiar', size: 'small', quantity: 1, price: 500 }];
+    const total = await computeVerifiedTotal(client, items);
+
+    expect(total).toBe(150000); // basePrice real, NO el precio de la pizza Small
   });
 
   it('rejects an item referencing a product id that does not exist in the catalog', async () => {

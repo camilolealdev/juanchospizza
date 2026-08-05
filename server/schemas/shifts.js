@@ -15,3 +15,10 @@ export const closeShiftSchema = z.object({
     .min(0, 'El monto de cierre no puede ser negativo'),
   notas: strOpt(500),
 });
+
+// Actualización de metadatos del turno — deliberadamente SOLO notas: los
+// montos (openingCash/closingCash/expectedCash/difference) los manejan
+// únicamente abrir/cerrar porque la reconciliación de caja deriva de ellos.
+export const updateShiftSchema = z.object({
+  notas: strOpt(500),
+});

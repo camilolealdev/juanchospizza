@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import logger from './services/logger.js';
+import { validateConfig } from './config.js';
 import { pool, initDB } from './db.js';
 import { initPush } from './push.js';
 import { generalRateLimit, serviceRateLimit } from './middleware/rateLimit.js';
@@ -74,7 +75,6 @@ app.set('trust proxy', 1);
 // 'self' (/src/main.tsx build hasheado + /pizza-builder.js +
 // /consent-banner.js). No tocamos frameSrc/connectSrc por dominio:
 // esos son los reales (Gemini, Bold, Wompi, etc.).
-const isProduction = process.env.NODE_ENV === 'production';
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -258,27 +258,64 @@ app.get('*', (req, res) => {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// Validar config al iniciar
-if (!process.env.DATABASE_URL) {
-  logger.fatal('Falta DATABASE_URL en .env');
-  process.exit(1);
-}
-
-// FRONTEND_URL obligatorio en producción — si falta, las pasarelas de pago
-// redirigirían al literal 'undefined' (rompiendo el checkout). Hacer
-// fail-fast al boot es mejor que discover-on-deploy.
-if (isProduction && !process.env.FRONTEND_URL) {
-  logger.fatal('Falta FRONTEND_URL en .env para entorno de producción');
-  process.exit(1);
-}
+// Validar config al iniciar (fail-fast al boot). validateConfig() en
+// server/config.js exige DATABASE_URL, exige FRONTEND_URL en producción (las
+// pasarelas de pago redirigen ahí) y avisa si falta GEMINI_API_KEY (menú
+// inteligente deshabilitado). Antes estos chequeos estaban duplicados acá.
+validateConfig();
 
 initRedis();
 trackRedisStatus(isRedisAvailable());
+
+// Auditoría de arquitectura (crítico #3): no había manejo de SIGTERM/SIGINT
+// ni de uncaughtException/unhandledRejection -- cada deploy o reinicio
+// mataba el proceso en seco, sin cerrar el pool de Postgres ni el
+// WebSocketServer, y un error no capturado en cualquier parte del código
+// tumbaba el server sin dejar rastro más allá de lo que Node imprime por
+// defecto en stderr.
+let shuttingDown = false;
+function gracefulShutdown(signal, server, wss) {
+  return () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info({ signal }, 'Cerrando servidor...');
+    // Deja de aceptar conexiones HTTP nuevas primero, así el orquestador
+    // (Docker/Railway) puede drenar tráfico en curso antes del cierre real.
+    server.close(() => {
+      logger.info('HTTP server cerrado');
+    });
+    try {
+      wss?.close();
+    } catch (e) {
+      logger.warn({ err: e.message }, 'Error cerrando WebSocketServer');
+    }
+    pool
+      .end()
+      .then(() => logger.info('Pool de Postgres cerrado'))
+      .catch((e) => logger.warn({ err: e.message }, 'Error cerrando pool de Postgres'))
+      .finally(() => process.exit(0));
+    // Fuerza la salida si algo (una conexión colgada, un handle abierto)
+    // impide que el cierre ordenado termine en un tiempo razonable.
+    setTimeout(() => process.exit(1), 10000).unref();
+  };
+}
+
+process.on('unhandledRejection', (reason) => {
+  logger.error({ err: reason instanceof Error ? reason.message : reason }, 'unhandledRejection no capturado');
+});
+process.on('uncaughtException', (err) => {
+  logger.error({ err: err.message, stack: err.stack }, 'uncaughtException no capturado');
+  // Node ya no garantiza estado consistente tras un uncaughtException --
+  // salir controladamente en vez de seguir corriendo en un estado incierto.
+  process.exit(1);
+});
 
 initDB().then(() => {
   const server = app.listen(PORT, () => {
     logger.info({ port: PORT }, `🍕 Guido Pizza API Server running on port ${PORT}`);
     logger.info(`📊 Health: http://localhost:${PORT}/api/health`);
   });
-  initWebSocket(server);
+  const wss = initWebSocket(server);
+  process.on('SIGTERM', gracefulShutdown('SIGTERM', server, wss));
+  process.on('SIGINT', gracefulShutdown('SIGINT', server, wss));
 });

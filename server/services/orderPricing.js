@@ -51,6 +51,21 @@ const PIZZA_BUILDER_PRODUCT_ID = 'pizza-builder';
 
 const BUILDER_LEGACY_FLOOR = 25000;
 
+// Auditoría de arquitectura (critico #1): sizePriceByKey era un mapa GLOBAL
+// de TODA la tabla pizza_sizes, sin verificar que el producto en cuestión
+// realmente tuviera esa talla. Un item {productId:'combo-caro', size:'small'}
+// para un producto que NUNCA tuvo tallas igual matcheaba 'small' contra el
+// mapa global y cobraba precio de pizza chica en vez del basePrice real del
+// combo -- exploit de precio explotable sin login (POST /api/orders es
+// checkout de invitado). Mismo criterio que ya usa el frontend
+// (MenuDigital.tsx isPizzaCategory) para decidir qué productos tienen tallas
+// de verdad: solo los sabores de pizza (categoryId pizza, no subcategory
+// 'Porción'). server/seedData/juanchosMenu.js usa 'pizzas'; scripts/seed-menu.sql
+// usa 'cat_pizzas' -- toleramos ambos, mismo criterio que MenuDigital.tsx.
+const PIZZA_CATEGORY_IDS = new Set(['pizzas', 'cat_pizzas']);
+const hasRealSizes = (product) =>
+  !!product && PIZZA_CATEGORY_IDS.has(product.categoryId) && product.subcategory !== 'Porción';
+
 const MAX_ITEM_QUANTITY = 500;
 
 export class OrderPricingError extends Error {
@@ -73,7 +88,9 @@ export async function computeVerifiedTotal(client, items) {
 
   const [productsResult, sizesResult] = await Promise.all([
     productIds.length
-      ? client.query('SELECT id, "basePrice" FROM products WHERE id = ANY($1::text[])', [productIds])
+      ? client.query('SELECT id, "basePrice", "categoryId", subcategory FROM products WHERE id = ANY($1::text[])', [
+          productIds,
+        ])
       : Promise.resolve({ rows: [] }),
     client.query('SELECT id, nombre, precio FROM pizza_sizes'),
   ]);
@@ -106,7 +123,10 @@ export async function computeVerifiedTotal(client, items) {
       if (!product) {
         throw new OrderPricingError(`Producto inválido: "${item?.productId}"`);
       }
-      const sizeKey = item?.size ? String(item.size).toLowerCase() : null;
+      // Solo los sabores de pizza reales tienen talla -- para cualquier otro
+      // producto ignoramos item.size por completo, sin importar si por
+      // coincidencia matchea el id/nombre de alguna fila de pizza_sizes.
+      const sizeKey = hasRealSizes(product) && item?.size ? String(item.size).toLowerCase() : null;
       const sizePrice = sizeKey ? sizePriceByKey.get(sizeKey) : undefined;
       unitPrice = sizePrice !== undefined ? sizePrice : Number(product.basePrice) || 0;
     }

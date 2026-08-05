@@ -1,8 +1,9 @@
 # 📚 Índice Maestro de Documentación — Juancho's Pizza / GastroPro
 
 > **Propósito:** Mapa único de toda la documentación del proyecto.
-> **Última actualización:** 2026-07-21 (reorganización: 3 docs nuevos actuels + historial consolidado)
+> **Última actualización:** 2026-08-05 (catálogo ampliado a 27 docs vigentes + registro de auditorías continuas)
 > **Repo canónico:** `pizzeria-merge/`. `pizzeria-master/` se conserva como espejo histórico no actualizado.
+> **Grafo del proyecto:** `graphify-out/` (raíz) — knowledge graph regenerado el 2026-08-05 (2038 nodos · 2957 edges · 181 comunidades). Consultable con `/graphify query`.
 
 ---
 
@@ -60,19 +61,49 @@ pizzeria-merge/                    ★ Repo canónico (single source of truth)
 | 4   | `CONTRIBUTING.md` | Guía de contribución y convenciones               | ✅ Vigente            |
 | 5   | `DEPLOY.md`       | Despliegue Docker, VPS, CI/CD                     | ✅ Vigente (jul-2026) |
 
-### 📁 `docs/` — Documentación técnica (9 archivos vigentes)
+### 📁 `docs/` — Documentación técnica (27 archivos vigentes)
 
-| #   | Archivo                          | Propósito                                           | Reemplaza a              | Estado                              |
-| --- | -------------------------------- | --------------------------------------------------- | ------------------------ | ----------------------------------- |
-| 6   | `API.md`                         | Referencia endpoints (29 módulos)                   | —                        | ✅ Vigente                          |
-| 7   | `AUDIT_COMPLETO.md`              | Auditoría integral (módulos, DB, seguridad)         | —                        | ✅ Vigente                          |
-| 8   | `DEPLOY_READINESS_2026-07-21.md` | Estado REAL del proyecto (60% listo)                | `DEPLOY_READINESS.md`    | ✅ Vigente — única fuente de verdad |
-| 9   | `DIAN_MODULE_STATUS.md`          | Integración facturación electrónica                 | —                        | ⏳ Pendiente cert + provider real   |
-| 10  | `GAPS_REMEDIATION_PLAN.md`       | Plan por sprints S0-S4                              | —                        | ⏳ S1-S4 pendientes                 |
-| 11  | `PENDIENTES_PROVEEDORES.md`      | Pasos Bold, DIAN, SMTP, VAPID                       | —                        | ⏳ Pendiente credenciales           |
-| 12  | `DESIGN_SYSTEM_TOKENS.md`        | Catálogo de tokens (color, type, radius, z-index…)  | —                        | ✅ Vigente (jul-2026)               |
-| 13  | `FRONTEND_AUDIT_2026-07-21.md`   | Auditoría frontend 4-agentes (P0+P1E resueltos hoy) | `TEST_REPORT.md`         | ✅ Vigente — única fuente de verdad |
-| 14  | `ISSUES_2026-07-21.md`           | 27 hallazgos priorizados (10 done / 17 backlog)     | `SUGGESTED_FOLLOWUPS.md` | ✅ Vigente — única fuente de verdad |
+#### 🔒 Auditorías y brechas (fuente vigente hoy)
+
+| #   | Archivo                         | Propósito                                                                                                          | Estado                        |
+| --- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
+| 6   | `GAPS_DETALLADO_2026-08-05.md`  | **Brechas 2026-08-05** — informe componente por componente (34 tablas, 32 routers, 20 vistas): qué hay y qué falta | ✅ Vigente — el más detallado |
+| 6b  | `BREACHES_2026-08-04.md`        | **Brechas 2026-08-04** — 5 áreas, 10 hallazgos (5 resueltos), cobertura 66.34%                                     | ✅ Vigente                    |
+| 7   | `AUDIT_2026-07-30.md`           | Auditoría pre-deploy multi-agente (4 Critical + 9 High) — sección 0 con seguimiento 08-04                          | ✅ Vigente con seguimiento    |
+| 8   | `ISO27001_AUDIT_2026-07-26.md`  | Auditoría ISO/IEC 27001 pre-deploy (3 no conformidades)                                                            | ✅ Vigente                    |
+| 9   | `PREDEPLOY_AUDIT_2026-07-26.md` | Auditoría pre-deploy completa + checklist verificación                                                             | ✅ Vigente                    |
+| 10  | `READINESS_FINAL.md`            | Evaluación final de readiness                                                                                      | ✅ Vigente                    |
+| 11  | `AUDIT_COMPLETO.md`             | Auditoría integral (módulos, DB, seguridad)                                                                        | —                             | ✅ Vigente (jul-2026) |
+| 12  | `FRONTEND_AUDIT_2026-07-21.md`  | Auditoría frontend 4-agentes (P0+P1E resueltos)                                                                    | `TEST_REPORT.md`              | ✅ Vigente            |
+| 13  | `ISSUES_2026-07-21.md`          | 27 hallazgos priorizados (10 done / 17 backlog)                                                                    | `SUGGESTED_FOLLOWUPS.md`      | ✅ Vigente            |
+
+#### 🚀 Deploy, monitoreo y operación
+
+| #   | Archivo                           | Propósito                                                            | Estado                |
+| --- | --------------------------------- | -------------------------------------------------------------------- | --------------------- |
+| 14  | `DEPLOY_READINESS_2026-07-21.md`  | Estado REAL del proyecto                                             | `DEPLOY_READINESS.md` | ✅ Vigente                     |
+| 15  | `PENDIENTES_DEPLOY_2026-07-26.md` | Pendientes de la sesión de deploy (bloqueante: Docker nunca levantó) | —                     | ✅ Vigente + seguimiento 08-04 |
+| 16  | `DEPLOY_SUMMARY.md`               | Resumen de deploy + checklist pre-deploy                             | —                     | ✅ Vigente                     |
+| 17  | `DR_RUNBOOK.md`                   | Runbook de disaster recovery (docker compose v2)                     | —                     | ✅ Vigente                     |
+| 18  | `MONITOREO_N8N.md`                | Propuesta monitoreo con n8n (health + metrics)                       | —                     | ⏳ Propuesta — no implementado |
+| 19  | `DOCKER_DNS_FIX.md`               | Fix de DNS IPv6 para builds Docker en Windows                        | —                     | ✅ Vigente                     |
+
+#### 📋 Producto, especificación y módulos
+
+| #   | Archivo                       | Propósito                                          | Estado |
+| --- | ----------------------------- | -------------------------------------------------- | ------ |
+| 20  | `PRD.md`                      | Product Requirements Document                      | —      | ✅ Vigente                        |
+| 21  | `TRD.md`                      | Technical Requirements Document                    | —      | ✅ Vigente                        |
+| 22  | `MVP_SCOPE.md`                | Alcance del MVP                                    | —      | ✅ Vigente                        |
+| 23  | `USER_FLOW.md`                | Flujos de usuario                                  | —      | ✅ Vigente                        |
+| 24  | `UIUX_PLAN.md`                | Plan UI/UX                                         | —      | ✅ Vigente                        |
+| 25  | `DEV_PLAN.md`                 | Plan de desarrollo                                 | —      | ✅ Vigente                        |
+| 26  | `DISENO_CATALOGO_TOPPINGS.md` | Diseño catálogo toppings + armador (nota estado)   | —      | ✅ Vigente                        |
+| 27  | `API.md`                      | Referencia endpoints (29 módulos)                  | —      | ✅ Vigente                        |
+| 28  | `DIAN_MODULE_STATUS.md`       | Integración facturación electrónica                | —      | ⏳ Pendiente cert + provider real |
+| 29  | `GAPS_REMEDIATION_PLAN.md`    | Plan por sprints S0-S4                             | —      | ⏳ S1-S4 pendientes               |
+| 30  | `PENDIENTES_PROVEEDORES.md`   | Pasos Bold, DIAN, SMTP, VAPID                      | —      | ⏳ Pendiente credenciales         |
+| 31  | `DESIGN_SYSTEM_TOKENS.md`     | Catálogo de tokens (color, type, radius, z-index…) | —      | ✅ Vigente (jul-2026)             |
 
 ### 📁 `docs/history/` — Snapshots (no modificar, referencia)
 
@@ -119,6 +150,23 @@ pizzeria-merge/                    ★ Repo canónico (single source of truth)
 ```
 
 ---
+
+---
+
+## 📌 Últimos docs agregados (2026-07-30 → 2026-08-05)
+
+| Doc                                                                                   | Fecha  | Por qué existe                                                                                                                        |
+| ------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUDIT_2026-07-30.md`                                                                 | 30-jul | Auditoría pre-deploy multi-agente (10 especialistas). Sección 0 = seguimiento 04-ago de los fixes en `73e08da`.                       |
+| `BREACHES_2026-08-04.md`                                                              | 04-ago | Auditoría 5 áreas del día: 10 hallazgos, 5 resueltos (cobertura 66.34% + gate CI), pagos/orders cubiertos, bundle recharts pendiente. |
+| `PENDIENTES_DEPLOY_2026-07-26.md`                                                     | 26-jul | Ledger de la sesión de deploy: bloqueante Docker Desktop, reconciliación git, hallazgos sin corregir. Seguimiento 04-ago agregado.    |
+| `PREDEPLOY_AUDIT_2026-07-26.md`, `READINESS_FINAL.md`, `ISO27001_AUDIT_2026-07-26.md` | 26-jul | Auditorías pre-deploy del día (una de una sesión paralela).                                                                           |
+| `DEPLOY_SUMMARY.md`, `DR_RUNBOOK.md`, `MONITOREO_N8N.md`                              | jul    | Resumen deploy, runbook DR, propuesta monitoreo.                                                                                      |
+| `PRD.md`, `TRD.md`, `MVP_SCOPE.md`, `USER_FLOW.md`, `UIUX_PLAN.md`, `DEV_PLAN.md`     | jul    | Especificación de producto y planificación.                                                                                           |
+| `DISENO_CATALOGO_TOPPINGS.md`                                                         | ago    | Diseño del catálogo de toppings — nota de estado del armador unificado (`470a48a`).                                                   |
+| `DOCKER_DNS_FIX.md`                                                                   | jul    | Fix de resolución DNS para builds en Docker Desktop Windows.                                                                          |
+
+> Los docs con sufijo `_YYYY-MM-DD` son **snapshots fechados**. Cuando se publique una versión más nueva, el hermano sin fecha se mueve a `docs/history/`.
 
 ---
 
