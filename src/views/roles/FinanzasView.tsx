@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { api, Expense, FinanceSummary } from '../../services/api';
+import { useLazyCharts } from '../../hooks/useLazyCharts';
+import ChartSkeleton from '../../components/ChartSkeleton';
 
 const formatCOP = (value: number) => '$' + value.toLocaleString('es-CO');
 
@@ -89,6 +90,10 @@ const FinanzasView: React.FC = () => {
     proveedor: '',
     factura: '',
   });
+  // recharts se descarga en paralelo a los datos de finanzas: la tabla y
+  // los KPIs pintan primero, y el chunk de ~363 KB llega cuando el primer
+  // gráfico (Ingresos vs Egresos) se acerca al viewport.
+  const { charts, error: chartsError, containerRef } = useLazyCharts();
 
   const loadAll = async () => {
     setLoading(true);
@@ -392,26 +397,30 @@ const FinanzasView: React.FC = () => {
           </div>
         </div>
         <div className="bg-stone-900/40 p-10 rounded-[4rem] border border-stone-800 shadow-2xl">
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={cashFlowData} barGap={4} barCategoryGap="20%">
-                <XAxis dataKey="name" stroke="#57534e" fontSize={11} axisLine={false} tickLine={false} />
-                <YAxis
-                  stroke="#57534e"
-                  fontSize={10}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v: number) => '$' + (v / 1000000).toFixed(1) + 'M'}
-                />
-                <Tooltip
-                  cursor={{ fill: '#ffffff08' }}
-                  content={<CustomBarTooltip />}
-                  labelStyle={{ color: '#a8a29e', fontWeight: 700, fontSize: 11 }}
-                />
-                <Bar dataKey="ingresos" fill="#22c55e" radius={[8, 8, 0, 0]} barSize={48} />
-                <Bar dataKey="egresos" fill="#ef4444" radius={[8, 8, 0, 0]} barSize={48} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div ref={containerRef} className="h-80">
+            {!chartsError && charts ? (
+              <charts.ResponsiveContainer width="100%" height="100%">
+                <charts.BarChart data={cashFlowData} barGap={4} barCategoryGap="20%">
+                  <charts.XAxis dataKey="name" stroke="#57534e" fontSize={11} axisLine={false} tickLine={false} />
+                  <charts.YAxis
+                    stroke="#57534e"
+                    fontSize={10}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v: number) => '$' + (v / 1000000).toFixed(1) + 'M'}
+                  />
+                  <charts.Tooltip
+                    cursor={{ fill: '#ffffff08' }}
+                    content={<CustomBarTooltip />}
+                    labelStyle={{ color: '#a8a29e', fontWeight: 700, fontSize: 11 }}
+                  />
+                  <charts.Bar dataKey="ingresos" fill="#22c55e" radius={[8, 8, 0, 0]} barSize={48} />
+                  <charts.Bar dataKey="egresos" fill="#ef4444" radius={[8, 8, 0, 0]} barSize={48} />
+                </charts.BarChart>
+              </charts.ResponsiveContainer>
+            ) : (
+              <ChartSkeleton error={chartsError} height="h-80" />
+            )}
           </div>
         </div>
       </section>
@@ -508,10 +517,10 @@ const FinanzasView: React.FC = () => {
               <div className="h-full flex items-center justify-center text-stone-600 font-bold text-xs uppercase tracking-widest">
                 Sin datos de gastos aún
               </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
+            ) : !chartsError && charts ? (
+              <charts.ResponsiveContainer width="100%" height="100%">
+                <charts.PieChart>
+                  <charts.Pie
                     data={computedDistribucion}
                     cx="50%"
                     cy="45%"
@@ -522,19 +531,21 @@ const FinanzasView: React.FC = () => {
                     stroke="none"
                   >
                     {computedDistribucion.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <charts.Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
-                  </Pie>
-                  <Tooltip content={<CustomPieTooltip />} />
-                  <Legend
+                  </charts.Pie>
+                  <charts.Tooltip content={<CustomPieTooltip />} />
+                  <charts.Legend
                     verticalAlign="bottom"
                     height={48}
                     iconType="circle"
                     iconSize={10}
                     formatter={(value: string) => <span className="text-xs text-stone-400 font-bold">{value}</span>}
                   />
-                </PieChart>
-              </ResponsiveContainer>
+                </charts.PieChart>
+              </charts.ResponsiveContainer>
+            ) : (
+              <ChartSkeleton error={chartsError} height="h-96" />
             )}
           </div>
         </div>

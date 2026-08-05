@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { api, FinanceSummary } from '../../services/api';
 import { Client, LocationId, Order, OrderStatus } from '../../types';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { useLazyCharts } from '../../hooks/useLazyCharts';
+import ChartSkeleton from '../../components/ChartSkeleton';
 
 interface WeeklyPoint {
   name: string;
@@ -47,6 +48,9 @@ const GastroProDashboard: React.FC<GastroProDashboardProps> = ({ locationId }) =
   const [orders, setOrders] = useState<Order[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [finance, setFinance] = useState<FinanceSummary | null>(null);
+  // recharts se descarga en paralelo a los datos: el shell de la vista
+  // pinta primero y el chunk de ~363 KB llega cuando el gráfico aparece.
+  const { charts, error: chartsError, containerRef } = useLazyCharts();
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -224,34 +228,38 @@ const GastroProDashboard: React.FC<GastroProDashboardProps> = ({ locationId }) =
             <p className="text-2xl font-black text-white mt-1">${totalVentas.toLocaleString('es-CO')}</p>
           </div>
         </div>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={weeklyData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
-              <defs>
-                <linearGradient id="ventasGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f97316" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#9a3412" stopOpacity={0.8} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(120, 113, 108, 0.15)" vertical={false} />
-              <XAxis
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#78716c', fontSize: 11, fontWeight: 800 }}
-                dy={10}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#78716c', fontSize: 11, fontWeight: 800 }}
-                tickFormatter={(val: number) => `$${(val / 1000000).toFixed(1)}M`}
-                dx={-5}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="ventas" fill="url(#ventasGradient)" radius={[8, 8, 0, 0]} maxBarSize={48} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div ref={containerRef} className="h-72">
+          {!chartsError && charts ? (
+            <charts.ResponsiveContainer width="100%" height="100%">
+              <charts.BarChart data={weeklyData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="ventasGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f97316" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#9a3412" stopOpacity={0.8} />
+                  </linearGradient>
+                </defs>
+                <charts.CartesianGrid strokeDasharray="3 3" stroke="rgba(120, 113, 108, 0.15)" vertical={false} />
+                <charts.XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#78716c', fontSize: 11, fontWeight: 800 }}
+                  dy={10}
+                />
+                <charts.YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#78716c', fontSize: 11, fontWeight: 800 }}
+                  tickFormatter={(val: number) => `$${(val / 1000000).toFixed(1)}M`}
+                  dx={-5}
+                />
+                <charts.Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                <charts.Bar dataKey="ventas" fill="url(#ventasGradient)" radius={[8, 8, 0, 0]} maxBarSize={48} />
+              </charts.BarChart>
+            </charts.ResponsiveContainer>
+          ) : (
+            <ChartSkeleton error={chartsError} />
+          )}
         </div>
       </div>
 

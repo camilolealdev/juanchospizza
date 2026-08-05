@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 import { Campaign } from '../../types';
 import { api } from '../../services/api';
+import { useLazyCharts } from '../../hooks/useLazyCharts';
+import ChartSkeleton from '../../components/ChartSkeleton';
 
 const emptyForm = {
   name: '',
@@ -47,6 +48,10 @@ const MarketingView: React.FC = () => {
   // this is always true and the UI below must say so instead of showing a fake "0".
   const metricsNotTracked = campaigns.length > 0 && campaigns.every((c) => c.reach === 0 && c.conversions === 0);
   const METRICS_TOOLTIP = 'Métrica no disponible: el envío de campañas aún no está conectado a ningún canal.';
+  // recharts (chunk de ~363 KB) solo se descarga si el gráfico se va a
+  // renderizar: sin métricas el chart ni siquiera se pinta, así que aquí
+  // nunca se carga (el envío de campañas aún no está conectado a canales).
+  const { charts, error: chartsError, containerRef } = useLazyCharts(!loading && !metricsNotTracked);
 
   const openCreate = () => {
     setEditingId(null);
@@ -130,22 +135,26 @@ const MarketingView: React.FC = () => {
             Sin datos de conversión todavía — el envío de campañas no está conectado a ningún canal.
           </p>
         ) : (
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={campaignStats}>
-                <XAxis dataKey="name" stroke="#444" fontSize={9} axisLine={false} tickLine={false} />
-                <YAxis stroke="#444" fontSize={9} axisLine={false} tickLine={false} />
-                <Tooltip
-                  cursor={{ fill: '#ffffff05' }}
-                  contentStyle={{ backgroundColor: '#1c1917', border: '1px solid #333', borderRadius: '16px' }}
-                />
-                <Bar dataKey="conv" radius={[10, 10, 0, 0]} barSize={50}>
-                  {campaignStats.map((_entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 1 ? '#ea580c' : '#444'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div ref={containerRef} className="h-72">
+            {!chartsError && charts ? (
+              <charts.ResponsiveContainer width="100%" height="100%">
+                <charts.BarChart data={campaignStats}>
+                  <charts.XAxis dataKey="name" stroke="#444" fontSize={9} axisLine={false} tickLine={false} />
+                  <charts.YAxis stroke="#444" fontSize={9} axisLine={false} tickLine={false} />
+                  <charts.Tooltip
+                    cursor={{ fill: '#ffffff05' }}
+                    contentStyle={{ backgroundColor: '#1c1917', border: '1px solid #333', borderRadius: '16px' }}
+                  />
+                  <charts.Bar dataKey="conv" radius={[10, 10, 0, 0]} barSize={50}>
+                    {campaignStats.map((_entry, index) => (
+                      <charts.Cell key={`cell-${index}`} fill={index === 1 ? '#ea580c' : '#444'} />
+                    ))}
+                  </charts.Bar>
+                </charts.BarChart>
+              </charts.ResponsiveContainer>
+            ) : (
+              <ChartSkeleton error={chartsError} />
+            )}
           </div>
         )}
       </div>

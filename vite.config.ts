@@ -39,6 +39,11 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          // recharts (~363 KB) se excluye del precache: es un chunk dinámico
+          // que solo se descarga cuando una vista con gráficos lo importa
+          // (useLazyCharts). El personal que nunca abre Finanzas/Dashboard
+          // no paga esos KB, y la primera visita instala la PWA sin el peso.
+          globIgnores: ['**/recharts-*.js'],
           // Estrategias de caché diferenciadas por tipo de recurso:
           //   - Assets con hash (JS/CSS/imágenes) → StaleWhileRevalidate
           //     (carga instantánea desde caché, actualiza en segundo plano)
@@ -81,6 +86,11 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           manualChunks(id: string) {
+            // Nombre estable para recharts: con import dinámico el chunk no
+            // se puede tree-shakear por acceso a namespace, así que se aísla
+            // para poder excluirlo del precache (globIgnores abajo) y que
+            // solo baje on-demand vía useLazyCharts.
+            if (id.includes('node_modules/recharts')) return 'recharts';
             if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) return 'react';
             if (id.includes('react-router-dom')) return 'router';
             if (id.includes('@radix-ui')) return 'ui';
