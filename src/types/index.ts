@@ -137,6 +137,9 @@ export interface Order {
   createdAt: string;
   estimatedTime: number;
   paymentMethod:
+    // Valores históricos de paymentMethod conservados en el modelo de datos
+    // (órdenes antiguas). El pago online activo es SOLO 'bold' desde
+    // 2026-08-06 — ver PaymentMethod en services/payments/paymentService.ts.
     'cash' | 'card' | 'nequi' | 'daviplata' | 'pse' | 'mercadopago' | 'paypal' | 'wompi' | 'bold' | 'whatsapp';
   locationId?: LocationId;
 }
@@ -165,6 +168,7 @@ export type GastroModule =
   | 'reportes'
   | 'reviews'
   | 'pagos'
+  | 'notificaciones'
   | 'empleados'
   | 'turnos'
   | 'mesas'

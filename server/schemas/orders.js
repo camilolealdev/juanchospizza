@@ -24,7 +24,13 @@ export const createOrderSchema = z.object({
 export const updateOrderSchema = z.object({
   address: str(200).optional(),
   items: itemsField.optional(),
-  total: clampedNumberOpt(0, 999999999),
+  // `total` NO se acepta del cliente en PUT (anti-tampering). El monto final
+  // se recalcula server-side desde el catálogo real cuando cambian los
+  // `items`, exactamente igual que en POST /api/orders -- nunca se persiste
+  // un total enviado por el cliente. Hallazgo #13 de
+  // docs/GAPS_DETALLADO_2026-08-05.md y P0 de docs/AUDITORIA_CRUD_GENERAL_2026-08-06.md.
+  // Nota: zod descarta (strip) campos no declarados, así que un `total` en el
+  // body simplemente se ignora -- no llega al handler.
   estimatedTime: clampedNumberOpt(0, 180),
   paymentMethod: str(20).optional(),
 });

@@ -824,6 +824,33 @@ export const api = {
     });
   },
 
+  // ---- NOTIFICATIONS (panel admin, server/routes/notifications.js) ----
+  // Backend montado en 2026-08-05 (commit 4216639); estos métodos conectan
+  // la vista NotificacionesView (P1 de docs/AUDITORIA_CRUD_GENERAL_2026-08-06.md).
+  async getNotificationsStatus(): Promise<{
+    email: { configured: boolean; host: string; from: string };
+    push: { configured: boolean; vapidPresent: boolean };
+    webhook: { configured: boolean; orderUrl: string | null; paymentUrl: string | null };
+  }> {
+    return apiFetch('/api/notifications/status');
+  },
+
+  async testNotificationEmail(to?: string): Promise<{ success: boolean; to: string }> {
+    return apiFetch('/api/notifications/test-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(to ? { to } : {}),
+    });
+  },
+
+  async testNotificationWebhook(): Promise<{ success: boolean; status: number }> {
+    return apiFetch('/api/notifications/test-webhook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+  },
+
   // Inventory
   async getInventory(): Promise<InventoryItem[]> {
     return apiFetch('/api/inventory');

@@ -33,6 +33,7 @@ const ALL_NAV: { module: GastroModule; label: string; icon: string; roles: UserR
   { module: 'reportes', label: 'Reportes', icon: 'chart-line', roles: [UserRole.ADMIN] },
   { module: 'reviews', label: 'Reseñas', icon: 'star', roles: [UserRole.ADMIN] },
   { module: 'pagos', label: 'Pagos', icon: 'credit-card', roles: [UserRole.ADMIN] },
+  { module: 'notificaciones', label: 'Notificaciones', icon: 'bell', roles: [UserRole.ADMIN] },
   { module: 'empleados', label: 'Empleados', icon: 'id-badge', roles: [UserRole.ADMIN] },
   { module: 'turnos', label: 'Turnos', icon: 'clock', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
   { module: 'mesas', label: 'Mesas', icon: 'table', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
@@ -55,6 +56,7 @@ const MODULE_TITLES: Record<GastroModule, string> = {
   reportes: 'Reportes',
   reviews: 'Reseñas',
   pagos: 'Pagos',
+  notificaciones: 'Notificaciones',
   empleados: 'Empleados',
   turnos: 'Turnos',
   mesas: 'Mesas',
@@ -236,23 +238,25 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             )}
             {/* [2026-07-21] Frontend audit P0: el badge "3" era HARDCODED — el
                 bell siempre mostraba 3 independientemente de la sesión/rol.
-                Comprobé que el conteo no se leerá de nada real hasta que
-                exista un endpoint /api/notifications (campanas, pedidos
-                nuevos, reseñas pendientes). Se deja el botón sin badge y se
-                documenta el TODO acá para no reintroducir el literal. */}
-            <button
-              className="relative w-8 h-8 flex items-center justify-center text-white/70 hover:text-white transition-all"
-              aria-label="Notificaciones"
-            >
-              <i className="fas fa-bell text-sm" aria-hidden="true"></i>
-              {/* TODO 2026-07-21: notifications count wired to backend.
-                  Render badge only when notifications.length > 0:
-                  {notifications?.length > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-brand-600 rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-lg shadow-brand-900/40">
-                      {notifications.length}
-                    </span>
-                  )} */}
-            </button>
+                No se reintroduce un conteo falso. El botón ahora abre el
+                módulo Notificaciones (panel real de estado de canales +
+                pruebas, NotificacionesView.tsx). Un badge con conteo real
+                requeriría un endpoint agregado de "pendientes" (campanas,
+                pedidos nuevos, reseñas) — queda como follow-up, no se
+                inventa un número. */}
+            {/* Solo ADMIN tiene el módulo 'notificaciones' (ROLE_MODULE_ACCESS
+                en App.tsx): para otros roles el bell se oculta — un click de
+                un OPERATOR terminaría redirigido al dashboard por el guard. */}
+            {userRole === UserRole.ADMIN && (
+              <button
+                onClick={() => handleModuleChange('notificaciones')}
+                className="relative w-8 h-8 flex items-center justify-center text-white/70 hover:text-white transition-all"
+                aria-label="Notificaciones"
+                title="Notificaciones"
+              >
+                <i className="fas fa-bell text-sm" aria-hidden="true"></i>
+              </button>
+            )}
           </div>
         </div>
       </div>

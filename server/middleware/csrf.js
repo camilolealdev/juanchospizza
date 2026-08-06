@@ -55,16 +55,18 @@ export function csrfProtection(req, res, next) {
     return next();
   }
 
-  // Payment creation endpoints: endpoints de pago público que NO llevan
-  // authMiddleware (checkout sin sesión de usuario), llamados desde
-  // paymentService.ts con fetch directo. Sin auth = sin sesión que
-  // proteger con CSRF.
-  const PAYMENT_PATHS = [
-    '/api/payments/bold/create-link',
-    '/api/payments/mercadopago/create-payment',
-    '/api/payments/wompi/create-transaction',
-    '/api/payments/paypal/create-order',
-  ];
+  // Payment endpoints públicos que NO llevan authMiddleware (checkout sin
+  // sesión de usuario), llamados desde paymentService.ts con fetch directo,
+  // y los WEBHOOKS entrantes de pasarelas (servidores externos que no
+  // tienen cookie CSRF ni header). Sin auth = sin sesión que proteger con
+  // CSRF.
+  //
+  // ⚠️ FIX 2026-08-06: los webhooks estaban fuera de esta lista — un
+  // POST /api/payments/bold/webhook sin cookie CSRF recibía 403 y el pago
+  // nunca se confirmaba (Bold reintenta pero el pedido quedaba pending).
+  // Los tests previos no lo detectaron porque el app de test montaba
+  // express.raw() pero no csrfProtection.
+  const PAYMENT_PATHS = ['/api/payments/bold/create-link', '/api/payments/bold/webhook'];
   if (req.method === 'POST' && PAYMENT_PATHS.some((p) => fullPath === p)) {
     return next();
   }

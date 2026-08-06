@@ -75,9 +75,10 @@ describe('updateOrderSchema (partial)', () => {
     expect(result.data.paymentMethod).toBeUndefined();
   });
 
-  it('still clamps a provided total', () => {
+  it('descarta el total enviado por el cliente (anti-tampering, zod strip)', () => {
     const result = updateOrderSchema.safeParse({ total: 5_000_000_000 });
-    expect(result.data.total).toBe(999999999);
+    expect(result.success).toBe(true);
+    expect(result.data.total).toBeUndefined();
   });
 });
 

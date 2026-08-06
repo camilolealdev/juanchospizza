@@ -597,15 +597,63 @@ describe('PUT /api/orders/:id', () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it('clampa (no rechaza) un total fuera de rango — contrato de clampedNumberOpt', async () => {
+  it('ignora el total enviado por el cliente (anti-tampering: no escribe total)', async () => {
     const app = createApp();
-    mockQuery.mockResolvedValueOnce({ rowCount: 1 }).mockResolvedValueOnce({ rows: [mockOrder()] });
+    mockQuery.mockResolvedValueOnce({ rows: [mockOrder()] });
 
-    const res = await supertest(app).put('/api/orders/ord_1').send({ total: -5 });
+    // updateOrderSchema ya no declara `total` (zod strip) — el handler no
+    // puede persistirlo. El pedido original con total 100000 queda intacto.
+    const res = await supertest(app).put('/api/orders/ord_1').send({ total: 1 });
 
     expect(res.status).toBe(200);
-    expect(mockQuery.mock.calls[0][0]).toBe('UPDATE orders SET total = $1 WHERE id = $2');
-    expect(mockQuery.mock.calls[0][1]).toEqual([0, 'ord_1']); // -5 → clamp a 0
+    expect(mockQuery.mock.calls.some(([sql]) => String(sql).includes('UPDATE orders SET total'))).toBe(false);
+    expect(res.body.total).toBe(100000);
+  });
+
+  it('recalcula el total desde el catálogo cuando cambian los items (anti-tampering)', async () => {
+    const app = createApp();
+    // mockClientQuery ya responde el catálogo (products/pizza_sizes) en
+    // beforeEach; el SELECT final de la ruta devuelve la orden actualizada.
+    mockQuery.mockResolvedValueOnce({ rows: [mockOrder({ total: 90000 })] });
+
+    const res = await supertest(app)
+      .put('/api/orders/ord_1')
+      .send({ items: [{ productId: 'pizza-margherita', quantity: 2, price: 1 }], total: 1 });
+
+    expect(res.status).toBe(200);
+    // Transacción con BEGIN…COMMIT y UPDATE con items + total recalculado
+    expect(mockClientQuery).toHaveBeenCalledWith('BEGIN');
+    const updateCall = mockClientQuery.mock.calls.find(([sql]) => String(sql).includes('UPDATE orders SET'));
+    expect(updateCall).toBeDefined();
+    const sql = String(updateCall[0]);
+    expect(sql).toContain('items = $1');
+    expect(sql).toContain('total = $2');
+    // El total recalculado es 45000 x 2 = 90000, NO el 1 del cliente
+    expect(updateCall[1]).toEqual([
+      JSON.stringify([{ productId: 'pizza-margherita', quantity: 2, price: 1 }]),
+      90000,
+      'ord_1',
+    ]);
+    expect(mockClientQuery).toHaveBeenCalledWith('COMMIT');
+  });
+
+  it('400 + ROLLBACK cuando un item editado no existe en el catálogo', async () => {
+    const app = createApp();
+    mockClientQuery.mockImplementation((sql) => {
+      const s = String(sql);
+      if (s.includes('FROM products')) return Promise.resolve({ rows: [] });
+      if (s.includes('FROM pizza_sizes')) return Promise.resolve({ rows: [SIZE_FAMILIAR] });
+      return Promise.resolve({});
+    });
+
+    const res = await supertest(app)
+      .put('/api/orders/ord_1')
+      .send({ items: [{ productId: 'producto-inexistente', quantity: 1, price: 9999 }] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('Producto inválido');
+    expect(mockClientQuery).toHaveBeenCalledWith('ROLLBACK');
+    expect(mockClientQuery.mock.calls.some(([sql]) => String(sql).includes('UPDATE orders SET'))).toBe(false);
   });
 
   it('actualiza solo las columnas enviadas (no sobrescribe con NULL)', async () => {

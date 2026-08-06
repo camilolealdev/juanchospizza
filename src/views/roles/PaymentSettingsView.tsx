@@ -3,11 +3,10 @@ import { api } from '../../services/api';
 
 type ProviderStatus = { configured: boolean; webhookSecret: boolean | null };
 
+// Pago online: SOLO Bold (decisión 2026-08-06). MercadoPago/Wompi/PayPal
+// quedaron fuera del proyecto (backend y servicio eliminados).
 const PROVIDERS: { key: string; label: string; envVar: string; webhookVar: string | null }[] = [
   { key: 'bold', label: 'Bold', envVar: 'BOLD_API_KEY', webhookVar: 'BOLD_WEBHOOK_SECRET' },
-  { key: 'mercadopago', label: 'MercadoPago', envVar: 'MP_ACCESS_TOKEN', webhookVar: 'MP_WEBHOOK_SECRET' },
-  { key: 'wompi', label: 'Wompi', envVar: 'WOMPI_MERCHANT_ID', webhookVar: 'WOMPI_EVENTS_SECRET' },
-  { key: 'paypal', label: 'PayPal', envVar: 'PAYPAL_CLIENT_ID', webhookVar: null },
 ];
 
 // Read-only status board -- deliberately never shows or accepts real secret
@@ -19,9 +18,10 @@ const PaymentSettingsView: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.getPaymentStatus()
+    api
+      .getPaymentStatus()
       .then(setStatus)
-      .catch(e => setError(e instanceof Error ? e.message : 'Error cargando estado de pagos'));
+      .catch((e) => setError(e instanceof Error ? e.message : 'Error cargando estado de pagos'));
   }, []);
 
   return (
@@ -29,8 +29,8 @@ const PaymentSettingsView: React.FC = () => {
       <div>
         <h1 className="text-5xl font-brand">Pagos</h1>
         <p className="text-stone-500 mt-4 max-w-xl">
-          Estado de credenciales por proveedor. Las claves reales solo viven como variables de entorno
-          en el backend -- acá nunca se ven ni se editan.
+          Estado de credenciales por proveedor. Las claves reales solo viven como variables de entorno en el backend --
+          acá nunca se ven ni se editan.
         </p>
       </div>
 
@@ -46,16 +46,20 @@ const PaymentSettingsView: React.FC = () => {
 
       {status && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {PROVIDERS.map(p => {
+          {PROVIDERS.map((p) => {
             const s = status[p.key];
             const ok = !!s?.configured;
             return (
               <div key={p.key} className="bg-stone-900/40 p-8 rounded-[2.5rem] border border-stone-800/50">
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-xl font-black text-white">{p.label}</h3>
-                  <span className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-full border ${
-                    ok ? 'bg-green-950 text-green-500 border-green-500/20' : 'bg-red-950 text-red-500 border-red-500/20'
-                  }`}>
+                  <span
+                    className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-full border ${
+                      ok
+                        ? 'bg-green-950 text-green-500 border-green-500/20'
+                        : 'bg-red-950 text-red-500 border-red-500/20'
+                    }`}
+                  >
                     {ok ? 'Configurado' : 'Falta configurar'}
                   </span>
                 </div>

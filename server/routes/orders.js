@@ -392,8 +392,14 @@ router.put(
   requireRole('ADMIN', 'OPERATOR'),
   validate(updateOrderSchema),
   async (req, res) => {
+    let client;
     try {
-      const { address, items, total, estimatedTime, paymentMethod } = req.body;
+      // `total` NO se lee del body a propósito: updateOrderSchema ya lo
+      // descarta (anti-tampering, hallazgo #13 de GAPS_08-05 / P0 de la
+      // auditoría 08-06). Si cambian los items, el total se recalcula
+      // server-side desde el catálogo real en la transacción de abajo --
+      // nunca se persiste un monto enviado por el cliente.
+      const { address, items, estimatedTime, paymentMethod } = req.body;
 
       const updates = [];
       const params = [];
@@ -402,11 +408,30 @@ router.put(
         updates.push(`address = $${params.length}`);
       }
       if (items !== undefined) {
+        // Cambiaron los items: abrir transacción, recalcular el total real
+        // desde el catálogo (igual que el POST de checkout) y persistir
+        // items + total juntos de forma consistente.
+        client = await pool.connect();
+        await client.query('BEGIN');
+
+        let verifiedTotal;
+        try {
+          verifiedTotal = await computeVerifiedTotal(client, items);
+        } catch (pricingError) {
+          // OrderPricingError → 400 con ROLLBACK acá mismo (la transacción
+          // queda descartada y el catch externo no debe volver a hacerlo).
+          // Cualquier otro error se re-lanza sin ROLLBACK: lo descarta el
+          // catch externo (evita un ROLLBACK doble sobre la transacción).
+          if (pricingError instanceof OrderPricingError) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: pricingError.message });
+          }
+          throw pricingError;
+        }
+
         params.push(JSON.stringify(items));
         updates.push(`items = $${params.length}`);
-      }
-      if (total !== undefined) {
-        params.push(total);
+        params.push(verifiedTotal);
         updates.push(`total = $${params.length}`);
       }
       if (estimatedTime !== undefined) {
@@ -420,7 +445,9 @@ router.put(
 
       if (updates.length) {
         params.push(req.params.id);
-        await pool.query(`UPDATE orders SET ${updates.join(', ')} WHERE id = $${params.length}`, params);
+        const executor = client || pool;
+        await executor.query(`UPDATE orders SET ${updates.join(', ')} WHERE id = $${params.length}`, params);
+        if (client) await client.query('COMMIT');
       }
 
       const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
@@ -431,7 +458,16 @@ router.put(
         res.status(404).json({ error: 'Order not found' });
       }
     } catch (_e) {
+      if (client) {
+        try {
+          await client.query('ROLLBACK');
+        } catch {
+          /* conexión perdida -- nada más que hacer */
+        }
+      }
       res.status(500).json({ error: 'Error updating order' });
+    } finally {
+      if (client) client.release();
     }
   }
 );

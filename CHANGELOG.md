@@ -5,6 +5,28 @@
 
 ---
 
+## [unreleased] — 2026-08-06 — Seguridad PUT orders + Vista Notificaciones
+
+### 🔴 P0: Tampering de precio en `PUT /api/orders/:id` (auditoría 2026-08-06)
+
+- **`server/schemas/orders.js`**: `total` eliminado de `updateOrderSchema` (Zod lo descarta si el cliente lo envía).
+- **`server/routes/orders.js`**: el handler PUT recalcula `total` server-side con `computeVerifiedTotal` (mismo catálogo real que el POST) cuando cambian los `items`, dentro de una transacción `BEGIN/COMMIT/ROLLBACK` con liberación correcta del pool client. Ya no es posible manipular el precio vía PUT.
+- **Tests**: `server/tests/orders.test.js` + `server/schemas/orders.test.js` actualizados con casos anti-tampering (envío de `total` ignorado, recálculo verificado). 52/52 verdes.
+
+### 🟠 P1: Vista de Notificaciones (cierra TODO AdminLayout del 2026-07-21)
+
+- **`src/views/roles/NotificacionesView.tsx`** (nueva): panel con estado del backend (`getNotificationsStatus`), botones de test email y test webhook, con patrón visual oscuro premium del CRM.
+- **`src/services/api.ts`**: métodos `getNotificationsStatus`, `testNotificationEmail`, `testNotificationWebhook`.
+- **`src/App.tsx` + `src/types/index.ts`**: módulo `'notificaciones'` registrado en `GASTRO_MODULES` (acceso ADMIN).
+- **`src/components/AdminLayout.tsx`**: ítem de navegación Notificaciones + **la campana ahora navega al módulo** y solo se muestra para ADMIN (único rol con acceso), reemplazando el TODO pendiente.
+
+### 🧪 Validación
+
+- Suite completa: **308/308 tests verdes** · `tsc --noEmit` 0 errores · ESLint 0 warnings en archivos tocados.
+- Code review `code-reviewer-deepseek-flash`: 2 rondas, fixes aplicados (eliminado ROLLBACK doble, campana solo ADMIN).
+
+---
+
 ## [2.0.0] — 2026-07-15
 
 ### 🚀 Seguridad (100%)

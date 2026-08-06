@@ -26,6 +26,7 @@ const FinanzasView = lazy(() => import('./views/roles/FinanzasView'));
 const ReportesView = lazy(() => import('./views/roles/ReportesView'));
 const ReviewsView = lazy(() => import('./views/roles/ReviewsView'));
 const PaymentSettingsView = lazy(() => import('./views/roles/PaymentSettingsView'));
+const NotificacionesView = lazy(() => import('./views/roles/NotificacionesView'));
 const EmpleadosView = lazy(() => import('./views/roles/EmpleadosView'));
 const TurnosView = lazy(() => import('./views/roles/TurnosView'));
 const MesasView = lazy(() => import('./views/roles/MesasView'));
@@ -79,6 +80,7 @@ const GASTRO_MODULES: GastroModule[] = [
   'reportes',
   'reviews',
   'pagos',
+  'notificaciones',
   'empleados',
   'turnos',
   'mesas',
@@ -330,6 +332,8 @@ const App: React.FC = () => {
         return <ReviewsView />;
       case 'pagos':
         return <PaymentSettingsView />;
+      case 'notificaciones':
+        return <NotificacionesView />;
       case 'empleados':
         return <EmpleadosView />;
       case 'turnos':

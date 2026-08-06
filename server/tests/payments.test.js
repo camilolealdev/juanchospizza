@@ -1,10 +1,14 @@
-// Tests de seguridad para los webhooks de pago (Bold y Wompi).
+// Tests de seguridad del webhook de pago Bold (única pasarela, decisión
+// 2026-08-06 — MercadoPago/Wompi/PayPal eliminados).
 // Cubre:
 //   1. Fail-closed: sin secret configurado → 503, sin tocar DB
-//   2. Verificación de firma: firma/checksum inválida → 200 (ignorada), sin tocar DB
+//   2. Verificación de firma: firma inválida → 200 (ignorada), sin tocar DB
 //   3. Firma válida → paymentStatus transiciona a paid/failed
 //   4. Idempotencia: el mismo evento no se procesa dos veces
 //   5. Respuesta 200 ante payloads incompletos (orden inexistente, sin referencia)
+//   6. [REGRESIÓN 2026-08-06] El webhook Bold NO debe requerir CSRF (lo
+//      bloqueaba con 403 y el pago nunca se confirmaba), pero las demás
+//      mutaciones autenticadas SÍ deben requerirlo.
 //
 // NOTA sobre el webhook Bold: index.js monta express.raw() para esa ruta, así
 // que req.body llega como Buffer (el bug de 2026-07-29 donde el handler leía
@@ -46,9 +50,9 @@ vi.mock('../services/webhooks.js', () => ({
 
 // ── Importar rutas después de mocks ─────────────────────────────
 import paymentsRoutes from '../routes/payments.js';
+import { csrfProtection } from '../middleware/csrf.js';
 
 const BOLD_SECRET = 'bold-test-secret-1234567890';
-const WOMPI_SECRET = 'wompi-test-secret-1234567890';
 
 // Mismo orden de middlewares que server/index.js: raw body ANTES de
 // express.json() para que el webhook Bold reciba req.body como Buffer.
@@ -56,6 +60,18 @@ function createApp() {
   const app = express();
   app.use('/api/payments/bold/webhook', express.raw({ type: 'application/json' }));
   app.use(express.json());
+  app.use('/', paymentsRoutes);
+  return app;
+}
+
+// App con csrfProtection real montado (mismo patrón que index.js) para la
+// prueba de regresión del 2026-08-06: sin esto, los tests pasaban aunque el
+// webhook estuviera roto por CSRF.
+function createAppWithCsrf() {
+  const app = express();
+  app.use('/api/payments/bold/webhook', express.raw({ type: 'application/json' }));
+  app.use(express.json());
+  app.use('/api', csrfProtection);
   app.use('/', paymentsRoutes);
   return app;
 }
@@ -266,113 +282,58 @@ describe('POST /api/payments/bold/webhook', () => {
   });
 });
 
-// ── WOMPI ───────────────────────────────────────────────────────
-describe('POST /api/payments/wompi/webhook', () => {
-  // Genera un evento Wompi con checksum válido (mismo algoritmo que
-  // verifyWompiChecksum en server/routes/payments.js).
-  function wompiEvent({ status = 'APPROVED', id = 'evt_wompi_1', transactionId = 'tx_1' } = {}) {
-    const event = {
-      id,
-      timestamp: '1720000000',
-      data: {
-        transaction: { id: transactionId, status, reference: 'ORD-123' },
-      },
-      signature: {
-        properties: ['transaction.id', 'transaction.status'],
-        checksum: '',
-      },
-    };
-    const concatenated = event.signature.properties
-      .map((prop) => prop.split('.').reduce((obj, key) => obj?.[key], event.data))
-      .join('');
-    event.signature.checksum = crypto
-      .createHash('sha256')
-      .update(`${concatenated}${event.timestamp}${WOMPI_SECRET}`)
-      .digest('hex');
-    return event;
-  }
+// ── REGRESIÓN 2026-08-06: webhook Bold NO requiere CSRF ───────────
+describe('CSRF en webhook de pago (regresión 2026-08-06)', () => {
+  const eventBody = JSON.stringify({
+    id: 'evt_csrf_1',
+    source: 'bold',
+    type: 'SALE_APPROVED',
+    data: { metadata: { reference: 'ORD-123' } },
+  });
 
-  it('responde 503 si WOMPI_EVENTS_SECRET no está configurado (fail-closed)', async () => {
-    const app = createApp();
+  it('el webhook Bold pasa aunque NO lleve cookie CSRF ni header (sin secret → 503, no 403)', async () => {
+    const app = createAppWithCsrf();
 
-    const res = await supertest(app).post('/api/payments/wompi/webhook').send(wompiEvent());
+    const res = await supertest(app)
+      .post('/api/payments/bold/webhook')
+      .set('Content-Type', 'application/json')
+      .send(eventBody);
 
+    // Sin BOLD_WEBHOOK_SECRET: fail-closed 503. Antes del fix esto daba
+    // 403 (CSRF) y el pago nunca llegaba a evaluarse.
     expect(res.status).toBe(503);
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it('ignora (200) un checksum inválido sin tocar la DB', async () => {
-    vi.stubEnv('WOMPI_EVENTS_SECRET', WOMPI_SECRET);
-    const app = createApp();
-    const event = wompiEvent();
-    // Hash de 64 chars (misma longitud que el esperado) pero distinto valor:
-    // así timingSafeEqual compara longitudes iguales y falla por contenido,
-    // que es la ruta real de mismatch en producción (un string de otra
-    // longitud dispararía ERR_CRYPTO_TIMING_SAFE_EQUAL_LENGTH y probaría
-    // solo la rama del catch, no la comparación).
-    event.signature.checksum = 'f'.repeat(64);
-
-    const res = await supertest(app).post('/api/payments/wompi/webhook').send(event);
-
-    expect(res.status).toBe(200);
-    expect(mockQuery).not.toHaveBeenCalled();
-  });
-
-  it('marca paid cuando transaction.status es APPROVED con checksum válido', async () => {
-    vi.stubEnv('WOMPI_EVENTS_SECRET', WOMPI_SECRET);
-    const app = createApp();
+  it('el webhook Bold procesa un pago válido con CSRF montado (firma + setImmediate)', async () => {
+    vi.stubEnv('BOLD_WEBHOOK_SECRET', BOLD_SECRET);
+    const app = createAppWithCsrf();
+    const sig = boldSignature(eventBody, BOLD_SECRET);
 
     mockQuery
-      .mockResolvedValueOnce({ rows: [{ provider: 'wompi', sourceId: 'wompi_evt_wompi_1' }] })
-      .mockResolvedValueOnce({ rows: [mockOrder()] })
-      .mockResolvedValueOnce({ rowCount: 1 });
-
-    const res = await supertest(app).post('/api/payments/wompi/webhook').send(wompiEvent());
-
-    expect(res.status).toBe(200);
-    expect(mockQuery).toHaveBeenCalledTimes(3);
-    expect(mockQuery.mock.calls[2][0]).toContain('UPDATE orders');
-    expect(mockQuery.mock.calls[2][1][0]).toBe('paid');
-  });
-
-  it('marca failed cuando transaction.status es DECLINED', async () => {
-    vi.stubEnv('WOMPI_EVENTS_SECRET', WOMPI_SECRET);
-    const app = createApp();
-
-    mockQuery
-      .mockResolvedValueOnce({ rows: [{ provider: 'wompi', sourceId: 'wompi_evt_wompi_1' }] })
+      .mockResolvedValueOnce({ rows: [{ provider: 'bold', sourceId: 'bold_evt_csrf_1' }] })
       .mockResolvedValueOnce({ rows: [mockOrder()] })
       .mockResolvedValueOnce({ rowCount: 1 });
 
     const res = await supertest(app)
-      .post('/api/payments/wompi/webhook')
-      .send(wompiEvent({ status: 'DECLINED' }));
+      .post('/api/payments/bold/webhook')
+      .set('Content-Type', 'application/json')
+      .set('x-bold-signature', sig)
+      .send(eventBody);
 
     expect(res.status).toBe(200);
-    expect(mockQuery.mock.calls[2][1][0]).toBe('failed');
+    await vi.waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(3));
+    expect(mockQuery.mock.calls[2][1][0]).toBe('paid');
   });
 
-  it('no reprocesa un evento ya procesado (idempotencia por event.id)', async () => {
-    vi.stubEnv('WOMPI_EVENTS_SECRET', WOMPI_SECRET);
-    const app = createApp();
+  it('una mutación NO exenta sigue requiriendo CSRF (protección intacta)', async () => {
+    const app = createAppWithCsrf();
 
-    // INSERT con ON CONFLICT DO NOTHING que no inserta → ya visto
-    mockQuery.mockResolvedValueOnce({ rows: [] });
+    // POST /api/payments/bold/status/xxx no existe como ruta, pero el CSRF
+    // corre ANTES del router: sin cookie/header debe dar 403, no 404/200.
+    const res = await supertest(app).post('/api/payments/bold/status/LNK_xxx').send({});
 
-    const res = await supertest(app).post('/api/payments/wompi/webhook').send(wompiEvent());
-
-    expect(res.status).toBe(200);
-    expect(mockQuery).toHaveBeenCalledTimes(1);
-    expect(mockQuery.mock.calls[0][0]).toContain('processed_webhooks');
-  });
-
-  it('responde 200 sin crash si el payload no trae transaction', async () => {
-    vi.stubEnv('WOMPI_EVENTS_SECRET', WOMPI_SECRET);
-    const app = createApp();
-
-    const res = await supertest(app).post('/api/payments/wompi/webhook').send({ event: 'no-transaction' });
-
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
     expect(mockQuery).not.toHaveBeenCalled();
   });
 });

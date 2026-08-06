@@ -614,31 +614,7 @@ Webhook de Bold (CloudEvents v1.0). Bold notifica eventos de pago (`SALE_APPROVE
 
 ---
 
-### Wompi
-
-#### `POST /api/payments/wompi/create-transaction`
-
-Crea una transacción Wompi.
-
-**Response (201):** `{ transactionId, approved, paymentUrl }`
-
-**Auth:** ❌ Público
-
----
-
-### MercadoPago
-
-#### `POST /api/payments/mercadopago/create-payment`
-
-**⚠️ DESHABILITADO** — El método `pix` es brasileño; no funciona en Colombia. Usar Bold o Wompi.
-
----
-
-### PayPal
-
-#### `POST /api/payments/paypal/create-order`
-
-Crea una orden de PayPal. **Stub sin API real** — redirige a PayPal con URL construida básica.
+> ⚠️ **Pago online: SOLO Bold** (decisión 2026-08-06). MercadoPago, Wompi y PayPal fueron eliminados del backend (`server/routes/payments.js`), del servicio (`paymentService.ts`) y del panel (`PaymentSettingsView`). `GET /api/payments/status` solo reporta `bold`. Los webhooks de esas pasarelas ya no existen.
 
 ---
 
