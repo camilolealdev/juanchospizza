@@ -50,6 +50,7 @@ import invoicesRoutes from './routes/invoices.js';
 import qrMenuRoutes from './routes/qrMenu.js';
 import digiturnoRoutes from './routes/digiturno.js';
 import consentRoutes from './routes/consent.js';
+import notificationsRoutes from './routes/notifications.js';
 
 dotenv.config();
 initPush();
@@ -226,6 +227,7 @@ app.use('/', invoicesRoutes);
 app.use('/', qrMenuRoutes);
 app.use('/', digiturnoRoutes);
 app.use('/', consentRoutes);
+app.use('/', notificationsRoutes);
 
 // CSRF token endpoint (debe ir ANTES de servir archivos estáticos)
 app.get('/api/csrf-token', csrfTokenHandler);

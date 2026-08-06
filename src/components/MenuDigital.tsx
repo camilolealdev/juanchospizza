@@ -377,7 +377,11 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
           >
             <i className="fas fa-basket-shopping text-sm" aria-hidden="true"></i>
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[#F9DC5C] text-[#1A1A1A] flex items-center justify-center text-[10px] font-black shadow-lg">
+              <span
+                aria-live="polite"
+                aria-atomic="true"
+                className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[#F9DC5C] text-[#1A1A1A] flex items-center justify-center text-[10px] font-black shadow-lg"
+              >
                 {cartCount}
               </span>
             )}
