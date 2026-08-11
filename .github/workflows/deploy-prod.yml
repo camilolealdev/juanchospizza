@@ -4,7 +4,7 @@
 #
 #  TRIGGERS:
 #    - workflow_dispatch (manual, con selector de rama)
-#    - push a master (opcional, descomentar bloque on:push)
+#    - push a master (auto-deploy: cada push a master despliega)
 #
 #  REQUISITOS (GitHub Secrets):
 #    PROD_HOST       — IP del VPS
@@ -32,9 +32,9 @@ on:
           - master
           - main
 
-  # ⚠️ DESCOMENTAR SOLO si se quiere deploy automático en cada push a master
-  # push:
-  #   branches: [master, main]
+  # Auto-deploy: cada push a master lanza quality → build → deploy
+  push:
+    branches: [master, main]
 
 concurrency:
   group: deploy-production-${{ github.ref }}
@@ -111,9 +111,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [quality, docker-check]
-    # Solo correr deploy si es workflow_dispatch manual
-    # (push a master solo corre quality + docker-check, no deploy automático)
-    if: github.event_name == 'workflow_dispatch'
+    # Corre con ambos triggers: workflow_dispatch manual y push a master.
+    # En push, github.event.inputs.branch es vacío y BRANCH cae al default
+    # 'master' dentro del script SSH (ver paso 0).
     environment: production
 
     steps:
