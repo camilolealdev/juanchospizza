@@ -127,11 +127,11 @@ jobs:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
-          # VPS nuevo / IP cambiante: sin esto el runner falla en el primer
-          # intento porque la host key no está en su known_hosts. Como la
-          # conexión va protegida por la propia deploy key, el TOFU por
-          # host key no aporta seguridad adicional acá (el runner es efímero).
-          disable_host_key_checking: true
+          # Fingerprint (SHA256) de la host key del VPS: appleboy/ssh-action
+          # lo usa para verificar la identidad del servidor (anti-MITM) sin
+          # necesitar known_hosts en el runner efímero. Obtener con:
+          #   ssh-keyscan -t ed25519 <IP> | ssh-keygen -lf -
+          fingerprint: SHA256:51L6hCFxpqMkxlboJa5Y3EIOg59U+V6Wy7lIzKIw/8g
           # Tiempo suficiente para docker compose pull + build + up
           command_timeout: 300s
           script: |
