@@ -221,6 +221,34 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose }) => {
           >
             {isSubmitting ? 'Ingresando...' : 'Entrar'}
           </button>
+
+          {/* Requisito Meta (WhatsApp Cloud API): la app debe exponer la
+              política de privacidad y los términos desde el diálogo de
+              inicio de sesión. Se abren en pestaña nueva para no interrumpir
+              el login (el focus trap sigue activo en este modal). */}
+          <div className="mt-5 pt-4 border-t border-white/10 text-center">
+            <p className="text-[10px] leading-relaxed text-stone-500">
+              Al ingresar aceptas nuestros{' '}
+              <a
+                href="/terminos-y-condiciones"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-stone-400 underline underline-offset-2 hover:text-orange-500 transition-colors"
+              >
+                Términos y Condiciones
+              </a>{' '}
+              y nuestra{' '}
+              <a
+                href="/politica-de-privacidad"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-stone-400 underline underline-offset-2 hover:text-orange-500 transition-colors"
+              >
+                Política de Privacidad
+              </a>
+              .
+            </p>
+          </div>
         </form>
 
         {/* Frontend audit P0: bloque "¿Olvidaste el PIN?" eliminado.

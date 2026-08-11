@@ -30,8 +30,60 @@ const PAGE_PATHS = {
     'menu': '/menu',
     'domicilios': '/domicilios',
     'carrito': '/carrito',
+    'politica-de-privacidad': '/politica-de-privacidad',
+    'terminos-y-condiciones': '/terminos-y-condiciones',
+    'eliminacion-de-datos': '/eliminacion-de-datos',
 };
-const PATH_TO_PAGE = { '/': 'inicio', '/crea-tu-pizza': 'crea-tu-pizza', '/menu': 'menu', '/domicilios': 'domicilios', '/carrito': 'carrito' };
+const PATH_TO_PAGE = {
+    '/': 'inicio',
+    '/crea-tu-pizza': 'crea-tu-pizza',
+    '/menu': 'menu',
+    '/domicilios': 'domicilios',
+    '/carrito': 'carrito',
+    '/politica-de-privacidad': 'politica-de-privacidad',
+    '/terminos-y-condiciones': 'terminos-y-condiciones',
+    '/eliminacion-de-datos': 'eliminacion-de-datos',
+};
+
+// ── SEO por página (SPA de un solo index.html) ─────────────────────
+// Cada página actualiza document.title, la meta description y el
+// canonical en tiempo real, para que Google/Meta indexen la URL
+// correcta con su título y descripción propios.
+var SITE_ORIGIN = 'https://juanchospizza.com';
+var PAGE_SEO = {
+    'inicio': {
+        title: "Juancho's Pizza y Comidas Rápidas - Nemocón & Zipaquirá",
+        description: "Juancho's Pizza con sedes en Nemocón y Zipaquirá. Pizzas artesanales, lasañas y spaguettis. Domicilios rápidos. Pizzería en Nemocón y Zipaquirá, Cundinamarca.",
+    },
+    'politica-de-privacidad': {
+        title: "Política de Privacidad | Juancho's Pizza",
+        description: "Política de Tratamiento de Datos Personales de Juancho's Pizza conforme a la Ley 1581 de 2012. Conoce qué datos recopilamos, para qué y cómo ejercer tus derechos.",
+    },
+    'terminos-y-condiciones': {
+        title: "Términos y Condiciones | Juancho's Pizza",
+        description: "Términos y Condiciones de Juancho's Pizza conforme a la Ley 1480 de 2011. Pedidos, pagos, domicilios, derecho de retracto y reversión de pago.",
+    },
+    'eliminacion-de-datos': {
+        title: "Eliminación de Datos | Juancho's Pizza",
+        description: "Solicita la eliminación de tus datos personales en Juancho's Pizza. Derecho a la supresión conforme al artículo 15 de la Ley 1581 de 2012.",
+    },
+};
+
+function applyPageSeo(pageId) {
+    var seo = PAGE_SEO[pageId];
+    if (!seo) return;
+    if (seo.title) document.title = seo.title;
+    var meta = document.querySelector('meta[name="description"]');
+    if (meta && seo.description) meta.setAttribute('content', seo.description);
+    var canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+        canonical = document.createElement('link');
+        canonical.rel = 'canonical';
+        document.head.appendChild(canonical);
+    }
+    var canonicalUrl = SITE_ORIGIN + (PAGE_PATHS[pageId] === '/' ? '/' : PAGE_PATHS[pageId]);
+    canonical.href = canonicalUrl;
+}
 
 function showPage(pageId, skipPushState) {
     document.querySelectorAll('.page-container').forEach(function(el) {
@@ -50,6 +102,11 @@ function showPage(pageId, skipPushState) {
     }
     if (!skipPushState && PAGE_PATHS[pageId] && window.location.pathname !== PAGE_PATHS[pageId]) {
         history.pushState({ page: pageId }, '', PAGE_PATHS[pageId]);
+    }
+    applyPageSeo(pageId);
+    // Las páginas legales son documentos largos: siempre abren desde arriba.
+    if (pageId === 'politica-de-privacidad' || pageId === 'terminos-y-condiciones' || pageId === 'eliminacion-de-datos') {
+        window.scrollTo({ top: 0, behavior: 'auto' });
     }
 }
 

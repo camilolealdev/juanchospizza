@@ -115,7 +115,8 @@
       'Tratamos tus datos personales para gestionar pedidos, entregas y notificaciones sobre tu cuenta. ' +
       '¿Autorizas el tratamiento de tus datos según nuestra ' +
       '<a href="/politica-de-privacidad" target="_blank" rel="noopener">política de privacidad</a>' +
-      ' y los términos de la SIC?' +
+      ' y nuestros ' +
+      '<a href="/terminos-y-condiciones" target="_blank" rel="noopener">términos y condiciones</a>?' +
       '<span class="jc-details">Puedes cambiar tu decisión cuando quieras desde el pie de página.</span>' +
       '</div>' +
       '<div class="jc-buttons">' +
@@ -178,6 +179,14 @@
       return Object.assign({}, decisions);
     },
   };
+
+  // Link "Cambiar preferencias de privacidad" del footer → reabre el banner.
+  document.addEventListener('click', function (e) {
+    var target = e.target && e.target.closest ? e.target.closest('#footerConsentLink') : null;
+    if (!target) return;
+    e.preventDefault();
+    window.JuanchosConsent.reopen();
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
