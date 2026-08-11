@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../services/api';
+import { subscribeToPushNotifications } from '../services/push';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Recibido',
@@ -42,11 +43,20 @@ const OrderConfirmationPage: React.FC = () => {
   const [isPolling, setIsPolling] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
 
+  // La página pollea cada 5s — la suscripción push se ofrece UNA sola vez
+  // tras la primera respuesta exitosa (no en cada poll). Best-effort: si el
+  // navegador no soporta push o el usuario rechaza, no pasa nada.
+  const pushOffered = useRef(false);
+
   const poll = useCallback(async () => {
     try {
       const result = await api.trackOrder(orderNumber, phone);
       setOrder(result);
       setError('');
+      if (!pushOffered.current) {
+        pushOffered.current = true;
+        void subscribeToPushNotifications(phone);
+      }
       const settled =
         result.paymentStatus === 'paid' || result.paymentStatus === 'failed' || result.status === 'CANCELLED';
       if (settled) {

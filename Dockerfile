@@ -65,13 +65,18 @@ FROM deps-dev AS build
 # desde docker-compose.yml (--build-arg) con el valor correcto según entorno
 # (ej: https://juanchospizza.com para producción, https://localhost para dev).
 ARG VITE_API_URL
+# VITE_VAPID_PUBLIC_KEY: clave pública VAPID para notificaciones push; se
+# hornea en el bundle en build time (la lee import.meta.env en
+# src/services/push.ts). Sin ella el cliente no puede suscribirse. Mismo
+# valor que VAPID_PUBLIC_KEY, expuesta al bundle (la pública no es secreta).
+ARG VITE_VAPID_PUBLIC_KEY
 
 COPY tsconfig.json vite.config.ts tailwind.config.js postcss.config.js ./
 COPY public/ ./public/
 COPY index.html ./
 COPY src/ ./src/
 
-RUN VITE_API_URL=${VITE_API_URL} npm run build 2>&1
+RUN VITE_API_URL=${VITE_API_URL} VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY} npm run build 2>&1
 
 # ── Stage 4: Runtime final (imagen mínima) ─────────────────────────────
 # Solo lo necesario para correr: Node, production deps, server, y dist.

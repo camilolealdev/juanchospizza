@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { subscribeToPushNotifications } from '../services/push';
 import { lockBodyScroll, unlockBodyScroll } from '../utils/useBodyScrollLock';
 
 interface TrackOrderModalProps {
@@ -87,6 +88,11 @@ const TrackOrderModal: React.FC<TrackOrderModalProps> = ({ onClose }) => {
     try {
       const result = await api.trackOrder(orderNumber.trim(), phone.trim());
       setOrder(result);
+      // Best-effort: ofrecer notificaciones push del estado del pedido al
+      // teléfono recién verificado. No bloquea ni rompe el flujo — si el
+      // navegador no soporta push, no hay clave VAPID en el bundle, o el
+      // usuario rechaza el permiso, simplemente no hace nada.
+      void subscribeToPushNotifications(phone.trim());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No encontramos ese pedido');
     } finally {
