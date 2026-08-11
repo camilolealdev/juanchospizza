@@ -133,14 +133,21 @@ jobs:
             set -e
             echo "🚀 Iniciando deploy en $(hostname)"
 
-            PROJECT_DIR="${{ secrets.PROD_PATH || '/opt/guido-pizza' }}"
+            # ── 0. Valores con fallback en shell ──────────────
+            # ⚠️ NO usar literales con comillas dentro de expresiones de
+            # GitHub Actions en bloques run/script: el parser rompe el
+            # YAML del workflow. Los defaults se resuelven acá en shell.
+            PROJECT_DIR="${{ secrets.PROD_PATH }}"
+            PROJECT_DIR="${PROJECT_DIR:-/opt/guido-pizza}"
+            BRANCH="${{ github.event.inputs.branch }}"
+            BRANCH="${BRANCH:-master}"
 
             # ── 1. Ir al proyecto y traer últimos cambios ──────
             cd "$PROJECT_DIR"
-            echo "📥 Pulling branch: ${{ github.event.inputs.branch || 'master' }}"
+            echo "📥 Pulling branch: $BRANCH"
             git fetch origin
-            git checkout ${{ github.event.inputs.branch || 'master' }}
-            git pull origin ${{ github.event.inputs.branch || 'master' }}
+            git checkout "$BRANCH"
+            git pull origin "$BRANCH"
 
             # ── 2. Copiar .env.production desde backup ────────
             # Asume que .env.production existe en el servidor
