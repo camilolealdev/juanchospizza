@@ -31,7 +31,11 @@ export interface PaymentResponse {
 
 class PaymentService {
   private async postToBackend<T>(path: string, body: Record<string, unknown>): Promise<{ ok: boolean; data: T }> {
-    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    // Mismo patrón que services/api.ts: '' = rutas relativas contra el
+    // origin real. El fallback 'http://localhost:3001' horneaba localhost en
+    // el bundle y rompía los pagos en producción (cada cliente intentaba su
+    // propio localhost).
+    const apiBase = import.meta.env.VITE_API_URL || '';
     const response = await fetch(`${apiBase}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

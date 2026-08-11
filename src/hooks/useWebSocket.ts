@@ -1,6 +1,13 @@
 import { useEffect, useRef, useCallback } from 'react';
 
-const WS_BASE = import.meta.env.VITE_API_URL?.replace(/^http/, 'ws') || 'ws://localhost:3001';
+// Base del WebSocket. Si VITE_API_URL está definida (backend en dominio
+// aparte), se deriva de ella (http→ws). Si no, se construye desde el origin
+// REAL del visitante — NUNCA localhost:3001: cada cliente intentaría su
+// propio localhost y el WS quedaría muerto en producción (mismo bug que
+// tenía la API antes de usar rutas relativas).
+const WS_BASE = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace(/^http/, 'ws')
+  : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
 
 type WSEventCallback = (data: unknown) => void;
 

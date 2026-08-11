@@ -3,10 +3,15 @@ services:
     build:
       context: .
       args:
-        # URL usada por Vite en build time para WebSocket y fetch API del frontend
-        # En desarrollo local con Docker: https://localhost
-        # En producción: https://juanchospizza.com (o el dominio real)
-        VITE_API_URL: ${VITE_API_URL:-https://localhost}
+        # URL base usada por Vite en build time para WebSocket y fetch API.
+        # VALOR POR DEFECTO: vacío → el frontend usa rutas RELATIVAS
+        # ('/api/...'), que resuelven contra el origin real del visitante
+        # (https://juanchospizza.com, localhost, etc.). Es el patrón correcto
+        # en producción: el bundle YA NO hornea 'https://localhost' (que hacía
+        # que cada cliente intentara SU PROPIO localhost → bloqueado por CSP →
+        # menú/API muertos). Solo definir VITE_API_URL si el backend vive en
+        # un dominio distinto al del frontend.
+        VITE_API_URL: ${VITE_API_URL:-}
       # ── Network para build ────────────────────────────────────
       # Docker Desktop en Windows tiene un proxy DNS virtual que
       # falla con etiquetas IPv6 de npm registry. network: host
