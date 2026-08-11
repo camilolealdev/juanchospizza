@@ -4,10 +4,13 @@ import { useEffect, useRef, useCallback } from 'react';
 // aparte), se deriva de ella (http→ws). Si no, se construye desde el origin
 // REAL del visitante — NUNCA localhost:3001: cada cliente intentaría su
 // propio localhost y el WS quedaría muerto en producción (mismo bug que
-// tenía la API antes de usar rutas relativas).
+// tenía la API antes de usar rutas relativas). El guard de `window` mantiene
+// el módulo seguro en entornos sin browser (tests, SSR).
 const WS_BASE = import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL.replace(/^http/, 'ws')
-  : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
+  : typeof window !== 'undefined'
+    ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`
+    : 'ws://localhost:3001';
 
 type WSEventCallback = (data: unknown) => void;
 
