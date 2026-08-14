@@ -5,6 +5,15 @@
 
 ---
 
+## [unreleased] — 2026-08-14 — Revisión integral + recuperación de imagen perdida + deploy reparado
+
+### 🟠 P1: Deploy a VPS reparado (fingerprint SSH ECDSA)
+
+- **`.github/workflows/deploy-prod.yml`**: el fingerprint hardcodeado era el ed25519, pero appleboy/ssh-action (vía easyssh-proxy) compara el SHA256 de la host key que el SERVIDOR presenta al cliente Go — el server presenta **ECDSA**, no ed25519 ni RSA. Desde 2026-08-11 todo deploy fallaba con `ssh: host key fingerprint mismatch`. Corregido a `SHA256:970NxLNqTjUqnjEsrzV09GaCHAgWPcKCffzwzb+Mj9E` (verificado con keyscan desde el runner: mismas 3 keys, sin rotación).
+- **Verificación en producción (juanchospizza.com):** `pina.svg` → 200 · `/api/health` → 200 · pipeline 4/4 jobs success (quality, docker, deploy, smoke).
+
+---
+
 ## [unreleased] — 2026-08-14 — Revisión integral + recuperación de imagen perdida
 
 ### 🔴 P0: Imagen perdida recuperada (`pina.svg`)
