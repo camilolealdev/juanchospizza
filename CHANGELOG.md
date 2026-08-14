@@ -5,6 +5,23 @@
 
 ---
 
+## [unreleased] — 2026-08-14 — Revisión integral + recuperación de imagen perdida
+
+### 🔴 P0: Imagen perdida recuperada (`pina.svg`)
+
+- **`public/assets/images/ingredients/pina.svg`** + **`src/assets/images/ingredients/pina.svg`**: el archivo quedó con typo (`pioa.svg`) en el commit de optimización de assets (36de673); `src/config/ingredientImages.ts` referenciaba `/assets/images/ingredients/pina.svg` → 404 en producción. Renombrado con `git mv` (historial preservado). Escaneo completo de src + index.html: 0 referencias rotas.
+
+### 🟠 P1: Tests de servidor sin commitear
+
+- **`server/tests/{campaigns,categories,clients,employees,ingredients,menu,misc,products,recipes,reviews,stats}.test.js`** (11 archivos): existían en disco y CI los corre, pero nunca se committearon. Agregados al repo.
+
+### 📋 Revisión integral 2026-08-14
+
+- Equipo de 8 agentes × 4 skills (32 skills): frontend, backend, PostgreSQL, Redis, Nginx, Docker/Deploy, Tests, Assets. Ver `docs/REVISION_2026-08-14.md`.
+- Verificación: `tsc --noEmit` 0 errores · `vite build` OK · **429/429 tests verdes**.
+
+---
+
 ## [unreleased] — 2026-08-06 — Seguridad PUT orders + Vista Notificaciones
 
 ### 🔴 P0: Tampering de precio en `PUT /api/orders/:id` (auditoría 2026-08-06)
