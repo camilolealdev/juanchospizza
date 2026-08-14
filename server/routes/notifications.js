@@ -4,7 +4,7 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole } from '../auth.js';
-import { sendTemplatedEmail, templates } from '../services/email.js';
+import { sendTemplatedEmail } from '../services/email.js';
 import { deliverWebhook } from '../services/webhooks.js';
 import { isPushEnabled } from '../push.js';
 

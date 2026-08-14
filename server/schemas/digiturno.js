@@ -1,6 +1,6 @@
 // Zod schemas for digiturno (digital ticket/turn system).
 import { z } from 'zod';
-import { str, strOpt, boolOpt, clampedNumberOpt } from './helpers.js';
+import { strOpt, clampedNumberOpt } from './helpers.js';
 
 const LOCATION_IDS = ['nemocon', 'zipaquira'];
 const ORDER_TYPES = ['dine-in', 'pickup'];

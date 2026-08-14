@@ -93,7 +93,8 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test.afterEach(async (_fixtures, testInfo) => {
+// eslint-disable-next-line no-empty-pattern -- Playwright 1.61 exige destructuring, aunque no se usen fixtures
+test.afterEach(async ({}, testInfo) => {
   const errors = ALL_CONSOLE_ENTRIES.filter((e) => e.type === 'error');
   const warnings = ALL_CONSOLE_ENTRIES.filter((e) => e.type === 'warning');
   if (
@@ -313,7 +314,6 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
 
 // ─── ADMIN CRM TESTS ───────────────────────────────────────────────────────
 
-test.describe.configure({ mode: 'serial' });
 test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => {
   test('19 - Login modal elements', async ({ page }) => {
     await page.locator('button[title*="Panel Administrativo"]').click();
@@ -451,7 +451,6 @@ test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => 
 
 // ─── CONSOLE AUDIT SUMMARY ─────────────────────────────────────────────────
 
-test.describe.configure({ mode: 'serial' });
 test.describe('CONSOLE AUDIT', () => {
   test('Summary - Aggregate console errors across all pages', async ({ page }) => {
     for (const url of ['/', '/menu', '/crea-tu-pizza', '/domicilios', '/carrito']) {

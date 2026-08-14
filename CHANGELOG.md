@@ -5,6 +5,23 @@
 
 ---
 
+## [unreleased] — 2026-08-14 — QA producción: smoke real en CI, e2e arreglados, lint 0
+
+### 🟠 P1: QA de producción (equipo 8×3 skills) — ver `docs/QA_PRODUCCION_2026-08-14.md`
+
+- **`.github/workflows/deploy-prod.yml`**: el job de Smoke era un verde falso — arrancaba `dev:all` sin postgres en el runner (timeout 90s) y el `\`|\` echo`tragaba el fallo. Ahora usa`e2e/playwright.smoke.config.ts`(apunta a`PROD_URL`, sin webServer) y FALLA si el smoke no pasa. Verificado: 2/2 contra producción.
+- **`e2e/full-audit.spec.ts`**: roto con Playwright 1.61 (el caret de `^1.48.0` saltó a 1.61.1): doble `describe.configure serial` y `afterEach` con firma vieja. Arreglado: 25 tests cargan.
+- **Lint 10 → 0**: imports sin usar en `server/routes/notifications.js` y `server/schemas/digiturno.js`; `doc/*` (generado por JSDoc) agregado a `ignorePatterns`.
+- **`e2e/playwright.smoke.config.ts`** (nuevo): config de smoke contra producción sin webServer.
+
+### ⚠️ Pendientes operacionales (requieren VPS)
+
+- Backups de BD rotos desde 12-08: falta secret `DATABASE_URL` + Postgres no alcanzable desde el runner (`expose: 5432`) → correr backup en el VPS.
+- Deny blocks de nginx inactivos en prod (sin fuga de datos) → `docker compose restart nginx` en el VPS.
+- `/api/metrics` público (info disclosure menor) → restringir sin romper el scraper de monitoreo.
+
+---
+
 ## [unreleased] — 2026-08-14 — Revisión integral + recuperación de imagen perdida + deploy reparado
 
 ### 🟠 P1: Deploy a VPS reparado (fingerprint SSH ECDSA)

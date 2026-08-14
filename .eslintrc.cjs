@@ -25,6 +25,7 @@ module.exports = {
   ],
   ignorePatterns: [
     'dist',
+    'doc', // salida generada por JSDoc, no es codigo fuente
     'node_modules',
     // @typescript-eslint/parser@7.18.0 crashes ("Cannot read properties of
     // undefined (reading 'members')") parsing ANY `export enum` regardless

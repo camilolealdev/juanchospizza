@@ -235,11 +235,13 @@ jobs:
       - name: 📦 Install Playwright
         run: npx playwright install chromium --with-deps
 
-      # El E2E apunta al dominio real en producción
+      # El E2E apunta al dominio real en producción.
+      # Config dedicado (e2e/playwright.smoke.config.ts): sin webServer local
+      # (antes arrancaba dev:all, sin postgres en el runner → timeout de 90s
+      # y el `|| echo` ocultaba el fallo: job verde falso). Ahora el job FALLA
+      # si el smoke no pasa.
       - name: 🌐 E2E Smoke contra producción
         run: |
-          BASE_URL="${PROD_URL:-https://tudominio.com}" \
-          npx playwright test e2e/smoke.spec.ts --reporter=list || \
-          echo "⚠️  Smoke test falló (red externa) — revisar manualmente"
+          npx playwright test --config=e2e/playwright.smoke.config.ts
         env:
           PROD_URL: ${{ secrets.PROD_URL }}
