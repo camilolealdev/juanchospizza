@@ -131,14 +131,13 @@ jobs:
           # (vía easyssh-proxy) compara ssh.FingerprintSHA256 de la key que el
           # SERVIDOR elige presentar en el handshake con el cliente Go — NO es
           # la de ssh-keyscan local (que lista TODAS las keys del server).
-          # Con sshd en orden por defecto el server presenta RSA, no ed25519.
-          #   hostkey RSA:   ssh-keygen -lf /etc/ssh/ssh_host_rsa_key.pub
-          # Verificado 2026-08-14: ed25519 fallaba con "host key fingerprint
-          # mismatch"; RSA funciona. Fingerprints del VPS (31.97.8.138):
-          #   ed25519 = SHA256:51L6hCFxpqMkxlboJa5Y3EIOg59U+V6Wy7lIzKIw/8g
-          #   rsa     = SHA256:ntiGLnJqkfc3452w5P5kRYlG+mEcL06R2hjN9iThZTU
-          #   ecdsa   = SHA256:970NxLNqTjUqnjEsrzV09GaCHAgWPcKCffzwzb+Mj9E
-          fingerprint: SHA256:ntiGLnJqkfc3452w5P5kRYlG+mEcL06R2hjN9iThZTU
+          # Verificado 2026-08-14 (keyscan desde el runner = mismas keys):
+          #   ed25519 = SHA256:51L6hCFxpqMkxlboJa5Y3EIOg59U+V6Wy7lIzKIw/8g ✗
+          #   rsa     = SHA256:ntiGLnJqkfc3452w5P5kRYlG+mEcL06R2hjN9iThZTU ✗
+          #   ecdsa   = SHA256:970NxLNqTjUqnjEsrzV09GaCHAgWPcKCffzwzb+Mj9E ✓
+          # El server presenta ECDSA al cliente Go (ssh-rsa quedó deprecado
+          # y Go no lo ofrece como host key algorithm en versiones recientes).
+          fingerprint: SHA256:970NxLNqTjUqnjEsrzV09GaCHAgWPcKCffzwzb+Mj9E
           # Tiempo suficiente para docker compose pull + build + up
           command_timeout: 300s
           script: |
