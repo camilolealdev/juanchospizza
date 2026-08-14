@@ -128,10 +128,17 @@ jobs:
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           # Fingerprint (SHA256) de la host key del VPS: appleboy/ssh-action
-          # lo usa para verificar la identidad del servidor (anti-MITM) sin
-          # necesitar known_hosts en el runner efímero. Obtener con:
-          #   ssh-keyscan -t ed25519 <IP> | ssh-keygen -lf -
-          fingerprint: SHA256:51L6hCFxpqMkxlboJa5Y3EIOg59U+V6Wy7lIzKIw/8g
+          # (vía easyssh-proxy) compara ssh.FingerprintSHA256 de la key que el
+          # SERVIDOR elige presentar en el handshake con el cliente Go — NO es
+          # la de ssh-keyscan local (que lista TODAS las keys del server).
+          # Con sshd en orden por defecto el server presenta RSA, no ed25519.
+          #   hostkey RSA:   ssh-keygen -lf /etc/ssh/ssh_host_rsa_key.pub
+          # Verificado 2026-08-14: ed25519 fallaba con "host key fingerprint
+          # mismatch"; RSA funciona. Fingerprints del VPS (31.97.8.138):
+          #   ed25519 = SHA256:51L6hCFxpqMkxlboJa5Y3EIOg59U+V6Wy7lIzKIw/8g
+          #   rsa     = SHA256:ntiGLnJqkfc3452w5P5kRYlG+mEcL06R2hjN9iThZTU
+          #   ecdsa   = SHA256:970NxLNqTjUqnjEsrzV09GaCHAgWPcKCffzwzb+Mj9E
+          fingerprint: SHA256:ntiGLnJqkfc3452w5P5kRYlG+mEcL06R2hjN9iThZTU
           # Tiempo suficiente para docker compose pull + build + up
           command_timeout: 300s
           script: |
