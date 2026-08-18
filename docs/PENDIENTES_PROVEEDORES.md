@@ -1,6 +1,6 @@
 # Pendientes de Proveedores Externos
 
-> **Actualizado:** 2026-07-15  
+> **Actualizado:** 2026-08-18
 > **Propósito:** Pasos exactos para completar la integración con cada proveedor externo cuando tengas las credenciales.  
 > **Estado:** ⏸ Pausado hasta recibir credenciales.
 
@@ -18,14 +18,14 @@
 
 ### ✅ Lo que ya funciona sin credenciales
 
-| Componente | Archivo | Estado |
-|------------|---------|--------|
-| Crear link de pago | `server/routes/payments.js` | Código listo, llama a `integrations.api.bold.co/online/link/v1` |
-| Webhook de confirmación | `server/routes/payments.js` | Listo, verifica `x-bold-signature` o `x-webhook-secret` |
-| Botón de checkout | `src/components/payments/BoldCheckoutButton.tsx` | Listo, abre link en nueva pestaña y redirige a `/confirmacion` |
-| Servicio frontend | `src/services/payments/paymentService.ts` | Método `processBold()` listo |
-| Panel de estado | `src/views/roles/PaymentSettingsView.tsx` | Muestra si `BOLD_API_KEY` está configurada |
-| CSP | `server/index.js` | `https://checkout.bold.co` autorizado en `frame-src` y `connect-src` |
+| Componente              | Archivo                                          | Estado                                                                                      |
+| ----------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Crear link de pago      | `server/routes/payments.js`                      | Código listo, llama a `integrations.api.bold.co/online/link/v1`                             |
+| Webhook de confirmación | `server/routes/payments.js`                      | Listo: `x-bold-signature` + HMAC-SHA256 del body Base64; fallback legacy `x-webhook-secret` |
+| Botón de checkout       | `src/components/payments/BoldCheckoutButton.tsx` | Listo, abre link en nueva pestaña y redirige a `/confirmacion`                              |
+| Servicio frontend       | `src/services/payments/paymentService.ts`        | Método `processBold()` listo                                                                |
+| Panel de estado         | `src/views/roles/PaymentSettingsView.tsx`        | Muestra si `BOLD_API_KEY` está configurada                                                  |
+| CSP                     | `server/index.js`                                | `https://checkout.bold.co` autorizado en `frame-src` y `connect-src`                        |
 
 ### ❌ Pasos pendientes (cuando tengas credenciales)
 
@@ -33,13 +33,13 @@
 
 Registrate en [Bold Dashboard](https://app.bold.co) y obtené:
 
-| Variable | Dónde obtenerla |
-|----------|----------------|
-| `BOLD_API_KEY` | Bold Dashboard → Configuración → API Keys |
+| Variable              | Dónde obtenerla                                            |
+| --------------------- | ---------------------------------------------------------- |
+| `BOLD_API_KEY`        | Bold Dashboard → Configuración → API Keys                  |
 | `BOLD_WEBHOOK_SECRET` | Bold Dashboard → Webhooks → Crear webhook → Copiar secreto |
 
 > ⚠️ **Importante:** El webhook debe apuntar a:  
-> `https://[TU-DOMINIO]/api/payments/bold/webhook`
+> `https://juanchospizza.com/api/payments/bold/webhook`
 
 #### Paso 2: Configurar variables de entorno
 
@@ -53,23 +53,16 @@ BOLD_WEBHOOK_SECRET=tu_webhook_secret_aqui
 
 #### Paso 3: Verificar firma del webhook Bold
 
-**⚠️ ADVERTENCIA:** La verificación actual del webhook de Bold tiene **menos confianza** que la de MercadoPago o Wompi. El motivo se documenta en el código de `server/routes/payments.js`:
+**✅ Implementación alineada con documentación oficial (2026-08-18):** el código conserva el body RAW, lo codifica en Base64 y calcula HMAC-SHA256 con la Identity Key; compara el digest hexadecimal con `x-bold-signature` usando comparación en tiempo constante. El header `x-webhook-secret` se conserva solo como compatibilidad legacy de Bold Simple.
 
-```javascript
-// NOTA IMPORTANTE: la verificación de firma de Bold se implementó con menos
-// confianza que MercadoPago/Wompi -- no se tuvo acceso a documentación en
-// vivo ni a credenciales de sandbox reales para confirmar el nombre exacto
-// del header o el algoritmo que usa Bold.
-```
+Referencia oficial: [Bold Webhooks](https://developers.bold.co/products/webhook)
 
 **Antes de aceptar pagos reales, hay que:**
 
-1. Revisar la documentación actual de Bold sobre webhooks:
-   - Ir a: [https://docs.bold.co](https://docs.bold.co) → sección Webhooks
-   - Confirmar el nombre exacto del header de firma (actual: `x-bold-signature` o `x-webhook-secret`)
-   - Confirmar el algoritmo de verificación (actual: comparación directa del header con el secreto)
-2. Probar con una notificación real del sandbox de Bold
-3. Actualizar la función de verificación en `server/routes/payments.js` (buscar `bold/webhook`)
+1. Configurar el webhook real en Bold.
+2. Ejecutar una notificación de sandbox y comprobar que retorna HTTP 200.
+3. Confirmar en logs que el pedido cambia a `paymentStatus='paid'` solo después de una firma válida.
+4. Repetir una notificación para verificar idempotencia.
 
 #### Paso 4: Probar flujo completo
 
@@ -88,17 +81,17 @@ BOLD_WEBHOOK_SECRET=tu_webhook_secret_aqui
 
 ### ✅ Lo que ya funciona sin credenciales
 
-| Componente | Archivo | Estado |
-|------------|---------|--------|
-| Generación XML (UBL 2.1 / DIAN 4.1) | `server/services/dianXml.js` | ✅ Completo con todos los campos |
-| Plantilla de firma digital XAdES-EPES | `server/services/dianSigner.js` | ✅ Estructura completa, pendiente de certificado real |
-| CRUD de facturas | `server/routes/invoices.js` | ✅ Crear, listar, actualizar, enviar, reenviar |
-| Envío a DIAN (simulado) | `server/routes/invoices.js` | `POST /api/invoices/:id/send` — prepara payload |
-| WebSocket | `server/routes/invoices.js` | Evento `invoice:update` en cambios |
-| Frontend de facturación | `src/views/roles/InvoicesView.tsx` | ✅ Visor XML, enviar, reenviar, firma manual |
-| Esquemas Zod | `server/schemas/invoices.js` | ✅ Validación completa |
-| Base de datos | `server/db.js` | ✅ Tablas `invoices` y `credit_notes` con todos los campos DIAN |
-| Documentación | `docs/DIAN_MODULE_STATUS.md` | ✅ Estado completo de integración |
+| Componente                            | Archivo                            | Estado                                                          |
+| ------------------------------------- | ---------------------------------- | --------------------------------------------------------------- |
+| Generación XML (UBL 2.1 / DIAN 4.1)   | `server/services/dianXml.js`       | ✅ Completo con todos los campos                                |
+| Plantilla de firma digital XAdES-EPES | `server/services/dianSigner.js`    | ✅ Estructura completa, pendiente de certificado real           |
+| CRUD de facturas                      | `server/routes/invoices.js`        | ✅ Crear, listar, actualizar, enviar, reenviar                  |
+| Envío a DIAN (simulado)               | `server/routes/invoices.js`        | `POST /api/invoices/:id/send` — prepara payload                 |
+| WebSocket                             | `server/routes/invoices.js`        | Evento `invoice:update` en cambios                              |
+| Frontend de facturación               | `src/views/roles/InvoicesView.tsx` | ✅ Visor XML, enviar, reenviar, firma manual                    |
+| Esquemas Zod                          | `server/schemas/invoices.js`       | ✅ Validación completa                                          |
+| Base de datos                         | `server/db.js`                     | ✅ Tablas `invoices` y `credit_notes` con todos los campos DIAN |
+| Documentación                         | `docs/DIAN_MODULE_STATUS.md`       | ✅ Estado completo de integración                               |
 
 ### ❌ Pasos pendientes (cuando tengas credenciales)
 
@@ -106,13 +99,13 @@ BOLD_WEBHOOK_SECRET=tu_webhook_secret_aqui
 
 Antes de empezar, elegí con qué proveedor vas a integrarte:
 
-| Proveedor | Sitio Web | Tipo API | Ideal para |
-|-----------|-----------|----------|------------|
-| **Muisca** (DIAN oficial) | [cdian.dian.gov.co](https://cdian.dian.gov.co) | SOAP/XML | Negocios grandes, facturación propia |
-| **Dataico** | [dataico.com](https://dataico.com) | REST | Pymes, fácil integración |
-| **Novasoft** | [novasoft.com.co](https://novasoft.com.co) | REST | Pymes, facturación + nómina |
-| **Siesa** | [siesa.com](https://siesa.com) | API propia | Si ya usás Siesa como ERP |
-| **Alégrate** | [alegrate.co](https://alegrate.co) | REST | Startups, API moderna |
+| Proveedor                 | Sitio Web                                      | Tipo API   | Ideal para                           |
+| ------------------------- | ---------------------------------------------- | ---------- | ------------------------------------ |
+| **Muisca** (DIAN oficial) | [cdian.dian.gov.co](https://cdian.dian.gov.co) | SOAP/XML   | Negocios grandes, facturación propia |
+| **Dataico**               | [dataico.com](https://dataico.com)             | REST       | Pymes, fácil integración             |
+| **Novasoft**              | [novasoft.com.co](https://novasoft.com.co)     | REST       | Pymes, facturación + nómina          |
+| **Siesa**                 | [siesa.com](https://siesa.com)                 | API propia | Si ya usás Siesa como ERP            |
+| **Alégrate**              | [alegrate.co](https://alegrate.co)             | REST       | Startups, API moderna                |
 
 > Recomendación para Juancho's Pizza: **Dataico** o **Alégrate** por tener APIs REST modernas y estar diseñados para pymes colombianas.
 
@@ -129,13 +122,14 @@ Antes de empezar, elegí con qué proveedor vas a integrarte:
 
 Adquirir un certificado digital para firma de facturas electrónicas:
 
-| Entidad | Producto | Precio aprox. | Vigencia |
-|---------|----------|---------------|----------|
-| **Andrés Díaz - SF** | Firma Electrónica | $150.000/año | 1 año |
-| **Certicámara** | Firma Electrónica Facturación | $200.000/año | 1 año |
-| **GSE** | Firma Electrónica | $180.000/año | 1 año |
+| Entidad              | Producto                      | Precio aprox. | Vigencia |
+| -------------------- | ----------------------------- | ------------- | -------- |
+| **Andrés Díaz - SF** | Firma Electrónica             | $150.000/año  | 1 año    |
+| **Certicámara**      | Firma Electrónica Facturación | $200.000/año  | 1 año    |
+| **GSE**              | Firma Electrónica             | $180.000/año  | 1 año    |
 
 Requisitos del certificado:
+
 - Formato: `.pfx` o `.p12`
 - Algoritmo: RSA 2048 bits
 - Uso: Firma digital (no autenticación)
@@ -202,14 +196,14 @@ software: {
 
 ```javascript
 export const CERTIFICADO_CONFIG = {
-  archivo: 'certificates/facturacion.pfx',  // ← Ruta al certificado
-  password: 'contraseña-del-certificado',    // ← Contraseña real
-  alias: 'facturacion-electronica',          // ← Alias del certificado
+  archivo: 'certificates/facturacion.pfx', // ← Ruta al certificado
+  password: 'contraseña-del-certificado', // ← Contraseña real
+  alias: 'facturacion-electronica', // ← Alias del certificado
   tipo: 'firmador',
-  vigenciaDesde: '2025-01-01',               // ← Fecha de emisión
-  vigenciaHasta: '2026-01-01',               // ← Fecha de vencimiento
-  entidad: 'ANDRES DIAZ - SF',               // ← Entidad certificadora
-}
+  vigenciaDesde: '2025-01-01', // ← Fecha de emisión
+  vigenciaHasta: '2026-01-01', // ← Fecha de vencimiento
+  entidad: 'ANDRES DIAZ - SF', // ← Entidad certificadora
+};
 ```
 
 #### Paso 7: Instalar dependencias criptográficas
@@ -229,8 +223,9 @@ npm install node-forge
 ```
 
 Y en el código:
+
 ```javascript
-const forge = await import('node-forge').then(m => m.default || m);
+const forge = await import('node-forge').then((m) => m.default || m);
 ```
 
 **Nota:** Crear el directorio `server/certificates/` para el archivo .pfx.
@@ -267,7 +262,7 @@ export async function sendToDataico(xmlFirmado, invoice) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/xml',
-      'Authorization': `Bearer ${process.env.DATAICO_API_KEY}`,
+      Authorization: `Bearer ${process.env.DATAICO_API_KEY}`,
     },
     body: xmlFirmado,
   });
@@ -280,10 +275,11 @@ Luego integrarlo en `server/routes/invoices.js`, endpoint `POST /api/invoices/:i
 ```javascript
 // Reemplazar el bloque que actualiza status = 'sent' por:
 const respuestaProveedor = await sendToDataico(xmlFirmado, invoice);
-await pool.query(
-  `UPDATE invoices SET status = 'accepted', cufe = $1, "dianResponse" = $2 WHERE id = $3`,
-  [respuestaProveedor.cufe, JSON.stringify(respuestaProveedor), invoice.id]
-);
+await pool.query(`UPDATE invoices SET status = 'accepted', cufe = $1, "dianResponse" = $2 WHERE id = $3`, [
+  respuestaProveedor.cufe,
+  JSON.stringify(respuestaProveedor),
+  invoice.id,
+]);
 ```
 
 #### Paso 10: Probar en ambiente de habilitación (pruebas)
@@ -313,6 +309,7 @@ await pool.query(
 Todas las variables que necesita el sistema, agrupadas por proveedor:
 
 ### Bold
+
 ```bash
 # Obligatorias para activar Bold
 BOLD_API_KEY=sk_live_xxx              # API Key de Bold (dashboard)
@@ -325,6 +322,7 @@ BOLD_WEBHOOK_SECRET=whsec_xxx         # Secreto del webhook Bold
 ```
 
 ### DIAN / Facturación Electrónica
+
 ```bash
 # Configuración del emisor (se edita en dianXml.js, no en .env)
 # Ver server/services/dianXml.js → DIAN_CONFIG
@@ -340,6 +338,7 @@ DATAICO_API_URL=https://api.dataico.com/v1
 ```
 
 ### Correo (para enviar facturas por email a clientes)
+
 ```bash
 # Opcional pero recomendado
 SMTP_HOST=smtp.gmail.com
@@ -350,6 +349,7 @@ EMAIL_FROM=facturacion@juanchospizza.com
 ```
 
 ### Webhook general (opcional)
+
 ```bash
 WEBHOOK_URL=https://tu-webhook.com/eventos   # Recibe eventos del sistema
 ```
@@ -359,14 +359,16 @@ WEBHOOK_URL=https://tu-webhook.com/eventos   # Recibe eventos del sistema
 ## Checklist Rápido
 
 ### Bold — ¿Cuándo está listo?
+
 - [ ] `BOLD_API_KEY` configurada en `.env`
 - [ ] `BOLD_WEBHOOK_SECRET` configurado en `.env`
 - [ ] Webhook de Bold apuntando a `[DOMINIO]/api/payments/bold/webhook`
-- [ ] Verificada la firma del webhook contra docs de Bold
+- [ ] Verificada la firma HMAC-SHA256/Base64 con una notificación sandbox
 - [ ] Probado flujo completo en sandbox
 - [ ] Cambiado a producción
 
 ### DIAN — ¿Cuándo está lista?
+
 - [ ] Software registrado en la DIAN (Software ID + PIN)
 - [ ] Certificado digital adquirido (.pfx/.p12)
 - [ ] Datos del emisor completados en `dianXml.js`

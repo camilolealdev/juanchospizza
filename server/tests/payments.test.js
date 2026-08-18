@@ -91,10 +91,11 @@ function mockOrder(overrides = {}) {
   };
 }
 
-// HMAC-SHA256 hex del body RAW (exactamente lo que Bold envía en
-// x-bold-signature).
+// Bold firma el Base64 del body RAW con HMAC-SHA256 y devuelve hex
+// en x-bold-signature.
 function boldSignature(rawBody, secret) {
-  return crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+  const encodedBody = Buffer.from(rawBody, 'utf8').toString('base64');
+  return crypto.createHmac('sha256', secret).update(encodedBody).digest('hex');
 }
 
 // Da tiempo al setImmediate de Bold (que responde 200 primero y procesa

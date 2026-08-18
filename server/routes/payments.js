@@ -315,12 +315,11 @@ router.get('/api/payments/bold/status/:paymentLink', authMiddleware, requireRole
   }
 });
 
-// NOTA IMPORTANTE 2026-07-29: Verificación de firma Bold actualizada.
+// Verificación de firma Bold (documentación oficial, 2026-08-18).
 // Bold envía webhooks en formato CloudEvents v1.0 con firma HMAC-SHA256.
-// El header `x-bold-signature` contiene el HMAC del body (como string plano)
-// usando el secreto configurado en el panel de Bold (Integrations > Webhooks).
-// También se acepta el header `x-webhook-secret` como fallback para integraciones
-// más simples (comparación directa del secreto).
+// `x-bold-signature` es el HMAC hexadecimal del body codificado en Base64,
+// usando la Identity Key como secreto. El body debe conservarse RAW antes de
+// parsearlo. `x-webhook-secret` se mantiene como fallback para Bold Simple.
 //
 // express.raw() en server/index.js transforma req.body a Buffer para ESTA ruta.
 // Por eso el handler parsea manualmente: rawBodyBuffer para HMAC, body para datos.
@@ -348,10 +347,12 @@ router.post('/api/payments/bold/webhook', async (req, res) => {
     let signatureValid = false;
 
     if (signatureHeader) {
-      // HMAC sobre el buffer crudo, no sobre JSON.stringify del objeto parseado
+      // Bold firma el Base64 del body RAW, no el JSON parseado ni el Buffer
+      // directamente. Ver: https://developers.bold.co/products/webhook
+      const encodedBody = Buffer.from(rawBodyBuffer.toString('utf8'), 'utf8').toString('base64');
       const expectedSig = crypto
         .createHmac('sha256', process.env.BOLD_WEBHOOK_SECRET)
-        .update(rawBodyBuffer)
+        .update(encodedBody)
         .digest('hex');
       const providedBuf = Buffer.from(signatureHeader, 'hex');
       const expectedBuf = Buffer.from(expectedSig, 'hex');

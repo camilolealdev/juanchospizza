@@ -1,5 +1,7 @@
 # Auditoría General Total — CRM Juancho's Pizza (GastroModule)
 
+> **Documento histórico:** auditoría del 2026-08-06. Las reparaciones y pendientes aquí descritos deben contrastarse con los documentos de estado del 17-18 de agosto antes de ejecutarse.
+
 **Fecha:** 2026-08-06
 **Método:** Equipo 6 agentes paralelos (backend/CRUD, datos/schema, frontend/views, tests, servicios/integraciones, docs/deps) + orquestador. Verificación en código real (ripgrep AST), no solo docs.
 **Alcance:** Stack completo DB → Backend → Frontend, módulo por módulo, contra estándar CRUD.

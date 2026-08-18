@@ -11,6 +11,7 @@ import { initPush } from './push.js';
 import { generalRateLimit, serviceRateLimit } from './middleware/rateLimit.js';
 import { initServiceKeys, serviceKeyMiddleware } from './middleware/serviceKey.js';
 import { initRedis, isRedisAvailable } from './services/redis.js';
+import { startCampaignScheduler } from './services/campaignScheduler.js';
 import { initWebSocket } from './websocket.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { requestId } from './middleware/requestId.js';
@@ -276,6 +277,7 @@ trackRedisStatus(isRedisAvailable());
 // tumbaba el server sin dejar rastro más allá de lo que Node imprime por
 // defecto en stderr.
 let shuttingDown = false;
+let campaignSchedulerHandle = null;
 function gracefulShutdown(signal, server, wss) {
   return () => {
     if (shuttingDown) return;
@@ -286,6 +288,10 @@ function gracefulShutdown(signal, server, wss) {
     server.close(() => {
       logger.info('HTTP server cerrado');
     });
+    if (campaignSchedulerHandle) {
+      clearInterval(campaignSchedulerHandle);
+      campaignSchedulerHandle = null;
+    }
     try {
       wss?.close();
     } catch (e) {
@@ -313,6 +319,10 @@ process.on('uncaughtException', (err) => {
 });
 
 initDB().then(() => {
+  // Scheduler de campañas programadas: activa las `scheduled` vencidas cada
+  // 60s (migración #011 agrega la columna scheduleAt). Handle se limpia en
+  // gracefulShutdown para que el proceso salga sin timers colgados.
+  campaignSchedulerHandle = startCampaignScheduler(pool);
   const server = app.listen(PORT, () => {
     logger.info({ port: PORT }, `🍕 Guido Pizza API Server running on port ${PORT}`);
     logger.info(`📊 Health: http://localhost:${PORT}/api/health`);

@@ -1,7 +1,7 @@
 # API Documentation — Juancho's Pizza / GastroPro
 
-> **Base URL:** `http://localhost:3001` (dev) o `https://api.tudominio.com` (prod)
-> **Auth:** Bearer token en header `Authorization` para rutas protegidas
+> **Base URL:** `http://localhost:3001` (dev) o `https://juanchospizza.com` (prod)
+> **Auth:** cookies HttpOnly de sesión (access/refresh); las rutas protegidas no deben integrarse enviando tokens desde `localStorage`.
 > **Content-Type:** `application/json`
 
 ---
@@ -55,14 +55,13 @@ Iniciar sesión con username + PIN (y password para super admin).
 }
 ```
 
-**Response (200):**
+**Response (200):** la sesión se establece mediante cookies HttpOnly. El JSON contiene el rol y usuario; el access/refresh token no debe persistirse en `localStorage` ni exponerse al código de la UI.
 
 ```json
 {
-  "token": "eyJhbG...",
   "role": "ADMIN",
   "username": "admin",
-  "expiresIn": 1742179200
+  "expiresIn": 900
 }
 ```
 
@@ -75,21 +74,9 @@ Iniciar sesión con username + PIN (y password para super admin).
 
 Refrescar token antes de que expire.
 
-**Body:**
+**Body:** no requiere token en el body; la cookie HttpOnly de refresh se envía automáticamente.
 
-```json
-{
-  "token": "eyJhbG..."
-}
-```
-
-**Response (200):**
-
-```json
-{
-  "token": "nuevo_token"
-}
-```
+**Response (200):** la cookie de sesión se rota y el JSON confirma la renovación.
 
 **Auth:** ❌ Público (requiere token válido)
 
@@ -597,8 +584,8 @@ Webhook de Bold (CloudEvents v1.0). Bold notifica eventos de pago (`SALE_APPROVE
 
 **Verificación:**
 
-- **Principal**: Header `x-bold-signature` con HMAC-SHA256 del body RAW contra `BOLD_WEBHOOK_SECRET`
-- **Fallback**: Header `x-webhook-secret` comparación directa (Bold Simple)
+- **Principal**: Header `x-bold-signature` con HMAC-SHA256 del body RAW codificado en Base64, usando `BOLD_WEBHOOK_SECRET` como Identity Key
+- **Fallback legacy**: Header `x-webhook-secret` con comparación directa (Bold Simple)
 
 **Eventos:**
 

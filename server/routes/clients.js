@@ -13,10 +13,9 @@ const router = express.Router();
 // --- CLIENTS ---
 router.get('/api/clients', authMiddleware, requireRole('ADMIN', 'MARKETING'), async (req, res) => {
   try {
-    const { estado, search } = req.query;
-    let query = 'SELECT * FROM clients';
-    const params = [];
+    const { estado, search, page, pageSize } = req.query;
     const conditions = [];
+    const params = [];
     if (estado && estado !== 'todos') {
       params.push(estado);
       conditions.push(`estado = $${params.length}`);
@@ -28,9 +27,38 @@ router.get('/api/clients', authMiddleware, requireRole('ADMIN', 'MARKETING'), as
       const p2 = params.length;
       conditions.push(`(nombre ILIKE $${p1} OR telefono ILIKE $${p2})`);
     }
-    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-    query += ' ORDER BY "totalGastado" DESC';
-    const result = await pool.query(query, params);
+    const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
+
+    // Paginación real opcional: ?page=1&pageSize=50 → { data, total, page,
+    // pageSize, totalPages } (COUNT(*) + LIMIT/OFFSET). Sin page/pageSize →
+    // array completo (back-compat con dashboard/clientes/reportes, que
+    // agregan client-side y necesitan la lista entera), con tope defensivo
+    // de 5000 -- si la base lo supera, los consumidores deben migrar a
+    // paginación explícita o filtros, no subir el número (mismo criterio
+    // que el LIMIT 2000 deliberado de /api/orders).
+    const hasPagination = page !== undefined || pageSize !== undefined;
+    if (hasPagination) {
+      const p = Math.max(parseInt(page, 10) || 1, 1);
+      const ps = Math.min(Math.max(parseInt(pageSize, 10) || 50, 1), 500);
+      const offset = (p - 1) * ps;
+
+      const countResult = await pool.query(`SELECT COUNT(*)::int AS total FROM clients${where}`, params);
+      const total = countResult.rows[0]?.total || 0;
+
+      const result = await pool.query(
+        `SELECT * FROM clients${where} ORDER BY "totalGastado" DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, ps, offset]
+      );
+      return res.json({
+        data: result.rows.map((r) => ({ ...r, tags: r.tags || [], vip: !!r.vip })),
+        total,
+        page: p,
+        pageSize: ps,
+        totalPages: Math.ceil(total / ps),
+      });
+    }
+
+    const result = await pool.query(`SELECT * FROM clients${where} ORDER BY "totalGastado" DESC LIMIT 5000`, params);
     // tags es JSON nativo: el driver ya lo devuelve parseado (array u null)
     res.json(result.rows.map((r) => ({ ...r, tags: r.tags || [], vip: !!r.vip })));
   } catch (e) {

@@ -30,10 +30,12 @@ export function isPushEnabled() {
 
 // Envía una notificación a todas las suscripciones registradas para un
 // teléfono. Nunca lanza: cada fallo se loguea y las suscripciones
-// caducadas/inválidas (404/410) se limpian solas.
+// caducadas/inválidas (404/410) se limpian solas. Devuelve cuántas
+// notificaciones se entregaron (útil para reach/conversions de campañas).
 export async function sendPushToPhone(pool, phone, payload) {
-  if (!pushEnabled || !phone) return;
+  if (!pushEnabled || !phone) return 0;
 
+  let delivered = 0;
   try {
     const subs = await pool.query('SELECT * FROM push_subscriptions WHERE phone = $1', [phone]);
     for (const sub of subs.rows) {
@@ -42,6 +44,7 @@ export async function sendPushToPhone(pool, phone, payload) {
           { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
           JSON.stringify(payload)
         );
+        delivered++;
       } catch (err) {
         if (err.statusCode === 404 || err.statusCode === 410) {
           await pool.query('DELETE FROM push_subscriptions WHERE id = $1', [sub.id]).catch(() => {});
@@ -53,4 +56,5 @@ export async function sendPushToPhone(pool, phone, payload) {
   } catch (e) {
     logger.error({ err: e }, 'Push lookup error: ' + e.message);
   }
+  return delivered;
 }

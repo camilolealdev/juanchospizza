@@ -26,6 +26,9 @@ const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 
 const InventarioView: React.FC = () => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [movPage, setMovPage] = useState(1);
+  const [movTotal, setMovTotal] = useState(0);
+  const [movTotalPages, setMovTotalPages] = useState(1);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
@@ -56,13 +59,35 @@ const InventarioView: React.FC = () => {
     motivo: '',
   });
 
+  // Carga una página de movimientos vía el shape paginado del backend
+  // ({ data, total, page, pageSize, totalPages } con ?page=&pageSize=).
+  const loadMovements = async (page = 1) => {
+    try {
+      const res = await api.getInventoryMovements({ page, pageSize: 50 });
+      if (Array.isArray(res)) {
+        // Defensivo: si algún día el backend devuelve array (back-compat),
+        // seguimos funcionando con lo que venga.
+        setMovements(res);
+        setMovTotal(res.length);
+        setMovTotalPages(1);
+      } else {
+        setMovements(res.data);
+        setMovTotal(res.total);
+        setMovTotalPages(res.totalPages);
+      }
+      setMovPage(page);
+    } catch (e) {
+      showToast(`Error cargando movimientos: ${e instanceof Error ? e.message : 'error desconocido'}`);
+    }
+  };
+
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [inv, movs, recs] = await Promise.all([api.getInventory(), api.getInventoryMovements(), api.getRecipes()]);
+      const [inv, recs] = await Promise.all([api.getInventory(), api.getRecipes()]);
       setInventory(inv);
-      setMovements(movs);
       setRecipes(recs);
+      await loadMovements(1);
     } catch (e) {
       showToast(`Error cargando inventario: ${e instanceof Error ? e.message : 'error desconocido'}`);
     } finally {
@@ -249,10 +274,10 @@ const InventarioView: React.FC = () => {
           },
           {
             label: 'Movimientos',
-            value: `${movements.length}`,
+            value: `${movTotal}`,
             icon: 'right-left',
             color: 'text-purple-500',
-            trend: 'últimos 50',
+            trend: 'registrados',
           },
         ].map((stat, i) => (
           <div
@@ -428,6 +453,32 @@ const InventarioView: React.FC = () => {
             );
           })}
         </div>
+
+        {movTotalPages > 1 && (
+          <div className="flex items-center justify-between px-8 py-4 border-t border-stone-800/40">
+            <span className="text-[11px] text-stone-500 font-bold uppercase tracking-widest">
+              {movTotal} movimientos · Página {movPage} de {movTotalPages}
+            </span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => loadMovements(movPage - 1)}
+                disabled={movPage <= 1}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-800 hover:bg-orange-600 text-stone-400 hover:text-white text-[10px] font-black uppercase tracking-wider border border-stone-700 hover:border-orange-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-stone-800 disabled:hover:text-stone-400 disabled:hover:border-stone-700"
+              >
+                <i className="fas fa-chevron-left text-[8px]"></i>
+                Anterior
+              </button>
+              <button
+                onClick={() => loadMovements(movPage + 1)}
+                disabled={movPage >= movTotalPages}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-800 hover:bg-orange-600 text-stone-400 hover:text-white text-[10px] font-black uppercase tracking-wider border border-stone-700 hover:border-orange-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-stone-800 disabled:hover:text-stone-400 disabled:hover:border-stone-700"
+              >
+                Siguiente
+                <i className="fas fa-chevron-right text-[8px]"></i>
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="space-y-8">

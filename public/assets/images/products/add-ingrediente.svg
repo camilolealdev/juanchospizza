@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a1a1a" width="400" height="300"/>
+  <circle cx="200" cy="160" r="90" fill="#e8e4da"/>
+  <circle cx="200" cy="160" r="72" fill="#f7f4ec"/>
+  <circle cx="185" cy="145" r="12" fill="#f2a0a0"/>
+  <circle cx="215" cy="170" r="11" fill="#f9e79f"/>
+  <circle cx="205" cy="140" r="10" fill="#52be80"/>
+  <circle cx="190" cy="175" r="10" fill="#e8d8c8"/>
+  <text x="200" y="225" text-anchor="middle" fill="#f5deb3" font-size="15" font-family="Arial, sans-serif" font-weight="bold">Adicional de ingrediente</text>
+</svg>

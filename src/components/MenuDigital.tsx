@@ -491,6 +491,12 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
                   <img
                     src={product.image}
                     alt={product.name}
+                    onError={(e) => {
+                      // Fallback defensivo: si la ruta local falla, usar la ilustración genérica de pizza
+                      if (!e.currentTarget.src.endsWith('/pizza-default.svg')) {
+                        e.currentTarget.src = '/assets/images/products/pizza-default.svg';
+                      }
+                    }}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     loading="lazy"
                   />

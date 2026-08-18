@@ -169,34 +169,58 @@ jobs:
               exit 1
             fi
 
-            # ── 3. Build + Deploy con Docker Compose ──────────
-            echo "🐳 Building and starting containers..."
-            # down + up --build es más limpio que restart para rebuild
-            docker compose --env-file .env.production down --remove-orphans 2>&1 || true
-            docker compose --env-file .env.production up -d --build 2>&1
+            # ── 3. Backup previo obligatorio ──────────────────
+            # El runner de GitHub no puede alcanzar postgres:5432 porque
+            # solo está expuesto dentro de app-network. El backup se ejecuta
+            # aquí, en el VPS, antes de bajar el stack.
+            echo "📦 Creando backup previo al deploy..."
+            BACKUP_DIR="$PROJECT_DIR/backups"
+            mkdir -p "$BACKUP_DIR"
+            BACKUP_FILE="$BACKUP_DIR/guido-pizza_predeploy_$(date +%Y%m%d_%H%M%S).dump"
+            # Asegurar que PostgreSQL esté disponible sin tocar app/nginx.
+            docker compose --env-file .env.production up -d postgres
+            docker compose --env-file .env.production exec -T postgres pg_isready -U postgres -d juanchos_pizza
+            docker compose --env-file .env.production exec -T postgres \
+              pg_dump -U postgres -d juanchos_pizza -Fc -Z 9 > "$BACKUP_FILE"
+            test -s "$BACKUP_FILE"
+            sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
+            find "$BACKUP_DIR" -name 'guido-pizza_*.dump' -type f -mtime +30 -delete
+            find "$BACKUP_DIR" -name 'guido-pizza_*.dump.sha256' -type f -mtime +30 -delete
+            echo "✅ Backup previo creado: $BACKUP_FILE"
 
-            # ── 4. Limpiar imágenes viejas ────────────────────
+            # ── 4. Build + Deploy con Docker Compose ──────────
+            echo "🐳 Building and starting containers..."
+            # down + up --build es más limpio que restart
+            docker compose --env-file .env.production down --remove-orphans
+            docker compose --env-file .env.production up -d --build
+
+            # ── 5. Limpiar imágenes viejas ────────────────────
             echo "🧹 Pruning old Docker images..."
             docker image prune -f 2>&1 || true
 
-            # ── 5. Health check ────────────────────────────────
+            # ── 6. Health check obligatorio ───────────────────
             echo "⏳ Esperando health check (30s)..."
             sleep 30
 
-            # Intentar health check directo al app, fallback via nginx
-            HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health 2>/dev/null || echo "000")
+            # Intentar health check directo al app, fallback vía nginx.
+            HEALTH=$(curl -fsS -o /dev/null -w "%{http_code}" http://localhost:3001/api/health 2>/dev/null || true)
             if [ "$HEALTH" != "200" ]; then
-              HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/api/health 2>/dev/null || echo "000")
+              HEALTH=$(curl -kfsS -o /dev/null -w "%{http_code}" https://localhost/api/health 2>/dev/null || true)
             fi
 
-            if [ "$HEALTH" = "200" ]; then
-              echo "✅ Health check OK"
-            else
-              echo "⚠️  Health check falló (HTTP $HEALTH) — revisar logs"
-              docker compose logs --tail=20 app
+            if [ "$HEALTH" != "200" ]; then
+              echo "❌ Health check falló (HTTP ${HEALTH:-000}) — rollback manual requerido"
+              docker compose ps
+              docker compose logs --tail=50 app nginx
+              exit 1
             fi
+            echo "✅ App health check OK"
+            docker compose --env-file .env.production exec -T postgres pg_isready -U postgres -d juanchos_pizza
+            docker compose --env-file .env.production exec -T redis redis-cli ping | grep -qx PONG
+            docker compose --env-file .env.production exec -T nginx nginx -t
+            echo "✅ App, PostgreSQL, Redis y Nginx verificados"
 
-            # ── 6. Estado final ────────────────────────────────
+            # ── 7. Estado final ───────────────────────────────
             echo ""
             echo "📊 Container status:"
             docker compose ps

@@ -1,12 +1,15 @@
 import { z } from 'zod';
-import { str, strOpt, clampedNumber, clampedNumberOpt, clampedNumberDefaultOnUndef } from './helpers.js';
+import { str, strOpt, clampedNumberOpt, requiredPositiveNumber, clampedNumberDefaultOnUndef } from './helpers.js';
 
 export const createRewardSchema = z.object({
   nombre: str(100),
   descripcion: strOpt(300),
-  puntosCosto: clampedNumber(0, 999999),
+  // puntosCosto y valor son obligatorios y > 0: clampedNumber dejaba crear
+  // recompensas a 0 puntos / $0 (default silencioso) -- mismo criterio que
+  // finance. El frontend siempre envía ambos campos.
+  puntosCosto: requiredPositiveNumber(999999, 'Faltan datos requeridos'),
   tipo: strOpt(30),
-  valor: clampedNumber(0, 999999999),
+  valor: requiredPositiveNumber(999999999, 'Faltan datos requeridos'),
   // Columna INTEGER 0/1 (no boolean) -- 0 es un valor real ("no vigente"),
   // por eso el default solo aplica cuando el campo ni siquiera vino.
   vigente: clampedNumberDefaultOnUndef(0, 1, 1),

@@ -30,8 +30,8 @@ JWT_SECRET=$(openssl rand -hex 32)
 JWT_EXPIRES_IN=15m
 
 # ── URLs ──────────────────────────────────────────────────────
-FRONTEND_URL=https://tudominio.com
-ALLOWED_ORIGINS=https://tudominio.com
+FRONTEND_URL=https://juanchospizza.com
+ALLOWED_ORIGINS=https://juanchospizza.com,https://www.juanchospizza.com
 
 # ── Gemini (opcional) ─────────────────────────────────────────
 GEMINI_API_KEY=       # Dejar vacío si no se usa menú inteligente
@@ -45,14 +45,14 @@ WOMPI_EVENTS_SECRET=
 # ── Push (opcional) ───────────────────────────────────────────
 VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
-VAPID_SUBJECT=mailto:admin@tudominio.com
+VAPID_SUBJECT=mailto:admin@juanchospizza.com
 
 # ── SMTP (opcional) ───────────────────────────────────────────
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
-EMAIL_FROM=noreply@tudominio.com
+EMAIL_FROM=noreply@juanchospizza.com
 ```
 
 ---
@@ -81,13 +81,14 @@ cd /opt/guido-pizza
 cat > .env <<EOF
 POSTGRES_PASSWORD=<tu_password_seguro>
 JWT_SECRET=$(openssl rand -hex 32)
-ALLOWED_ORIGINS=https://tudominio.com
+ALLOWED_ORIGINS=https://juanchospizza.com,https://www.juanchospizza.com
 EOF
 
 # Crear .env.production (para el app service)
 cp .env.production.example .env.production
 nano .env.production
-# Completar TODAS las variables (al menos DATABASE_URL, JWT_SECRET, FRONTEND_URL)
+# Completar TODAS las variables (al menos POSTGRES_PASSWORD, JWT_SECRET, FRONTEND_URL, ALLOWED_ORIGINS)
+# VITE_API_URL puede quedar vacía: el frontend usa /api en el mismo dominio
 ```
 
 ### 3. Iniciar servicios
@@ -97,6 +98,9 @@ docker compose up -d
 
 # Verificar que todo esté healthy
 watch docker compose ps
+# Validar nginx antes de recargar una configuración montada
+ docker compose exec nginx nginx -t
+ docker compose exec nginx nginx -s reload
 
 # Probar health
 curl -k https://localhost/api/health
@@ -113,27 +117,27 @@ sudo apt install -y certbot
 
 # Opción A — Standalone (primera vez, requiere detener nginx):
 docker compose stop nginx
-sudo certbot certonly --standalone -d tudominio.com
+sudo certbot certonly --standalone -d juanchospizza.com
 docker compose start nginx
 
 # Opción B — Webroot (sin downtime, recomienda):
-sudo certbot certonly --webroot -w /var/www/certbot -d tudominio.com
+sudo certbot certonly --webroot -w /var/www/certbot -d juanchospizza.com
 
 # Copiar certificados al volumen montado por docker-compose
 sudo mkdir -p /opt/guido-pizza/certs
-sudo cp /etc/letsencrypt/live/tudominio.com/fullchain.pem /opt/guido-pizza/certs/
-sudo cp /etc/letsencrypt/live/tudominio.com/privkey.pem /opt/guido-pizza/certs/
+sudo cp /etc/letsencrypt/live/juanchospizza.com/fullchain.pem /opt/guido-pizza/certs/
+sudo cp /etc/letsencrypt/live/juanchospizza.com/privkey.pem /opt/guido-pizza/certs/
 docker compose restart nginx
 
 # Renovación automática (certbot crea systemd timer):
-# Editar /etc/letsencrypt/renewal/tudominio.com.conf y agregar:
-# renew_hook = cp /etc/letsencrypt/live/tudominio.com/*.pem /opt/guido-pizza/certs/ && cd /opt/guido-pizza && docker compose restart nginx
+# Editar /etc/letsencrypt/renewal/juanchospizza.com.conf y agregar:
+# renew_hook = cp /etc/letsencrypt/live/juanchospizza.com/*.pem /opt/guido-pizza/certs/ && cd /opt/guido-pizza && docker compose restart nginx
 ```
 
 ### 5. Verificar seguridad SSL
 
 ```bash
-curl -sI https://tudominio.com | grep -i strict-transport-security
+curl -sI https://juanchospizza.com | grep -i strict-transport-security
 # Debe mostrar: Strict-Transport-Security: max-age=31536000
 
 # Tests online: https://www.ssllabs.com/ssltest/
@@ -170,7 +174,7 @@ El proyecto tiene el workflow **`deploy-prod.yml`** que automatiza el deploy:
 | `PROD_USER`    | Usuario SSH       | `deploy`                                 |
 | `PROD_SSH_KEY` | Clave privada SSH | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
 | `PROD_PATH`    | Ruta en VPS       | `/opt/guido-pizza`                       |
-| `PROD_URL`     | URL pública       | `https://tudominio.com`                  |
+| `PROD_URL`     | URL pública       | `https://juanchospizza.com`              |
 
 ### Pipeline
 
@@ -206,7 +210,7 @@ workflow_dispatch (selector de rama)
 
 ```bash
 # Conectarse al VPS y ejecutar:
-ssh deploy@tudominio.com
+ssh deploy@juanchospizza.com
 cd /opt/guido-pizza
 git pull origin master
 docker compose up -d --build
@@ -218,12 +222,12 @@ docker compose up -d --build
 
 ### Inmediato (primeros 10 min)
 
-- [ ] `curl https://tudominio.com/api/health` → `{"status":"healthy", ... "services":{"database":"connected","redis":"connected"}}` (la forma real del health en `server/index.js`, que incluye uptime y estado de DB/Redis)
+- [ ] `curl https://juanchospizza.com/api/health` → `{"status":"healthy", ... "services":{"database":"connected","redis":"connected"}}` (la forma real del health en `server/index.js`, que incluye uptime y estado de DB/Redis)
 - [ ] Login como ADMIN funciona
 - [ ] Login como OPERATOR funciona
 - [ ] Menú digital carga correctamente
 - [ ] Static assets se sirven (JS, CSS, imágenes, iconos)
-- [ ] PWA manifest se carga: `curl https://tudominio.com/manifest.webmanifest`
+- [ ] PWA manifest se carga: `curl https://juanchospizza.com/manifest.webmanifest`
 - [ ] **🔴 Rotar los PINs por defecto** (1234/5678/0000/9999) vía CRM > Empleados
 
 ### Primeras 24 horas
@@ -233,7 +237,7 @@ docker compose up -d --build
 - [ ] Probar cambio de estado de pedido
 - [ ] Verificar dashboard muestra datos
 - [ ] Probar impresión de ticket de cocina
-- [ ] Verificar apple-touch-icon en iOS: `curl https://tudominio.com/apple-touch-icon.png`
+- [ ] Verificar apple-touch-icon en iOS: `curl https://juanchospizza.com/apple-touch-icon.png`
 
 ### Primera semana
 
@@ -266,7 +270,7 @@ docker compose logs -f app
 docker compose logs -f nginx
 
 # Health check
-curl https://tudominio.com/api/health
+curl https://juanchospizza.com/api/health
 
 # Estadísticas del contenedor
 docker stats
@@ -304,8 +308,10 @@ docker compose logs -f nginx
 # Ejecutar comando dentro del contenedor
 docker compose exec app node server/migrate.js
 
-# Respaldar BD
-docker compose exec postgres pg_dump -U postgres juanchos_pizza > backup.sql
+# Respaldar BD (formato custom, recomendado)
+mkdir -p backups
+docker compose exec -T postgres pg_dump -U postgres -d juanchos_pizza -Fc -Z 9 > "backups/guido-pizza_$(date +%Y%m%d_%H%M%S).dump"
+sha256sum backups/*.dump | tail -1
 
 # Restaurar BD
 cat backup.sql | docker compose exec -T postgres psql -U postgres juanchos_pizza

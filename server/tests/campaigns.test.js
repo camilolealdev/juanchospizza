@@ -106,7 +106,7 @@ describe('POST /api/campaigns', () => {
     expect(res.body.reach).toBe(0);
     expect(res.body.conversions).toBe(0);
     expect(res.body.budget).toBe(500000);
-    // INSERT con [id, name, type, discount, status, 0, 0, budget]
+    // INSERT con [id, name, type, discount, status, 0, 0, budget, scheduleAt]
     expect(mockQuery.mock.calls[0][1]).toEqual([
       expect.any(String),
       'Cyber Monday',
@@ -116,7 +116,35 @@ describe('POST /api/campaigns', () => {
       0,
       0,
       500000,
+      null,
     ]);
+  });
+
+  it('persiste scheduleAt cuando la campaña es programada', async () => {
+    const app = createApp();
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+    const iso = '2026-08-20T14:30:00.000Z';
+
+    const res = await supertest(app)
+      .post('/api/campaigns')
+      .send(validCampaign({ status: 'scheduled', scheduleAt: iso }));
+
+    expect(res.status).toBe(201);
+    expect(mockQuery.mock.calls[0][1][8]).toBeInstanceOf(Date);
+    expect(mockQuery.mock.calls[0][1][8].toISOString()).toBe(iso);
+    // supertest serializa el body a JSON: el Date vuelve como string ISO.
+    expect(res.body.scheduleAt).toBe(iso);
+  });
+
+  it('rechaza con 400 un scheduleAt que no es ISO válido', async () => {
+    const app = createApp();
+
+    const res = await supertest(app)
+      .post('/api/campaigns')
+      .send(validCampaign({ status: 'scheduled', scheduleAt: 'mañana' }));
+
+    expect(res.status).toBe(400);
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 
   it('responde 500 si el INSERT falla', async () => {
@@ -150,6 +178,19 @@ describe('PUT /api/campaigns/:id', () => {
 
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: 'Campaign not found' });
+  });
+
+  it('actualiza scheduleAt como columna propia (con null para limpiarla)', async () => {
+    const app = createApp();
+    mockQuery
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ id: 'camp_1', status: 'draft' }] });
+
+    const res = await supertest(app).put('/api/campaigns/camp_1').send({ status: 'draft', scheduleAt: null });
+
+    expect(res.status).toBe(200);
+    expect(mockQuery.mock.calls[0][0]).toBe('UPDATE campaigns SET status = $1, "scheduleAt" = $2 WHERE id = $3');
+    expect(mockQuery.mock.calls[0][1]).toEqual(['draft', null, 'camp_1']);
   });
 });
 

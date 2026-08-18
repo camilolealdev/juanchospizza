@@ -4,25 +4,25 @@
 > `.env.production.example` (sí commiteada) y completa aquí los valores reales.
 > Esta guía explica **dónde obtener cada credencial** y qué habilita.
 
-Estado actualizado: **2026-08-06** — `JWT_SECRET` y claves VAPID **generadas localmente**.
+Estado actualizado: **2026-08-18** — `JWT_SECRET` y claves VAPID **generadas localmente**; URLs de producción fijadas a `juanchospizza.com`.
 
 ---
 
 ## 1. Resumen rápido
 
-| Variable                                    | Estado           | Qué habilita                      | Dónde obtenerla                    |
-| ------------------------------------------- | ---------------- | --------------------------------- | ---------------------------------- |
-| `JWT_SECRET`                                | ✅ **Generado**  | Firma de tokens de sesión (login) | Generar localmente (ver §2)        |
-| `VAPID_MAILTO`                              | ✅ **Generado**  | Push notifications (backend)      | Fijar tu `mailto:` de contacto     |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`    | ✅ **Generados** | Push notifications (backend)      | `npx web-push generate-vapid-keys` |
-| `VITE_VAPID_PUBLIC_KEY`                     | ✅ **Generada**  | Push (frontend/service worker)    | = `VAPID_PUBLIC_KEY`               |
-| `GEMINI_API_KEY`                            | ⬜ Vacía         | Menú inteligente (opcional)       | AI Studio → §3                     |
-| `BOLD_API_KEY` / `BOLD_WEBHOOK_SECRET`      | ⬜ Vacías        | Checkout Bold (Colombia)          | Portal de Comercio Bold → §4       |
-| `MP_ACCESS_TOKEN` / `MP_WEBHOOK_SECRET`     | ⬜ Vacías        | Checkout MercadoPago              | Developer Dashboard MP → §5        |
-| `WOMPI_MERCHANT_ID` / `WOMPI_EVENTS_SECRET` | ⬜ Vacías        | Checkout Wompi (Bancolombia)      | Dashboard comercios Wompi → §6     |
-| `PAYPAL_CLIENT_ID`                          | ⬜ Vacía         | Checkout PayPal                   | Developer Dashboard PayPal → §7    |
-| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS`     | ⬜ Vacías        | Emails transaccionales            | Proveedor SMTP → §8                |
-| `FRONTEND_URL` / `ALLOWED_ORIGINS`          | ⚠️ `localhost`   | CORS + redirects checkout         | Tu dominio real → §9               |
+| Variable                                    | Estado                              | Qué habilita                      | Dónde obtenerla                    |
+| ------------------------------------------- | ----------------------------------- | --------------------------------- | ---------------------------------- |
+| `JWT_SECRET`                                | ✅ **Generado**                     | Firma de tokens de sesión (login) | Generar localmente (ver §2)        |
+| `VAPID_MAILTO`                              | ✅ **Generado**                     | Push notifications (backend)      | Fijar tu `mailto:` de contacto     |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`    | ✅ **Generados**                    | Push notifications (backend)      | `npx web-push generate-vapid-keys` |
+| `VITE_VAPID_PUBLIC_KEY`                     | ✅ **Generada**                     | Push (frontend/service worker)    | = `VAPID_PUBLIC_KEY`               |
+| `GEMINI_API_KEY`                            | ⬜ Vacía                            | Menú inteligente (opcional)       | AI Studio → §3                     |
+| `BOLD_API_KEY` / `BOLD_WEBHOOK_SECRET`      | ⬜ Vacías                           | Checkout Bold (Colombia)          | Portal de Comercio Bold → §4       |
+| `MP_ACCESS_TOKEN` / `MP_WEBHOOK_SECRET`     | ⬜ Vacías                           | Checkout MercadoPago              | Developer Dashboard MP → §5        |
+| `WOMPI_MERCHANT_ID` / `WOMPI_EVENTS_SECRET` | ⬜ Vacías                           | Checkout Wompi (Bancolombia)      | Dashboard comercios Wompi → §6     |
+| `PAYPAL_CLIENT_ID`                          | ⬜ Vacía                            | Checkout PayPal                   | Developer Dashboard PayPal → §7    |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS`     | ⬜ Vacías                           | Emails transaccionales            | Proveedor SMTP → §8                |
+| `FRONTEND_URL` / `ALLOWED_ORIGINS`          | ✅ Dominio definido; validar en VPS | CORS + redirects checkout         | `https://juanchospizza.com` → §9   |
 
 Regla general de comportamiento del server (verificado en código):
 
@@ -100,10 +100,10 @@ Opciones de proveedor:
 | **Resend**                  | https://resend.com — API key / SMTP en la sección API Keys                                                                      |
 | **Mailtrap** (solo pruebas) | https://mailtrap.io — inbox de testing, los correos no se entregan de verdad                                                    |
 
-## 9. URLs de producción ⚠️ (pendientes de tu dominio)
+## 9. URLs de producción — juanchospizza.com
 
 - `FRONTEND_URL` — **obligatoria** en producción (fail-fast al boot; los checkout redirigen aquí).
-  Hoy: `http://localhost:3000` → **reemplazar por `https://tudominio.com`** antes del deploy.
+  Valor objetivo: `https://juanchospizza.com` (debe verificarse en `.env.production` del VPS).
 - `ALLOWED_ORIGINS` — CORS: lista de orígenes separada por comas. Añadir el dominio real.
 - `PUBLIC_URL` — URL absoluta del backend para los QR del menú (`server/routes/qrMenu.js`).
 - `VITE_API_URL` — URL base de API para el frontend (vacío = mismo origen).

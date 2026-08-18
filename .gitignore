@@ -88,5 +88,8 @@ docker-compose.override.yml
 # (excluido a continuación) o en un .gitignore_global/.git/info/exclude.
 .github/_local/
 
+# Backups locales de PostgreSQL — nunca versionar dumps ni checksums
+backups/
+
 # Certificados TLS locales autofirmados (nginx, dev/testing) -- nunca reales
 certs/

@@ -1,5 +1,7 @@
 # 🔬 Informe de Brechas Detallado — Juancho's Pizza / GastroPro
 
+> **Documento histórico:** auditoría del 2026-08-05. Sus hallazgos pendientes no representan automáticamente el estado vigente; para el estado actual consultar `docs/REVISION_6_FRENTES_2026-08-17.md` y `docs/PENDIENTES_OPERACIONALES_2026-08-17.md`.
+
 **Fecha:** 2026-08-05 · **Origen:** Auditoría multi-agente (DB, CRUD, Frontend, Seguridad, Tests, Performance) con skills tokensaver/ponytail/caveman
 **Base:** Working tree actual + `docs/BREACHES_2026-08-04.md` + `docs/AUDIT_2026-07-30.md`
 **Método:** extracción AST real por agente (34 tablas, 32 routers, 20 vistas, 130 métodos API) + verificación de gaps conocidos + **verificación línea por línea en código (pasada 2, 05-08)**
@@ -60,6 +62,8 @@
 | `loyalty_points`     | id, clientId, puntos, concepto, referencia, creado                                                                                                                                                        | ✅     | —                                             |
 | `loyalty_rewards`    | id, nombre, descripcion, tipo, valor, vigente                                                                                                                                                             | ✅     | —                                             |
 | `push_subscriptions` | id, phone, clientId, endpoint, p256dh, auth                                                                                                                                                               | ✅     | —                                             |
+
+> **Corrección posterior (2026-08-18):** las menciones de scheduler inexistente, paginación ausente y anti-tampering abierto que aparecen más abajo son hallazgos de la fotografía del 2026-08-05. Fueron resueltos posteriormente; no ejecutarlos como tareas vigentes. Consultar `docs/REVISION_6_FRENTES_2026-08-17.md` para el estado actualizado.
 
 ## 1.4 Tablas operativas
 
@@ -127,7 +131,7 @@
 **🟡 Gaps CRUD transversales:**
 
 - **PUT con lista fija de columnas (riesgo NULL-overwrite) → ✅ RESUELTO (verificado en código, 05-08):** los 18 routers (`campaigns, categories, clients, comandas, digiturno, employees, finance, ingredients, inventory, invoices, loyalty, menuExtras, orders, pizzaSizes, procurement, products, recipes, tables`) usan **updates dinámicos** con guardas `if (campo !== undefined)` — un campo ausente YA no se escribe NULL (hay comentarios en código: "Update dinámico — antes sobreescribía todas las columnas"). **Deuda B-7 de BREACHES_08-04, CERRADA.**
-- **🔴 PUT de `orders` acepta `total` del cliente (hallazgo 05-08):** el PUT de órdenes permite sobreescribir el monto sin re-pricing server-side (a diferencia del checkout POST que sí pasa por `orderPricing.js` + anti-tampering). Revisar/eliminar el campo.
+- ~~**🔴 PUT de `orders` acepta `total` del cliente (hallazgo 05-08):**~~ **✅ RESUELTO posteriormente:** el PUT ignora el total del cliente y recalcula server-side; se conserva esta línea como evidencia histórica.
 - **🔴 `notifications.js` sin montar → ✅ RESUELTO (05-08):** el router (3 endpoints: `/api/notifications/status`, `test-email`, `test-webhook`) **ya se importa y monta en `server/index.js`** — dejó de devolver 404. Tests: `server/tests/notifications.test.js` (9). El frontend todavía no lo llama (solo un TODO en AdminLayout) — el endpoint queda listo para el panel.
 - **`requireSameLocation` en `tables.js` → ✅ RESUELTO (05-08):** `requireSameLocation` ya cubría el mismatch explícito; el hueco real era que un OPERATOR que **omite** `locationId` veía TODAS las sedes (el middleware no bloquea omisión). Se agregó `effectiveLocationId()` (mismo patrón que inventory.js) que fuerza la sede del token server-side en `GET /api/tables` y `GET /api/tables/floor-plan`. **Hallazgo HIGH #5 de AUDIT_07-30, cerrado** con tests de scoping en `server/tests/tables.test.js`.
 - **`/api/inventory/movement` y `/api/inventory/movements`** sin DELETE de movimiento (auditoría).
@@ -138,27 +142,27 @@
 
 **20 vistas de roles + 9 componentes + 1 página + 3 services. Todos los 19 módulos GastroModule tienen vista.**
 
-| Módulo       | Vista                                      | API usada (api.ts)                                  | Estado                                                                |
-| ------------ | ------------------------------------------ | --------------------------------------------------- | --------------------------------------------------------------------- |
-| dashboard    | GastroProDashboard.tsx                     | stats, finance, inventory, orders                   | ✅                                                                    |
-| menu         | MenuInteligente.tsx (74KB — la más pesada) | products, categories, sizes, variants/combos/promos | ✅                                                                    |
-| inventario   | InventarioView.tsx                         | inventory, recipes                                  | ✅                                                                    |
-| clientes     | ClientesView.tsx (42KB)                    | clients                                             | ✅                                                                    |
-| fidelizacion | FidelizacionView.tsx                       | loyalty                                             | ✅                                                                    |
-| campanas     | MarketingView.tsx                          | campaigns                                           | ✅ (status `scheduled` en UI pero **sin scheduler backend** — ver §6) |
-| finanzas     | FinanzasView.tsx                           | finance/expenses                                    | ✅                                                                    |
-| reportes     | ReportesView.tsx                           | stats, finance                                      | ✅                                                                    |
-| reviews      | ReviewsView.tsx                            | reviews                                             | ✅                                                                    |
-| pagos        | PaymentSettingsView.tsx (2.4KB — mínima)   | payments/status                                     | ⚠️ es solo estado de configuración                                    |
-| empleados    | EmpleadosView.tsx (+test)                  | employees                                           | ✅                                                                    |
-| turnos       | TurnosView.tsx                             | shifts                                              | ✅                                                                    |
-| mesas        | MesasView.tsx                              | tables                                              | ✅                                                                    |
-| caja         | CajaView.tsx                               | cashRegister, tips                                  | ✅                                                                    |
-| comandas     | ComandasView.tsx                           | comandas                                            | ✅                                                                    |
-| compras      | ComprasView.tsx                            | procurement                                         | ✅                                                                    |
-| facturacion  | InvoicesView.tsx                           | invoices, credit-notes                              | ✅                                                                    |
-| digiturno    | DigiturnoView.tsx                          | digiturno                                           | ✅                                                                    |
-| derechos     | DerechosView.tsx                           | derechos ARCO                                       | ✅                                                                    |
+| Módulo       | Vista                                      | API usada (api.ts)                                  | Estado                                                                                                     |
+| ------------ | ------------------------------------------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| dashboard    | GastroProDashboard.tsx                     | stats, finance, inventory, orders                   | ✅                                                                                                         |
+| menu         | MenuInteligente.tsx (74KB — la más pesada) | products, categories, sizes, variants/combos/promos | ✅                                                                                                         |
+| inventario   | InventarioView.tsx                         | inventory, recipes                                  | ✅                                                                                                         |
+| clientes     | ClientesView.tsx (42KB)                    | clients                                             | ✅                                                                                                         |
+| fidelizacion | FidelizacionView.tsx                       | loyalty                                             | ✅                                                                                                         |
+| campanas     | MarketingView.tsx                          | campaigns                                           | ✅ (fotografía 2026-08-05: entonces sin scheduler; **resuelto posteriormente**, ver §6 del estado vigente) |
+| finanzas     | FinanzasView.tsx                           | finance/expenses                                    | ✅                                                                                                         |
+| reportes     | ReportesView.tsx                           | stats, finance                                      | ✅                                                                                                         |
+| reviews      | ReviewsView.tsx                            | reviews                                             | ✅                                                                                                         |
+| pagos        | PaymentSettingsView.tsx (2.4KB — mínima)   | payments/status                                     | ⚠️ es solo estado de configuración                                                                         |
+| empleados    | EmpleadosView.tsx (+test)                  | employees                                           | ✅                                                                                                         |
+| turnos       | TurnosView.tsx                             | shifts                                              | ✅                                                                                                         |
+| mesas        | MesasView.tsx                              | tables                                              | ✅                                                                                                         |
+| caja         | CajaView.tsx                               | cashRegister, tips                                  | ✅                                                                                                         |
+| comandas     | ComandasView.tsx                           | comandas                                            | ✅                                                                                                         |
+| compras      | ComprasView.tsx                            | procurement                                         | ✅                                                                                                         |
+| facturacion  | InvoicesView.tsx                           | invoices, credit-notes                              | ✅                                                                                                         |
+| digiturno    | DigiturnoView.tsx                          | digiturno                                           | ✅                                                                                                         |
+| derechos     | DerechosView.tsx                           | derechos ARCO                                       | ✅                                                                                                         |
 
 **Componentes públicos:** MenuDigital, CartSection, PizzaBuilder, ApprovedReviews, TrackOrderModal, LoginModal, BoldCheckoutButton, AdminLayout, OrderConfirmationPage.
 
@@ -219,17 +223,17 @@
 
 # 6. ⚙️ AUTOMATIZACIONES — estado
 
-| Automatización                                    | Estado                                                                                                                                  |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Backup diario BD (GitHub Action 04:00 COT)        | ✅ existe (backup.yml + scripts/backup.sh)                                                                                              |
-| Reset diario digiturno                            | ✅ implementado                                                                                                                         |
-| Idempotencia webhooks de pago                     | ✅                                                                                                                                      |
-| Push notifications                                | ✅ (server/push.js + VAPID)                                                                                                             |
-| Webhooks salientes (pedido/pago)                  | ✅ (webhooks.js con retry)                                                                                                              |
-| **Campañas `scheduled`**                          | 🔴 **NO hay scheduler/cron** — la UI deja programar campañas (status=scheduled) pero NADIE las dispara. Es el gap de automatización #1. |
-| **Monitoreo n8n de /api/health + /api/metrics**   | 🟡 propuesto (docs/MONITOREO_N8N.md) — NO implementado                                                                                  |
-| **Reconciliación caja/turno automática**          | 🔴 no existe — comandas no alimentan órdenes                                                                                            |
-| **Descuento de inventario por receta automático** | 🔴 no existe (backlog B-…)                                                                                                              |
+| Automatización                                    | Estado                                                                                                                                               |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backup diario BD (GitHub Action 04:00 COT)        | ✅ existe (backup.yml + scripts/backup.sh)                                                                                                           |
+| Reset diario digiturno                            | ✅ implementado                                                                                                                                      |
+| Idempotencia webhooks de pago                     | ✅                                                                                                                                                   |
+| Push notifications                                | ✅ (server/push.js + VAPID)                                                                                                                          |
+| Webhooks salientes (pedido/pago)                  | ✅ (webhooks.js con retry)                                                                                                                           |
+| **Campañas `scheduled`**                          | ~~🔴 NO había scheduler/cron en la fotografía del 05-08~~ → **✅ RESUELTO posteriormente** con `campaignScheduler.js`; consultar el informe vigente. |
+| **Monitoreo n8n de /api/health + /api/metrics**   | 🟡 propuesto (docs/MONITOREO_N8N.md) — NO implementado                                                                                               |
+| **Reconciliación caja/turno automática**          | 🔴 no existe — comandas no alimentan órdenes                                                                                                         |
+| **Descuento de inventario por receta automático** | 🔴 no existe (backlog B-…)                                                                                                                           |
 
 ---
 

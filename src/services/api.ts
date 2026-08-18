@@ -140,6 +140,17 @@ export interface InventoryMovement {
   usuario: string;
 }
 
+// Shape paginado que devuelven los endpoints con ?page=&pageSize= (clients,
+// orders, inventory movements) -- ver server/routes/*.js. Sin params esos
+// endpoints devuelven array directo (back-compat).
+export interface Paginated<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export interface RecipeIngredient {
   id: string;
   recipeId: string;
@@ -525,10 +536,15 @@ export const api = {
   },
 
   // Orders
-  async getOrders(status?: string, options?: { paidOnly?: boolean }) {
+  // Paginación real: pasar { page, pageSize } devuelve
+  // { data, total, page, pageSize, totalPages } (ver server/routes/orders.js).
+  // Sin ellos → array completo (back-compat con dashboard/reportes).
+  async getOrders(status?: string, options?: { paidOnly?: boolean; page?: number; pageSize?: number }) {
     const query = new URLSearchParams();
     if (status) query.set('status', status);
     if (options?.paidOnly) query.set('paidOnly', 'true');
+    if (options?.page !== undefined) query.set('page', String(options.page));
+    if (options?.pageSize !== undefined) query.set('pageSize', String(options.pageSize));
     const qs = query.toString();
     return apiFetch(`/api/orders${qs ? `?${qs}` : ''}`);
   },
@@ -592,10 +608,15 @@ export const api = {
   },
 
   // Clients
-  async getClients(params?: { estado?: string; search?: string }) {
+  // Paginación real: pasar { page, pageSize } devuelve
+  // { data, total, page, pageSize, totalPages } (ver server/routes/clients.js).
+  // Sin ellos → array completo (back-compat con dashboard/clientes/reportes).
+  async getClients(params?: { estado?: string; search?: string; page?: number; pageSize?: number }) {
     const query = new URLSearchParams();
     if (params?.estado) query.set('estado', params.estado);
     if (params?.search) query.set('search', params.search);
+    if (params?.page !== undefined) query.set('page', String(params.page));
+    if (params?.pageSize !== undefined) query.set('pageSize', String(params.pageSize));
     const qs = query.toString();
     return apiFetch(`/api/clients${qs ? `?${qs}` : ''}`);
   },
@@ -887,8 +908,18 @@ export const api = {
     });
   },
 
-  async getInventoryMovements(): Promise<InventoryMovement[]> {
-    return apiFetch('/api/inventory/movements');
+  // Paginación real: pasar { page, pageSize } devuelve
+  // { data, total, page, pageSize, totalPages } (ver server/routes/inventory.js).
+  // Sin ellos → array con los últimos 50 (back-compat con InventarioView).
+  async getInventoryMovements(params?: {
+    page?: number;
+    pageSize?: number;
+  }): Promise<InventoryMovement[] | Paginated<InventoryMovement>> {
+    const qs =
+      params?.page !== undefined || params?.pageSize !== undefined
+        ? `?page=${params.page ?? 1}&pageSize=${params.pageSize ?? 50}`
+        : '';
+    return apiFetch(`/api/inventory/movements${qs}`);
   },
 
   // Recipes

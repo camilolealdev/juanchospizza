@@ -30,34 +30,6 @@ export const CATEGORIES = [
   { id: 'adicionales', name: 'Adicionales', icon: 'plus', color: 'text-stone-500' },
   { id: 'bebidas', name: 'Bebidas', icon: 'wine-glass', color: 'text-cyan-500' },
 ];
-
-const IMG = {
-  pizzaHawaiana: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80',
-  pizzaPollo: 'https://images.unsplash.com/photo-1555109307-f7d9da25c244?auto=format&fit=crop&w=600&q=80',
-  pizzaCarnes: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=600&q=80',
-  pizzaCostillitas: 'https://images.unsplash.com/photo-1566853923569-3c0eb2e79edf?auto=format&fit=crop&w=600&q=80',
-  pizzaCriolla: 'https://images.unsplash.com/photo-1594007654729-407eedc4be65?auto=format&fit=crop&w=600&q=80',
-  pizzaMexicana: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=600&q=80',
-  pizzaRanchera: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80',
-  pizzaDeLaCasa: 'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?auto=format&fit=crop&w=600&q=80',
-  pizzaEspanola: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?auto=format&fit=crop&w=600&q=80',
-  pizzaNapolitana: 'https://images.unsplash.com/photo-1588315029754-2dd089d39a07?auto=format&fit=crop&w=600&q=80',
-  pizzaVegetariana: 'https://images.unsplash.com/photo-1604917877934-07d8d248d396?auto=format&fit=crop&w=600&q=80',
-  pizzaTropical: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=600&q=80',
-  pizzaQuesoBocadillo: 'https://images.unsplash.com/photo-1512152272829-e3139592d56f?auto=format&fit=crop&w=600&q=80',
-  pizzaSlice: 'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=600&q=80',
-  hamburguesa1: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80',
-  hamburguesa2: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=600&q=80',
-  hamburguesa3: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=600&q=80',
-  pasta: 'https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&w=600&q=80',
-  salchipapa: 'https://images.unsplash.com/photo-1624378420232-d5f1341b5c37?auto=format&fit=crop&w=600&q=80',
-  perro: 'https://images.unsplash.com/photo-1619740455993-9e612b1af08a?auto=format&fit=crop&w=600&q=80',
-  mazorcada: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
-  pechuga: 'https://images.unsplash.com/photo-1608039829572-9e18f2cf88d2?auto=format&fit=crop&w=600&q=80',
-  churrasco: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
-  bebida: 'https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?auto=format&fit=crop&w=600&q=80',
-};
-
 // { id, categoryId, subcategory, nombre, descripcion, basePrice, type, image,
 //   vegetariano, comboPrice? } -- comboPrice se traduce a una menu_variant
 // "Combo" (delta) en el seed, no es columna real de products.
@@ -71,7 +43,6 @@ export const PRODUCTS = [
     descripcion: 'Piña, Jamón',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaHawaiana,
   },
   {
     id: 'pz-pollo-champinones',
@@ -80,7 +51,6 @@ export const PRODUCTS = [
     descripcion: 'Jamón, Champiñones, Pollo desmechado',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaPollo,
   },
   {
     id: 'pz-carnes',
@@ -89,7 +59,6 @@ export const PRODUCTS = [
     descripcion: 'Jamón, Salami, Cabano',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaCarnes,
   },
   {
     id: 'pz-costillitas-bbq',
@@ -98,7 +67,6 @@ export const PRODUCTS = [
     descripcion: 'Jamón, Costillas BBQ, Maíz tierno',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaCostillitas,
   },
   {
     id: 'pz-criolla',
@@ -107,7 +75,6 @@ export const PRODUCTS = [
     descripcion: 'Carne desmechada, Maíz tierno',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaCriolla,
   },
   {
     id: 'pz-mexicana',
@@ -116,7 +83,6 @@ export const PRODUCTS = [
     descripcion: 'Carne molida, Maíz tierno, Tomate, Cilantro, Tostacos',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaMexicana,
   },
   {
     id: 'pz-ranchera',
@@ -125,7 +91,6 @@ export const PRODUCTS = [
     descripcion: 'Champiñones, Cebolla, Maíz tierno, Chorizo',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaRanchera,
   },
   {
     id: 'pz-de-la-casa',
@@ -134,7 +99,6 @@ export const PRODUCTS = [
     descripcion: 'Champiñones, Cebolla, Carne desmechada',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaDeLaCasa,
   },
   {
     id: 'pz-espanola',
@@ -143,7 +107,6 @@ export const PRODUCTS = [
     descripcion: 'Espinaca, Tocineta, Maíz tierno, Champiñón',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaEspanola,
   },
   {
     id: 'pz-napolitana',
@@ -152,7 +115,6 @@ export const PRODUCTS = [
     descripcion: 'Tomate, Orégano',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaNapolitana,
   },
   {
     id: 'pz-vegetariana',
@@ -161,7 +123,6 @@ export const PRODUCTS = [
     descripcion: 'Champiñón, Maíz tierno, Cebolla',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaVegetariana,
     vegetariano: true,
   },
   {
@@ -171,7 +132,6 @@ export const PRODUCTS = [
     descripcion: 'Cerezas, Piña, Duraznos, Uvas pasas',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaTropical,
     vegetariano: true,
   },
   {
@@ -181,7 +141,6 @@ export const PRODUCTS = [
     descripcion: 'Queso y bocadillo',
     basePrice: 30000,
     type: 'tradicional',
-    image: IMG.pizzaQuesoBocadillo,
     vegetariano: true,
   },
   {
@@ -192,7 +151,6 @@ export const PRODUCTS = [
     descripcion: 'Porción individual de pizza',
     basePrice: 9200,
     type: 'tradicional',
-    image: IMG.pizzaSlice,
   },
 
   // ── Hamburguesas (3 tiers) ───────────────────────────────────────
@@ -205,7 +163,6 @@ export const PRODUCTS = [
     basePrice: 17500,
     comboPrice: 25500,
     type: 'tradicional',
-    image: IMG.hamburguesa2,
   },
   {
     id: 'ham-plancha-especial',
@@ -216,7 +173,6 @@ export const PRODUCTS = [
     basePrice: 18000,
     comboPrice: 26500,
     type: 'tradicional',
-    image: IMG.hamburguesa1,
   },
   {
     id: 'ham-plancha-sencilla-doble',
@@ -227,7 +183,6 @@ export const PRODUCTS = [
     basePrice: 21500,
     comboPrice: 28000,
     type: 'tradicional',
-    image: IMG.hamburguesa2,
   },
   {
     id: 'ham-plancha-especial-doble',
@@ -238,7 +193,6 @@ export const PRODUCTS = [
     basePrice: 22000,
     comboPrice: 29000,
     type: 'tradicional',
-    image: IMG.hamburguesa1,
   },
   {
     id: 'ham-apanada-sencilla',
@@ -249,7 +203,6 @@ export const PRODUCTS = [
     basePrice: 20000,
     comboPrice: 27000,
     type: 'tradicional',
-    image: IMG.hamburguesa3,
   },
   {
     id: 'ham-apanada-especial',
@@ -260,7 +213,6 @@ export const PRODUCTS = [
     basePrice: 21000,
     comboPrice: 28000,
     type: 'tradicional',
-    image: IMG.hamburguesa3,
   },
   {
     id: 'ham-apanada-2carnes',
@@ -271,7 +223,6 @@ export const PRODUCTS = [
     basePrice: 22000,
     comboPrice: 28500,
     type: 'tradicional',
-    image: IMG.hamburguesa3,
   },
   {
     id: 'ham-apanada-tocineta',
@@ -282,7 +233,6 @@ export const PRODUCTS = [
     basePrice: 22000,
     comboPrice: 29000,
     type: 'tradicional',
-    image: IMG.hamburguesa3,
   },
   {
     id: 'ham-apanada-mixta',
@@ -293,7 +243,6 @@ export const PRODUCTS = [
     basePrice: 23500,
     comboPrice: 30000,
     type: 'tradicional',
-    image: IMG.hamburguesa3,
   },
   {
     id: 'ham-casa-sencilla',
@@ -304,7 +253,6 @@ export const PRODUCTS = [
     basePrice: 17000,
     comboPrice: 25000,
     type: 'tradicional',
-    image: IMG.hamburguesa1,
   },
   {
     id: 'ham-casa-especial',
@@ -315,7 +263,6 @@ export const PRODUCTS = [
     basePrice: 18000,
     comboPrice: 26000,
     type: 'tradicional',
-    image: IMG.hamburguesa1,
   },
 
   // ── Pastas (mismo precio en lasagna o spaghetti) ────────────────
@@ -327,7 +274,6 @@ export const PRODUCTS = [
       'Salsa boloñesa, pasta, champiñones, queso, pan tajado. Disponible en lasagna o spaghetti, mismo precio.',
     basePrice: 19000,
     type: 'tradicional',
-    image: IMG.pasta,
     vegetariano: true,
   },
   {
@@ -338,7 +284,6 @@ export const PRODUCTS = [
       'Salsa boloñesa, pasta, champiñón, pollo, jamón, queso, pan tajado. Disponible en lasagna o spaghetti, mismo precio.',
     basePrice: 21000,
     type: 'tradicional',
-    image: IMG.pasta,
   },
   {
     id: 'pasta-pollo',
@@ -347,7 +292,6 @@ export const PRODUCTS = [
     descripcion: 'Salsa boloñesa, pasta, pollo, queso, pan tajado. Disponible en lasagna o spaghetti, mismo precio.',
     basePrice: 23000,
     type: 'tradicional',
-    image: IMG.pasta,
   },
   {
     id: 'pasta-jamon',
@@ -356,7 +300,6 @@ export const PRODUCTS = [
     descripcion: 'Salsa boloñesa, pasta, jamón, queso, pan tajado. Disponible en lasagna o spaghetti, mismo precio.',
     basePrice: 23500,
     type: 'tradicional',
-    image: IMG.pasta,
   },
 
   // ── Salchipapas & perros calientes ───────────────────────────────
@@ -368,7 +311,6 @@ export const PRODUCTS = [
     descripcion: 'Papa francesa, chorizo, salchicha, queso, salami',
     basePrice: 16000,
     type: 'tradicional',
-    image: IMG.salchipapa,
   },
   {
     id: 'salchi-americana',
@@ -378,7 +320,6 @@ export const PRODUCTS = [
     descripcion: 'Papa francesa, chorizo, salchicha americana, queso, costillas de cerdo',
     basePrice: 17000,
     type: 'tradicional',
-    image: IMG.salchipapa,
   },
   {
     id: 'salchi-super-especial',
@@ -388,7 +329,6 @@ export const PRODUCTS = [
     descripcion: 'Papa francesa, chorizo, salchicha americana, champiñón, pollo, queso, costillas de cerdo',
     basePrice: 20000,
     type: 'tradicional',
-    image: IMG.salchipapa,
   },
   {
     id: 'perro-sencillo',
@@ -399,7 +339,6 @@ export const PRODUCTS = [
     basePrice: 15500,
     comboPrice: 22000,
     type: 'tradicional',
-    image: IMG.perro,
   },
   {
     id: 'perro-americano',
@@ -410,7 +349,6 @@ export const PRODUCTS = [
     basePrice: 16500,
     comboPrice: 24000,
     type: 'tradicional',
-    image: IMG.perro,
   },
   {
     id: 'perro-super-especial',
@@ -421,7 +359,6 @@ export const PRODUCTS = [
     basePrice: 18000,
     comboPrice: 25000,
     type: 'tradicional',
-    image: IMG.perro,
   },
 
   // ── Especiales ────────────────────────────────────────────────────
@@ -432,7 +369,6 @@ export const PRODUCTS = [
     descripcion: 'Champiñones, pollo, carne desmechada, maíz, chorizo, queso + francesa',
     basePrice: 27000,
     type: 'tradicional',
-    image: IMG.mazorcada,
   },
   {
     id: 'esp-pechuga-gratinada',
@@ -441,7 +377,6 @@ export const PRODUCTS = [
     descripcion: 'Queso, francesas, ensalada, arepa',
     basePrice: 28000,
     type: 'tradicional',
-    image: IMG.pechuga,
   },
   {
     id: 'esp-pechuga-rancho',
@@ -450,7 +385,6 @@ export const PRODUCTS = [
     descripcion: 'Champiñones, pollo, carne desmechada, maíz, chorizo, queso + francesa',
     basePrice: 31000,
     type: 'tradicional',
-    image: IMG.pechuga,
   },
   {
     id: 'esp-churrasco',
@@ -459,7 +393,6 @@ export const PRODUCTS = [
     descripcion: 'Carne 350 gramos, francesa, ensalada, arepa',
     basePrice: 29000,
     type: 'tradicional',
-    image: IMG.churrasco,
   },
   {
     id: 'esp-costillitas-bbq',
@@ -468,7 +401,6 @@ export const PRODUCTS = [
     descripcion: 'Costilla 350 gramos, francesa, ensalada, arepa',
     basePrice: 29000,
     type: 'tradicional',
-    image: IMG.churrasco,
   },
 
   // ── Adicionales (sección propia del menú -- ingrediente extra en
@@ -477,10 +409,10 @@ export const PRODUCTS = [
     id: 'add-ingrediente',
     categoryId: 'adicionales',
     nombre: 'Adicional de ingrediente',
-    descripcion: 'Súmale un ingrediente extra a cualquier plato del menú: pizza / hamburguesa / salchipapa / perro caliente',
+    descripcion:
+      'Súmale un ingrediente extra a cualquier plato del menú: pizza / hamburguesa / salchipapa / perro caliente',
     basePrice: 3500,
     type: 'entrada',
-    image: '',
     vegetariano: true,
   },
   {
@@ -490,7 +422,6 @@ export const PRODUCTS = [
     descripcion: 'Porción de papa francesa sola -- para acompañar o compartir',
     basePrice: 7000,
     type: 'entrada',
-    image: IMG.salchipapa,
     vegetariano: true,
   },
   {
@@ -500,7 +431,6 @@ export const PRODUCTS = [
     descripcion: 'Porción de papa criolla sola -- para acompañar o compartir',
     basePrice: 7000,
     type: 'entrada',
-    image: IMG.salchipapa,
     vegetariano: true,
   },
 
@@ -513,7 +443,6 @@ export const PRODUCTS = [
     descripcion: 'Jugo natural preparado con agua',
     basePrice: 6000,
     type: 'bebida',
-    image: IMG.bebida,
     vegetariano: true,
   },
   {
@@ -524,7 +453,6 @@ export const PRODUCTS = [
     descripcion: 'Jugo natural preparado con leche',
     basePrice: 7000,
     type: 'bebida',
-    image: IMG.bebida,
     vegetariano: true,
   },
   {
@@ -535,7 +463,6 @@ export const PRODUCTS = [
     descripcion: 'Botella de agua pequeña',
     basePrice: 2000,
     type: 'bebida',
-    image: IMG.bebida,
     vegetariano: true,
   },
   {
@@ -546,7 +473,6 @@ export const PRODUCTS = [
     descripcion: 'Botella de agua grande',
     basePrice: 3000,
     type: 'bebida',
-    image: IMG.bebida,
     vegetariano: true,
   },
   {
@@ -557,7 +483,6 @@ export const PRODUCTS = [
     descripcion: 'Botella de agua Bretaña',
     basePrice: 3500,
     type: 'bebida',
-    image: IMG.bebida,
     vegetariano: true,
   },
   {
@@ -568,7 +493,6 @@ export const PRODUCTS = [
     descripcion: 'Gaseosa Coca-Cola 1.5 litros',
     basePrice: 8500,
     type: 'bebida',
-    image: IMG.bebida,
     vegetariano: true,
   },
   {
@@ -579,7 +503,6 @@ export const PRODUCTS = [
     descripcion: 'Gaseosa Postobón 1.5 litros',
     basePrice: 7500,
     type: 'bebida',
-    image: IMG.bebida,
     vegetariano: true,
   },
   {
@@ -590,7 +513,6 @@ export const PRODUCTS = [
     descripcion: 'Gaseosa personal 350 ml',
     basePrice: 3800,
     type: 'bebida',
-    image: IMG.bebida,
     vegetariano: true,
   },
   {
@@ -601,7 +523,6 @@ export const PRODUCTS = [
     descripcion: 'Gaseosa personal 500 ml',
     basePrice: 4000,
     type: 'bebida',
-    image: IMG.bebida,
     vegetariano: true,
   },
   {
@@ -612,7 +533,6 @@ export const PRODUCTS = [
     descripcion: 'Gaseosa en botella de vidrio 250 ml',
     basePrice: 2800,
     type: 'bebida',
-    image: IMG.bebida,
     vegetariano: true,
   },
   {
@@ -623,7 +543,6 @@ export const PRODUCTS = [
     descripcion: 'Gaseosa en botella plástica 250 ml',
     basePrice: 2800,
     type: 'bebida',
-    image: IMG.bebida,
     vegetariano: true,
   },
 ];

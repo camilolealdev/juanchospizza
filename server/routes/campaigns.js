@@ -23,15 +23,17 @@ router.post(
   validate(createCampaignSchema),
   async (req, res) => {
     try {
-      const { name, type, discount, status, budget } = req.body;
+      const { name, type, discount, status, budget, scheduleAt } = req.body;
       const id = `camp_${Date.now()}`;
 
       await pool.query(
-        `INSERT INTO campaigns (id, name, type, discount, status, reach, conversions, budget) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [id, name, type, discount, status, 0, 0, budget]
+        `INSERT INTO campaigns (id, name, type, discount, status, reach, conversions, budget, "scheduleAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        // En un INSERT no hay fecha previa que pisar: undefined → null explícito
+        [id, name, type, discount, status, 0, 0, budget, scheduleAt ?? null]
       );
 
-      res.status(201).json({ id, name, type, discount, status, reach: 0, conversions: 0, budget });
+      res.status(201).json({ id, name, type, discount, status, reach: 0, conversions: 0, budget, scheduleAt });
     } catch (e) {
       res.status(500).json({ error: 'Error creating campaign' });
     }
@@ -45,7 +47,7 @@ router.put(
   validate(updateCampaignSchema),
   async (req, res) => {
     try {
-      const { name, type, discount, status, budget } = req.body;
+      const { name, type, discount, status, budget, scheduleAt } = req.body;
 
       const updates = [];
       const params = [];
@@ -68,6 +70,11 @@ router.put(
       if (budget !== undefined) {
         params.push(budget);
         updates.push(`budget = $${params.length}`);
+      }
+      if (scheduleAt !== undefined) {
+        // null explícito limpia la fecha programada (se valida en el schema)
+        params.push(scheduleAt);
+        updates.push(`"scheduleAt" = $${params.length}`);
       }
 
       if (updates.length) {

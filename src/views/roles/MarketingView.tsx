@@ -10,6 +10,31 @@ const emptyForm = {
   discount: 0,
   status: 'draft' as Campaign['status'],
   budget: 0,
+  scheduleAt: '',
+};
+
+// Convierte ISO (de la DB) → valor de <input type="datetime-local"> en hora
+// local (el input no acepta offset; datetime-local se interpreta como local).
+const toLocalInput = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// Formato legible para mostrar la fecha programada en la card.
+const formatSchedule = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 const MarketingView: React.FC = () => {
@@ -60,7 +85,14 @@ const MarketingView: React.FC = () => {
   };
   const openEdit = (c: Campaign) => {
     setEditingId(c.id);
-    setForm({ name: c.name, type: c.type, discount: c.discount, status: c.status, budget: c.budget });
+    setForm({
+      name: c.name,
+      type: c.type,
+      discount: c.discount,
+      status: c.status,
+      budget: c.budget,
+      scheduleAt: toLocalInput(c.scheduleAt),
+    });
     setShowModal(true);
   };
 
@@ -78,11 +110,16 @@ const MarketingView: React.FC = () => {
   const handleSubmit = async () => {
     if (!form.name.trim()) return;
     try {
+      // datetime-local → ISO con offset (lo que valida el schema del server).
+      const payload = {
+        ...form,
+        scheduleAt: form.scheduleAt ? new Date(form.scheduleAt).toISOString() : null,
+      };
       if (editingId) {
-        await api.updateCampaign(editingId, form);
+        await api.updateCampaign(editingId, payload);
         showToast('Campaña actualizada');
       } else {
-        await api.createCampaign(form);
+        await api.createCampaign(payload);
         showToast('Campaña creada');
       }
       setShowModal(false);
@@ -188,7 +225,13 @@ const MarketingView: React.FC = () => {
               </div>
             </div>
             <h4 className="font-black text-xl mb-3 tracking-tight">{c.name}</h4>
-            <p className="text-stone-500 text-[10px] mb-8 uppercase tracking-[0.3em] font-bold italic">{c.type}</p>
+            <p className="text-stone-500 text-[10px] mb-2 uppercase tracking-[0.3em] font-bold italic">{c.type}</p>
+            {c.status === 'scheduled' && c.scheduleAt && (
+              <p className="text-[10px] font-bold text-orange-400/80 mb-6 flex items-center gap-2">
+                <i className="fas fa-calendar"></i> Se activa el {formatSchedule(c.scheduleAt)}
+              </p>
+            )}
+            {c.status !== 'scheduled' && <div className="mb-6"></div>}
 
             <div className="grid grid-cols-2 gap-6 border-t border-white/5 pt-8">
               <div>
@@ -268,6 +311,22 @@ const MarketingView: React.FC = () => {
                   </select>
                 </div>
               </div>
+              {form.status === 'scheduled' && (
+                <div>
+                  <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-2">
+                    Fecha de activación
+                  </label>
+                  <input
+                    type="datetime-local"
+                    className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-orange-500 transition-colors"
+                    value={form.scheduleAt}
+                    onChange={(e) => setForm({ ...form, scheduleAt: e.target.value })}
+                  />
+                  <p className="text-[9px] text-stone-600 mt-2">
+                    La campaña pasa a «Activa» automáticamente a esta fecha/hora.
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-2">

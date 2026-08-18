@@ -184,6 +184,49 @@ describe('GET /api/orders', () => {
     expect(mockQuery.mock.calls[0][0]).not.toContain('status = $1');
   });
 
+  it('paginación real: page/pageSize devuelve { data, total, page, pageSize, totalPages }', async () => {
+    const app = createApp();
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ total: 7 }] }) // COUNT(*)
+      .mockResolvedValueOnce({ rows: [mockOrder(), mockOrder({ id: 'ord_2' })] }); // SELECT paginado
+
+    const res = await supertest(app).get('/api/orders?page=2&pageSize=2');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      data: [expect.objectContaining({ id: 'ord_1' }), expect.objectContaining({ id: 'ord_2' })],
+      total: 7,
+      page: 2,
+      pageSize: 2,
+      totalPages: 4,
+    });
+    expect(mockQuery.mock.calls[0][0]).toContain('COUNT(*)');
+    const [sql, sqlParams] = mockQuery.mock.calls[1];
+    expect(sql).toContain('LIMIT $1 OFFSET $2');
+    expect(sql).toContain('ORDER BY "createdAt" DESC');
+    expect(sqlParams).toEqual([2, 2]); // offset (2-1)*2 = 2
+  });
+
+  it('paginación real combina filtros status/locationId/paidOnly', async () => {
+    const app = createApp();
+    mockQuery.mockResolvedValueOnce({ rows: [{ total: 3 }] }).mockResolvedValueOnce({ rows: [mockOrder()] });
+
+    const res = await supertest(app).get(
+      '/api/orders?status=CONFIRMED&paidOnly=true&locationId=nemocon&page=1&pageSize=10'
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.totalPages).toBe(1);
+    const countSql = mockQuery.mock.calls[0][0];
+    expect(countSql).toContain('COUNT(*)');
+    expect(countSql).toContain('status = $1');
+    expect(countSql).toContain('"locationId" = $2');
+    expect(countSql).toContain(`"paymentStatus" = 'paid' OR "paymentMethod" IN ('cash', 'card', 'whatsapp')`);
+    // COUNT usa los 3 filtros; el SELECT agrega LIMIT/OFFSET en $4/$5
+    const [, sqlParams] = mockQuery.mock.calls[1];
+    expect(sqlParams).toEqual(['CONFIRMED', 'nemocon', 10, 0]);
+  });
+
   it('responde 500 si la query falla', async () => {
     const app = createApp();
     mockQuery.mockRejectedValueOnce(new Error('boom'));

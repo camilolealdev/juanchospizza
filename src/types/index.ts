@@ -153,6 +153,9 @@ export interface Campaign {
   reach: number;
   conversions: number;
   budget: number;
+  // Fecha programada (ISO) para status 'scheduled' — el scheduler del server
+  // activa la campaña cuando scheduleAt <= NOW(). Null si no está programada.
+  scheduleAt?: string | null;
 }
 
 // ===================== GASTROPRO CRM TYPES =====================

@@ -66,4 +66,11 @@ export const templates = {
     '<p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>\n' +
     '<p><a href="{{resetLink}}">Restablecer contraseña</a></p>\n' +
     '<p>El enlace expira en 1 hora.</p>\n',
+  campaign:
+    '<h1>{{campaignName}} 🍕</h1>\n' +
+    '<p>Hola {{customerName}},</p>\n' +
+    '<p>Tenemos una promo especial para ti:</p>\n' +
+    '<p style="font-size:24px;font-weight:bold;color:#C0392B;">{{discount}}% de descuento</p>\n' +
+    '<p>{{message}}</p>\n' +
+    "<p>¡Te esperamos en Juancho's Pizza!</p>\n",
 };

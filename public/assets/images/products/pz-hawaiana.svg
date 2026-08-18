@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a1a1a" width="400" height="300"/>
+  <circle cx="200" cy="145" r="100" fill="#dcae73"/>
+  <circle cx="200" cy="145" r="85" fill="#c9884a"/>
+  <circle cx="200" cy="145" r="70" fill="#e74c3c" opacity="0.85"/>
+  
+  <text x="200" y="225" text-anchor="middle" fill="#f5deb3" font-size="15" font-family="Arial, sans-serif" font-weight="bold">Hawaiana</text>
+</svg>

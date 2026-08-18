@@ -34,23 +34,40 @@ const memFallback = {
     memStore.set(key, { value, exp: Date.now() + ttlMs });
     return Promise.resolve('OK');
   },
-  incr(key) {
-    const val = memStore.get(key);
-    const next = val ? val.value + 1 : 1;
-    memStore.set(key, { value: next, exp: Infinity });
-    return Promise.resolve(next);
-  },
-  expire(key, ttlMs) {
+  // OJO: expire recibe SEGUNDOS (misma firma que ioredis/Redis real -- ver
+  // rateLimit.js: "redis.expire() espera segundos"). Antes se sumaban como
+  // milisegundos: la ventana vencía en 60ms en vez de 60s.
+  expire(key, ttlSeconds) {
     const val = memStore.get(key);
     if (val) {
-      val.exp = Date.now() + ttlMs;
+      val.exp = Date.now() + ttlSeconds * 1000;
       memStore.set(key, val);
     }
     return Promise.resolve(1);
   },
+  incr(key) {
+    // Una llave vencida debe reiniciar el contador en 1 (como hace Redis
+    // real). Antes se leía el Map crudo sin chequear exp: la entrada
+    // vencida seguía acumulando y el rate-limiter en memoria terminaba
+    // bloqueando TODO permanentemente (fail-open que se volvía
+    // fail-closed) hasta reiniciar el server.
+    const val = memStore.get(key);
+    if (!val || Date.now() > val.exp) {
+      memStore.set(key, { value: 1, exp: Infinity });
+      return Promise.resolve(1);
+    }
+    const next = val.value + 1;
+    // Preserva el TTL existente: en Redis real, INCR no toca el TTL que
+    // fijó EXPIRE (rateLimit.js lo llama solo en el primer request).
+    // Pisar exp con Infinity acá habría hecho que la ventana nunca
+    // venciera después del primer request.
+    memStore.set(key, { value: next, exp: val.exp });
+    return Promise.resolve(next);
+  },
   ttl(key) {
     const val = memStore.get(key);
-    if (!val) return Promise.resolve(-2);
+    if (!val) return Promise.resolve(-2); // -2 = la llave no existe (como Redis)
+    if (val.exp === Infinity) return Promise.resolve(-1); // -1 = sin TTL (como Redis)
     const remaining = val.exp - Date.now();
     return Promise.resolve(remaining > 0 ? Math.ceil(remaining / 1000) : -2);
   },

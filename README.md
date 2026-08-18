@@ -7,7 +7,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-8-FF4438?logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-131%2F131-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-521%2F521-brightgreen)
 ![PWA](https://img.shields.io/badge/PWA-✅-purple)
 
 > **Juancho's Pizza** — Pizzería artesanal con sedes en **Nemocón** y **Zipaquirá**, Cundinamarca, Colombia.  
@@ -26,9 +26,9 @@
 | **Proxy**    | Nginx 1.31 (SSL, rate-limit, WebSocket)       | ✅ Docker     |
 | **Auth**     | JWT (HMAC-SHA256) + PBKDF2 + HttpOnly cookies | ✅ Producción |
 | **IA**       | Google Gemini (menú inteligente opcional)     | ⚠️ Opcional   |
-| **Pagos**    | Bold + Wompi (Colombia)                       | ✅ Listo      |
+| **Pagos**    | Bold (Colombia)                               | ✅ Listo      |
 | **PWA**      | Service Worker + manifest + icons             | ✅ Listo      |
-| **Tests**    | Vitest (131 tests) + Playwright (E2E)         | ✅ CI         |
+| **Tests**    | Vitest (521 tests) + Playwright (E2E)         | ✅ CI         |
 
 ---
 
@@ -56,34 +56,32 @@ El proyecto usa un **patrón híbrido**: landing page estática (`index.html`) p
 
 ## 🚀 Módulos GastroPro CRM
 
-| Módulo                   | Descripción                               | Estado |
-| ------------------------ | ----------------------------------------- | ------ |
-| **Dashboard**            | Métricas real-time, heatmap, proyecciones | ✅     |
-| **Menú Inteligente**     | Productos, variantes, combos, promociones | ✅     |
-| **Inventario & Recetas** | Stock, costos por receta, alertas         | ✅     |
-| **CRM Clientes**         | Historial, tags, segmentación VIP         | ✅     |
-| **Fidelización**         | Puntos, niveles, retos                    | ✅     |
-| **Campañas**             | Flash, cupones, segmentadas               | ✅     |
-| **Finanzas**             | Ingresos, egresos, flujo de caja          | ✅     |
-| **Comandas**             | Mesas, splits, kitchen tickets            | ✅     |
-| **Digiturno**            | Tickets virtuales multi-sede              | ✅     |
-| **Facturación DIAN**     | Estructura lista, integración pendiente   | ⚠️     |
-| **Reportes**             | Informes detallados                       | ✅     |
-| **Caja**                 | Registro de caja por turno                | ✅     |
-| **Propinas**             | Gestión de propinas                       | ✅     |
+| Módulo                   | Descripción                                              | Estado |
+| ------------------------ | -------------------------------------------------------- | ------ |
+| **Dashboard**            | Métricas real-time, heatmap, proyecciones                | ✅     |
+| **Menú Inteligente**     | Productos, variantes, combos, promociones                | ✅     |
+| **Inventario & Recetas** | Stock, costos por receta, alertas                        | ✅     |
+| **CRM Clientes**         | Historial, tags, segmentación VIP                        | ✅     |
+| **Fidelización**         | Puntos, niveles, retos                                   | ✅     |
+| **Campañas**             | Flash, cupones, segmentadas                              | ✅     |
+| **Finanzas**             | Ingresos, egresos, flujo de caja                         | ✅     |
+| **Comandas**             | Mesas, splits, kitchen tickets                           | ✅     |
+| **Digiturno**            | Tickets virtuales multi-sede                             | ✅     |
+| **Facturación DIAN**     | Estructura/adapters listos; activación externa pendiente | ⚠️     |
+| **Reportes**             | Informes detallados                                      | ✅     |
+| **Caja**                 | Registro de caja por turno                               | ✅     |
+| **Propinas**             | Gestión de propinas                                      | ✅     |
 
 ---
 
 ## 💳 Pasarelas de Pago
 
-| Pasarela        | País        | Estado        | Notas                                      |
-| --------------- | ----------- | ------------- | ------------------------------------------ |
-| **Bold**        | 🇨🇴 Colombia | ✅ Producción | Payment links + webhook HMAC-SHA256        |
-| **Wompi**       | 🇨🇴 Colombia | ✅ Producción | Transacciones CARD + installments          |
-| **MercadoPago** | 🌎 LatAm    | ⛔ Bloqueado  | No aplica a Colombia (método 'pix' Brasil) |
-| **PayPal**      | 🌎 Global   | 🚧 Stub       | Oculto del selector                        |
+| Pasarela                         | País        | Estado        | Notas                                                             |
+| -------------------------------- | ----------- | ------------- | ----------------------------------------------------------------- |
+| **Bold**                         | 🇨🇴 Colombia | ✅ Producción | Payment links + webhook HMAC-SHA256                               |
+| **MercadoPago / Wompi / PayPal** | 🌎          | ⛔ No activos | No forman parte del flujo online vigente; solo Bold está expuesto |
 
-> **Todos los webhooks fallan cerrados (503)** si falta su secret de verificación.
+> **El webhook activo de Bold falla cerrado (503)** si falta su secreto de verificación. Las integraciones históricas de otros proveedores no están activas.
 
 ---
 
@@ -116,7 +114,7 @@ docker compose up --build -d
 
 # 6. Verificar
 curl -sk https://localhost/api/health
-# → {"status":"ok","timestamp":"..."}
+# → {"status":"healthy", ...}
 ```
 
 ---
@@ -165,12 +163,12 @@ npm run docker:run   # Docker Compose up
 
 ## 🚀 CI/CD
 
-| Workflow          | Archivo                             | Trigger                    |
-| ----------------- | ----------------------------------- | -------------------------- |
-| **CI**            | `.github/workflows/ci.yml`          | Push/PR a master           |
-| **Deploy**        | `.github/workflows/deploy.yml`      | Manual (PM2 legado)        |
-| **Deploy Docker** | `.github/workflows/deploy-prod.yml` | Manual con branch selector |
-| **Backup**        | `.github/workflows/backup.yml`      | Cron diario 04:00 COT      |
+| Workflow          | Archivo                                   | Trigger                                            |
+| ----------------- | ----------------------------------------- | -------------------------------------------------- |
+| **CI**            | `.github/workflows/ci.yml`                | Push/PR a master                                   |
+| **Deploy**        | `.github/workflows/deploy.yml`            | Manual (PM2 legado)                                |
+| **Deploy Docker** | `.github/workflows/deploy-prod.yml`       | Manual con branch selector                         |
+| **Backup**        | `.github/workflows/backup.yml` + cron VPS | GH no alcanza Postgres interno; cron VPS requerido |
 
 > El workflow **`deploy-prod.yml`** usa `appleboy/ssh-action` para hacer deploy con Docker Compose via SSH:
 > `quality → docker-check → deploy (git pull + compose up -d --build + healthcheck) → smoke test`
@@ -180,7 +178,7 @@ npm run docker:run   # Docker Compose up
 ## 📊 Tests
 
 ```bash
-npx vitest run        # 131 tests, 11 suites
+npx vitest run        # 521 tests, 47 archivos
 npx tsc --noEmit      # 0 errors
 npx vite build        # Build limpio
 npx playwright test    # E2E (requiere servidor)
@@ -226,7 +224,7 @@ npx playwright test    # E2E (requiere servidor)
 
 ## 🗺️ Roadmap
 
-- [ ] Integración DIAN (facturación electrónica Colombia)
+- [ ] Activar emisión DIAN end-to-end (estructura y adapters implementados; faltan datos/certificado/credenciales y habilitación)
 - [ ] Integración real MercadoPago Colombia (PSE/Nequi)
 - [ ] Dashboard con gráficos avanzados
 - [ ] App móvil (React Native / PWA avanzada)
@@ -234,6 +232,8 @@ npx playwright test    # E2E (requiere servidor)
 - [ ] Reportes exportables (Excel/PDF)
 
 ---
+
+> **Estado de documentación:** revisado el 2026-08-18. Los pendientes vigentes son DIAN end-to-end, configuración/validación externa de Bold y SMTP, cron diario de backups en VPS, recarga de nginx, monitoreo n8n y decisiones de producto explícitas; los demás pendientes históricos deben contrastarse con `docs/REVISION_6_FRENTES_2026-08-17.md`.
 
 <p align="center">
   <strong>Juancho's Pizza</strong> — Nemocón & Zipaquirá, Cundinamarca, Colombia<br>

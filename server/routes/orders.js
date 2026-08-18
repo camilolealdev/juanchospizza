@@ -15,7 +15,7 @@ const router = express.Router();
 // ORDERS
 router.get('/api/orders', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'), async (req, res) => {
   try {
-    const { status, paidOnly, locationId } = req.query;
+    const { status, paidOnly, locationId, page, pageSize } = req.query;
     const conditions = [];
     const params = [];
 
@@ -43,13 +43,38 @@ router.get('/api/orders', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPA
       conditions.push(`("paymentStatus" = 'paid' OR "paymentMethod" IN ('cash', 'card', 'whatsapp'))`);
     }
 
+    const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
+
+    // Paginación real opcional: ?page=1&pageSize=50 → { data, total, page,
+    // pageSize, totalPages } (COUNT(*) + LIMIT/OFFSET). Sin page/pageSize →
+    // array completo con el tope deliberado de 2000 de siempre (back-compat
+    // con dashboard/reportes, que agregan client-side). El comentario
+    // original aplica a ese camino: si el volumen crece, usar paginación
+    // explícita o filtros de fecha reales, no subir el número.
+    const hasPagination = page !== undefined || pageSize !== undefined;
+    if (hasPagination) {
+      const p = Math.max(parseInt(page, 10) || 1, 1);
+      const ps = Math.min(Math.max(parseInt(pageSize, 10) || 50, 1), 500);
+      const offset = (p - 1) * ps;
+
+      const countResult = await pool.query(`SELECT COUNT(*)::int AS total FROM orders${where}`, params);
+      const total = countResult.rows[0]?.total || 0;
+
+      const result = await pool.query(
+        `SELECT * FROM orders${where} ORDER BY "createdAt" DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, ps, offset]
+      );
+      return res.json({ data: result.rows, total, page: p, pageSize: ps, totalPages: Math.ceil(total / ps) });
+    }
+
     let query = 'SELECT * FROM orders';
     if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
     // Tope de seguridad -- sin esto, cada carga de dashboard/reportes trae
     // la tabla completa y crece sin límite con el volumen de pedidos. 2000
     // es generoso a propósito (no queremos truncar en silencio el análisis
     // histórico de Reportes); si el negocio crece más que eso, lo correcto
-    // es agregar filtros de fecha reales a esta ruta, no subir el número.
+    // es usar la paginación explícita de arriba o agregar filtros de fecha
+    // reales a esta ruta, no subir el número.
     query += ' ORDER BY "createdAt" DESC LIMIT 2000';
 
     const result = await pool.query(query, params);

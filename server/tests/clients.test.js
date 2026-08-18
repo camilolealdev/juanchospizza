@@ -122,6 +122,70 @@ describe('GET /api/clients', () => {
     expect(mockQuery.mock.calls[0][0]).not.toContain('estado = $1');
   });
 
+  it('sin paginación mantiene back-compat: array completo con tope 5000', async () => {
+    const app = createApp();
+    mockQuery.mockResolvedValueOnce({ rows: [mockClient(), mockClient({ id: 'cli_2' })] });
+
+    const res = await supertest(app).get('/api/clients');
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveLength(2);
+    expect(mockQuery.mock.calls[0][0]).toContain('LIMIT 5000');
+  });
+
+  it('paginación real: page/pageSize devuelve { data, total, page, pageSize, totalPages }', async () => {
+    const app = createApp();
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ total: 7 }] }) // COUNT(*)
+      .mockResolvedValueOnce({ rows: [mockClient(), mockClient({ id: 'cli_2' })] }); // SELECT paginado
+
+    const res = await supertest(app).get('/api/clients?page=2&pageSize=2');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      data: [expect.objectContaining({ id: 'cli_1' }), expect.objectContaining({ id: 'cli_2' })],
+      total: 7,
+      page: 2,
+      pageSize: 2,
+      totalPages: 4,
+    });
+    // 2 queries: COUNT + SELECT con LIMIT/OFFSET
+    expect(mockQuery.mock.calls[0][0]).toContain('COUNT(*)');
+    const [sql, sqlParams] = mockQuery.mock.calls[1];
+    expect(sql).toContain('LIMIT $1 OFFSET $2');
+    expect(sql).toContain('ORDER BY "totalGastado" DESC');
+    expect(sqlParams).toEqual([2, 2]); // page=2 → offset (2-1)*2 = 2
+  });
+
+  it('paginación real combina filtros estado/search', async () => {
+    const app = createApp();
+    mockQuery.mockResolvedValueOnce({ rows: [{ total: 1 }] }).mockResolvedValueOnce({ rows: [mockClient()] });
+
+    const res = await supertest(app).get('/api/clients?estado=activo&search=pepe&page=1&pageSize=10');
+
+    expect(res.status).toBe(200);
+    expect(res.body.totalPages).toBe(1);
+    const countSql = mockQuery.mock.calls[0][0];
+    expect(countSql).toContain('COUNT(*)');
+    expect(countSql).toContain('estado = $1');
+    expect(countSql).toContain('(nombre ILIKE $2 OR telefono ILIKE $3)');
+    // COUNT usa los 3 filtros; el SELECT agrega LIMIT/OFFSET en $4/$5
+    const [, sqlParams] = mockQuery.mock.calls[1];
+    expect(sqlParams).toEqual(['activo', '%pepe%', '%pepe%', 10, 0]);
+  });
+
+  it('pageSize inválido cae al default 50', async () => {
+    const app = createApp();
+    mockQuery.mockResolvedValueOnce({ rows: [{ total: 0 }] }).mockResolvedValueOnce({ rows: [] });
+
+    const res = await supertest(app).get('/api/clients?page=abc&pageSize=abc');
+
+    expect(res.status).toBe(200);
+    expect(res.body.page).toBe(1);
+    expect(res.body.pageSize).toBe(50);
+  });
+
   it('responde 500 si la query falla', async () => {
     const app = createApp();
     mockQuery.mockRejectedValueOnce(new Error('boom'));

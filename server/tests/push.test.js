@@ -105,11 +105,11 @@ describe('sendPushToPhone()', () => {
     const { sendPushToPhone } = await loadPush(); // sin initPush -> disabled
     const pool = { query: vi.fn() };
 
-    await expect(sendPushToPhone(pool, '3001234567', { title: 'x' })).resolves.toBeUndefined();
+    await expect(sendPushToPhone(pool, '3001234567', { title: 'x' })).resolves.toBe(0);
     expect(pool.query).not.toHaveBeenCalled();
   });
 
-  it('sin teléfono, retorna sin consultar la DB', async () => {
+  it('sin teléfono, retorna 0 sin consultar la DB', async () => {
     const { initPush, sendPushToPhone } = await loadPush({
       VAPID_MAILTO: 'mailto:a@b.com',
       VAPID_PUBLIC_KEY: 'k',
@@ -118,7 +118,7 @@ describe('sendPushToPhone()', () => {
     initPush();
     const pool = { query: vi.fn() };
 
-    await sendPushToPhone(pool, '', { title: 'x' });
+    await expect(sendPushToPhone(pool, '', { title: 'x' })).resolves.toBe(0);
 
     expect(pool.query).not.toHaveBeenCalled();
   });
@@ -171,7 +171,7 @@ describe('sendPushToPhone()', () => {
     };
     mockSendNotification.mockRejectedValueOnce({ statusCode: 410 }).mockResolvedValueOnce({});
 
-    await expect(sendPushToPhone(pool, '3001234567', {})).resolves.toBeUndefined();
+    await expect(sendPushToPhone(pool, '3001234567', {})).resolves.toBe(1);
 
     expect(pool.query).toHaveBeenCalledWith('DELETE FROM push_subscriptions WHERE id = $1', ['sub-vieja']);
     expect(mockSendNotification).toHaveBeenCalledTimes(2);
@@ -189,7 +189,7 @@ describe('sendPushToPhone()', () => {
     };
     mockSendNotification.mockRejectedValue(new Error('network down'));
 
-    await expect(sendPushToPhone(pool, '3001234567', {})).resolves.toBeUndefined();
+    await expect(sendPushToPhone(pool, '3001234567', {})).resolves.toBe(0);
     expect(mockLogger.error).toHaveBeenCalled();
     expect(pool.query).toHaveBeenCalledTimes(1); // sin DELETE
   });
@@ -203,7 +203,7 @@ describe('sendPushToPhone()', () => {
     initPush();
     const pool = { query: vi.fn().mockRejectedValue(new Error('db down')) };
 
-    await expect(sendPushToPhone(pool, '3001234567', {})).resolves.toBeUndefined();
+    await expect(sendPushToPhone(pool, '3001234567', {})).resolves.toBe(0);
     expect(mockLogger.error).toHaveBeenCalled();
   });
 });

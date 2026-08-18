@@ -334,6 +334,18 @@ const MIGRATIONS = [
       await pool.query('ALTER TABLE employees ADD COLUMN IF NOT EXISTS "lockedUntil" TIMESTAMPTZ');
     },
   },
+  // ── 011: scheduleAt para campañas programadas ─────────────────
+  // Habilita el scheduler de campañas (server/services/campaignScheduler.js):
+  // el cron del server pasa las campañas `scheduled` con scheduleAt <= NOW()
+  // a `active`. La columna es nullable -- una campaña `draft`/`active` sin
+  // fecha programada sigue siendo válida.
+  {
+    id: 11,
+    name: 'Add scheduleAt to campaigns for the scheduled-campaign scheduler',
+    up: async (pool) => {
+      await pool.query('ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS "scheduleAt" TIMESTAMPTZ');
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────

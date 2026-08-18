@@ -1,50 +1,57 @@
 # Módulo DIAN — Estado de Integración
 
-> **Última actualización:** 2026-07-15  
+> **Última actualización:** 2026-08-18
 > **Versión:** 4.1 (Resolución DIAN 000008 de 2023)
+>
+> **Alcance del estado:** la estructura y los componentes de firma/adaptadores están implementados en código. La emisión legal end-to-end sigue bloqueada por datos reales del emisor, certificado, software DIAN, credenciales y validación en habilitación. Este documento reemplaza las afirmaciones de "guía por implementar" de versiones anteriores.
 
 ---
 
 ## Estado General
 
-| Componente | Estado | Archivo |
-|------------|--------|---------|
-| Tabla `invoices` (DB) | ✅ Completa | `server/db.js` |
-| Tabla `credit_notes` (DB) | ✅ Completa | `server/db.js` |
-| Schema Zod | ✅ Completo | `server/schemas/invoices.js` |
-| CRUD Backend | ✅ Completo | `server/routes/invoices.js` |
-| Generación XML | ✅ Completa | `server/services/dianXml.js` |
-| Estructura Firma Digital | ✅ Guía estructural | `server/services/dianSigner.js` |
-| Frontend CRM | ✅ Completo | `src/views/roles/InvoicesView.tsx` |
-| API Service | ✅ Completo | `src/services/api.ts` |
-| WebSocket | ✅ `invoice:update` | `server/routes/invoices.js` |
-| **Firma digital real** | ❌ [Manual] | Ver abajo |
-| **Conexión proveedor DIAN** | ❌ [Manual] | Ver abajo |
-| **Certificado digital** | ❌ [Manual] | Ver abajo |
-| **CUFE real** | ❌ [Manual] | Ver abajo |
+| Componente                             | Estado                                                | Archivo                                         |
+| -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------- |
+| Tabla `invoices` (DB)                  | ✅ Completa                                           | `server/db.js`                                  |
+| Tabla `credit_notes` (DB)              | ✅ Completa                                           | `server/db.js`                                  |
+| Schema Zod                             | ✅ Completo                                           | `server/schemas/invoices.js`                    |
+| CRUD Backend                           | ✅ Completo                                           | `server/routes/invoices.js`                     |
+| Generación XML                         | ✅ Completa                                           | `server/services/dianXml.js`                    |
+| Estructura Firma Digital               | ✅ Implementada                                       | `server/services/dianSigner.js`                 |
+| Frontend CRM                           | ✅ Completo                                           | `src/views/roles/InvoicesView.tsx`              |
+| API Service                            | ✅ Completo                                           | `src/services/api.ts`                           |
+| WebSocket                              | ✅ `invoice:update`                                   | `server/routes/invoices.js`                     |
+| **Firma digital con certificado real** | 🟠 Requiere certificado/datos reales                  | Ver abajo                                       |
+| **Conexión proveedor DIAN**            | 🟠 Adaptadores implementados; falta activar y validar | `server/services/dianProvider.js` + ruta `send` |
+| **Certificado digital**                | 🟠 Externo, aún no provisionado                       | `.p12`/`.pfx` fuera del repo                    |
+| **CUFE real**                          | 🟠 Validación en habilitación pendiente               | DIAN/proveedor tecnológico                      |
 
 ---
 
 ## ✅ Lo que ya funciona
 
 ### Creación de facturas
+
 - `POST /api/invoices` — Crea factura, genera XML automáticamente, asigna número secuencial
 - Almacena datos del emisor y receptor como JSON en la DB
 - El XML generado sigue el estándar UBL 2.1 de DIAN versión 4.1
 
-### Envío a DIAN (simulado)
-- `POST /api/invoices/:id/send` — Prepara payload completo para el proveedor
-- Actualiza estado a `sent`
-- Devuelve instrucciones para el siguiente paso
+### Preparación de envío a DIAN (sin activación externa)
+
+- `POST /api/invoices/:id/send` — prepara el payload y el flujo interno; la activación del adapter y el envío legal requieren configuración externa
+- Actualiza estado a `sent` en el flujo actual
+- Devuelve instrucciones para completar la activación
 - Incluye WebSocket `invoice:update`
 
 ### Reenvío
+
 - `POST /api/invoices/:id/resend` — Regenera XML y payload, reenvía
 
 ### Actualización de firma
+
 - `PUT /api/invoices/:id` — Actualiza CUFE, XML firmado, estado, respuesta DIAN
 
 ### Frontend
+
 - Visor de XML expandible por factura
 - Botón "Enviar a DIAN" para facturas pendientes
 - Botón "Reenviar" para facturas enviadas
@@ -106,38 +113,40 @@ software: {
 }
 ```
 
-### 4. Obtener certificado digital
+### 4. Obtener y configurar certificado digital
 
 **Archivo:** `server/services/dianSigner.js`
 
 Se requiere un certificado digital emitido por una entidad de certificación autorizada:
 
-| Entidad | Tipo | Vigencia |
-|---------|------|----------|
+| Entidad          | Tipo              | Vigencia |
+| ---------------- | ----------------- | -------- |
 | Andrés Díaz - SF | Firma electrónica | 1-3 años |
-| Certicámara | Firma electrónica | 1-3 años |
-| GSE | Firma electrónica | 1-3 años |
+| Certicámara      | Firma electrónica | 1-3 años |
+| GSE              | Firma electrónica | 1-3 años |
 
 Pasos:
+
 1. Adquirir certificado digital (.pfx o .p12)
 2. Configurar `CERTIFICADO_CONFIG` en `dianSigner.js`
-3. Implementar la función `signXml()` usando `node-forge` o `xml-crypto`
-4. Implementar `calcularCUFE()` con SHA-384
+3. Verificar el flujo XAdES-EPES existente con el certificado real y ajustar solo lo que falle en habilitación
+4. Validar `calcularCUFE()` con una factura de prueba y la respuesta oficial del proveedor
 
-### 5. Elegir e integrar proveedor tecnológico
+### 5. Elegir y activar proveedor tecnológico
 
-| Proveedor | Sitio | API |
-|-----------|-------|-----|
-| **Muisca** (DIAN oficial) | ccdn.dian.gov.co | SOAP/XML |
-| **Dataico** | dataico.com | REST/SOAP |
-| **Novasoft** | novasoft.com.co | REST |
-| **Siesa** | siesa.com | API propia |
-| **Alégrate** | alegrate.co | REST |
+| Proveedor                 | Sitio            | API        |
+| ------------------------- | ---------------- | ---------- |
+| **Muisca** (DIAN oficial) | ccdn.dian.gov.co | SOAP/XML   |
+| **Dataico**               | dataico.com      | REST/SOAP  |
+| **Novasoft**              | novasoft.com.co  | REST       |
+| **Siesa**                 | siesa.com        | API propia |
+| **Alégrate**              | alegrate.co      | REST       |
 
 Flujo típico de integración:
+
 1. Registrar el software en la DIAN (obtener SoftwareID y PIN)
-2. Configurar los endpoints del proveedor en `server/services/dian.js` (por crear)
-3. Enviar XML firmado al proveedor
+2. Configurar credenciales/endpoints del adapter seleccionado en `server/services/dianProvider.js`
+3. Conectar/activar `sendToDataico()` o `sendToMuisca()` desde `POST /api/invoices/:id/send` y probarlo en habilitación
 4. Recibir respuesta con CUFE y resultado
 5. Actualizar factura con `PUT /api/invoices/:id`
 
@@ -211,17 +220,20 @@ flowchart TD
 ## 🚧 Próximos Pasos Recomendados
 
 ### Prioridad Alta (antes de producción)
+
 1. ✅ Generación de XML — **Listo**
-2. ❌ Firmar XML con certificado digital — Pendiente (ver `dianSigner.js`)
-3. ❌ Conectar con proveedor DIAN — Pendiente elegir e integrar
-4. ❌ Validar CUFE contra DIAN — Pendiente
+2. 🟠 Activar firma con certificado real y validarla en habilitación (ver `dianSigner.js`)
+3. 🟠 Activar el adapter elegido desde `POST /api/invoices/:id/send`
+4. 🟠 Validar CUFE y respuesta contra DIAN/proveedor en habilitación
 
 ### Prioridad Media
+
 5. ❌ Notas crédito/débito con XML
 6. ❌ Envío por email al cliente (adjuntar XML + PDF)
 7. ❌ Representación gráfica PDF de la factura DIAN
 
 ### Prioridad Baja
+
 8. ❌ Reporte de facturas emitidas por período
 9. ❌ Dashboard de estado DIAN (aceptadas vs rechazadas)
 10. ❌ Sincronización multi-sede
@@ -230,14 +242,14 @@ flowchart TD
 
 ## 📁 Archivos del Módulo DIAN
 
-| Archivo | Propósito |
-|---------|-----------|
-| `server/services/dianXml.js` | Generador XML de factura electrónica (estructura completa) |
-| `server/services/dianSigner.js` | Guía de firma digital XAdES-EPES + cálculo CUFE |
-| `server/routes/invoices.js` | CRUD + envío DIAN + WebSocket |
-| `server/schemas/invoices.js` | Validación Zod con todos los campos DIAN |
-| `server/db.js` | Tablas `invoices` y `credit_notes` |
-| `src/views/roles/InvoicesView.tsx` | Frontend completo con visor XML, envío, firma manual |
-| `src/services/api.ts` | Métodos API `sendInvoiceToDian`, `resendInvoiceToDian`, etc. |
-| `src/types/index.ts` | Interfaces `Invoice`, `CreditNote`, `InvoiceEmisorInfo`, `InvoiceReceptorInfo` |
-| `docs/DIAN_MODULE_STATUS.md` | Este documento |
+| Archivo                            | Propósito                                                                                    |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- |
+| `server/services/dianXml.js`       | Generador XML de factura electrónica (estructura completa)                                   |
+| `server/services/dianSigner.js`    | Implementación de firma XAdES-EPES + cálculo CUFE, pendiente de validar con certificado real |
+| `server/routes/invoices.js`        | CRUD + envío DIAN + WebSocket                                                                |
+| `server/schemas/invoices.js`       | Validación Zod con todos los campos DIAN                                                     |
+| `server/db.js`                     | Tablas `invoices` y `credit_notes`                                                           |
+| `src/views/roles/InvoicesView.tsx` | Frontend completo con visor XML, envío, firma manual                                         |
+| `src/services/api.ts`              | Métodos API `sendInvoiceToDian`, `resendInvoiceToDian`, etc.                                 |
+| `src/types/index.ts`               | Interfaces `Invoice`, `CreditNote`, `InvoiceEmisorInfo`, `InvoiceReceptorInfo`               |
+| `docs/DIAN_MODULE_STATUS.md`       | Este documento                                                                               |

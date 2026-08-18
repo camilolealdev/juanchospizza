@@ -35,7 +35,9 @@ router.post('/api/seed', authMiddleware, requireRole('ADMIN'), async (req, res) 
           p.descripcion,
           p.basePrice,
           p.type,
-          p.image || '',
+          // Imagen local por producto (SVG procedural generado en tools/generate-product-images.cjs).
+          // Ruta local siempre: evita dependencia de hotlinks externos (Unsplash) que se rompen.
+          `/assets/images/products/${p.id}.svg`,
           p.tiempo || 20,
           p.popularidad || 0,
           !!p.vegetariano,

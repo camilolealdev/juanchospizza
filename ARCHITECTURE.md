@@ -56,7 +56,13 @@ Mientras el backend no esté desplegado, el sitio público (menú + WhatsApp) si
 
 ## Autenticación
 
-JWT firmado a mano (HMAC-SHA256, sin librería externa) + PINs de 4 dígitos con PBKDF2 y salt random por usuario. La lista de usuarios sigue hardcodeada en `server/auth.js` (deuda conocida, ver [Deuda estructural](#deuda-estructural-conocida)). Access tokens duran 15 minutos; el refresh token tiene un tope de sesión total de 30 días vía `origIat`, aunque el frontend hoy no llama al endpoint de refresh en ningún lado (queda para cuando se implemente auto-refresh).
+JWT firmado a mano (HMAC-SHA256, sin librería externa) + PINs de 4 dígitos con PBKDF2-100k y salt random por usuario. El login autentica contra la tabla `employees` en Postgres (los usuarios por defecto se insertan con la migración #001; `username`/`password`/`isSuperAdmin` con la #004). No hay usuarios hardcodeados en memoria — para agregar empleados se usa el CRUD del CRM (`server/routes/employees.js`).
+
+**Anti brute-force por cuenta (migración #010):** además del rate limiter por IP (`/api/auth/login`, Redis, fail-open si Redis cae), cada fila de `employees` lleva `failedLoginAttempts` + `lockedUntil`: 5 intentos fallidos → 15 minutos de lockout por cuenta, contador que vive en la DB y aplica aunque Redis esté caído. Incluye protección de enumeración de usuarios por timing: `runDummyHash()` corre el mismo PBKDF2 cuando el username no existe, para que un miss no sea detectablemente más rápido que un hit.
+
+**Verificación timing-safe:** `crypto.timingSafeEqual` sobre los hashes PBKDF2 (nunca comparación de strings directa).
+
+**Sesiones:** access token de 15 minutos + refresh con tope de sesión total de 30 días vía `origIat` (`MAX_SESSION_SECONDS`). Ambos viven en cookies `HttpOnly` (parseadas a mano, sin cookie-parser). El frontend **sí** implementa auto-refresh: `api.ts` tiene una _refresh queue_ con promesa compartida (`tryRefreshToken()`) — ante un 401, una sola llamada a `/api/auth/refresh` se comparte entre todos los callers concurrentes, y si funciona el request original se reintenta una vez.
 
 **Fix aplicado (2026-07-29):** `GEMINI_API_KEY` ahora es opcional en `server/config.js`. Antes causaba `process.exit(1)` si faltaba, bloqueando todo el servidor aunque Gemini solo sea menú inteligente. Ahora muestra un warning y continúa.
 
@@ -68,12 +74,12 @@ JWT firmado a mano (HMAC-SHA256, sin librería externa) + PINs de 4 dígitos con
 
 Cada proveedor sigue el mismo patrón: la orden se crea PRIMERO (con `paymentStatus: 'pending'` para métodos online), y solo el webhook del proveedor — nunca el cliente ni la respuesta síncrona del create-payment — puede pasarla a `'paid'`.
 
-Los tres webhooks (Bold, MercadoPago, Wompi) fallan cerrados (503) si falta su secret de verificación, en vez de procesar sin validar.
+El webhook activo de Bold falla cerrado (503) si falta su secreto de verificación, en vez de procesar sin validar. MercadoPago, Wompi y PayPal no forman parte del flujo online vigente.
 
 ### Bold (🇨🇴 Colombia) — ✅ Producción
 
-- **Create-link**: endpoint `/api/payments/bold/create-link` crea un link de pago con `expiration_date` (24h en nanosegundos) + `callback_url` que redirige a `/confirmacion?orderNumber=...`.
-- **Webhook**: usa **HMAC-SHA256** con el body RAW (capturado con `express.raw()` en `server/index.js` antes de `express.json()`). El header `x-bold-signature` (o fallback a `x-webhook-secret`) se verifica contra `BOLD_WEBHOOK_SECRET`. Soporta formato CloudEvents y formato legacy.
+- **Create-link**: endpoint `/api/payments/bold/create-link` crea un link de pago con `expiration_date` (24h en milisegundos, como espera Bold) + `callback_url` que redirige a `/confirmacion?orderNumber=...`.
+- **Webhook**: conserva el body RAW (capturado con `express.raw()` en `server/index.js` antes de `express.json()`), lo codifica en Base64 y calcula HMAC-SHA256 con la Identity Key configurada en `BOLD_WEBHOOK_SECRET`. El digest hexadecimal se compara en tiempo constante mediante `x-bold-signature`; `x-webhook-secret` queda únicamente como compatibilidad legacy de Bold Simple. Soporta formato CloudEvents y formato legacy.
 - **Fix crítico (2026-07-29):** `express.raw()` hace que `req.body` sea un Buffer — el handler original accedía a `body.type` sobre un Buffer (todo `undefined`). Corregido parseando con `Buffer.isBuffer()`.
 
 ### Wompi (🇨🇴 Colombia) — ✅ Producción
@@ -83,15 +89,9 @@ Los tres webhooks (Bold, MercadoPago, Wompi) fallan cerrados (503) si falta su s
 - `redirect_url` apunta a `/confirmacion?orderNumber=`.
 - **Webhook**: verifica checksum contra `WOMPI_EVENTS_SECRET`, status `APPROVED` (mayúsculas — Wompi usa mayúsculas, diferencia de Bold que usa minúsculas).
 
-### MercadoPago — 🚫 Bloqueado
+### Proveedores no activos
 
-- No aplica a Colombia (hardcodeaba `payment_method_id: 'pix'` que es método brasileño).
-- El endpoint retorna **503** con mensaje claro: _"MercadoPago requiere configuración adicional para Colombia. Usar Bold o Wompi."_
-- El código comentado en `server/routes/payments.js` tiene el reemplazo listo (PSE/Nequi) para cuando se implemente.
-
-### PayPal — 🚧 Stub
-
-- Endpoint listo pero oculto del selector de métodos en el frontend.
+MercadoPago, Wompi y PayPal no están expuestos en el flujo online actual. Si se retoma alguno, debe diseñarse y documentarse como una integración nueva para Colombia; no asumir que los endpoints históricos siguen disponibles.
 
 ---
 
@@ -101,7 +101,7 @@ PostgreSQL 17. `server/db.js`'s `initDB()` es la fuente de verdad real (se corre
 
 ### Migraciones
 
-Sistema versionado en `server/migrate.js`. Estado actual: 6 migraciones aplicadas.
+Sistema versionado en `server/migrate.js`. Estado actual: 11 migraciones aplicadas.
 
 - `001`: Seed usuarios default
 - `002`: Columna email + índice
@@ -109,6 +109,11 @@ Sistema versionado en `server/migrate.js`. Estado actual: 6 migraciones aplicada
 - `004`: username/password 2FA
 - `005`: isSuperAdmin flag (idempotente, duplicado con initDB)
 - `006`: Más ALTER TABLE (idempotente)
+- `007`: Índice UNIQUE en invoices.orderId (previene facturas duplicadas)
+- `008`: Tabla processed_webhooks (idempotencia de webhooks de pago)
+- `009`: locationId en inventory_items/expenses + índice compuesto en orders
+- `010`: `failedLoginAttempts`/`lockedUntil` en employees (lockout por cuenta)
+- `011`: `scheduleAt` en campaigns (scheduler de campañas programadas)
 
 > ⚠️ Migraciones 005 y 006 son redundantes con `initDB()` — no causan error por `IF NOT EXISTS` pero son código muerto.
 
@@ -212,14 +217,15 @@ Generados en SVG (vectoriales) + convertidos a PNG con `sharp`:
 
 ## Deuda estructural conocida
 
-1. **Sin tests automatizados sobre `server/routes/`** — los tests existentes cubren schemas Zod, auth y orders, pero no las 30 rutas restantes.
+1. ✅ **Resuelto — tests sobre `server/routes/`:** `server/tests/` tiene 26 archivos de tests (incluidos products, clients, finance, campaigns, orders, auth y schemas). Las rutas restantes sin cobertura son las de menor riesgo (utilitarias/estáticas).
 2. **`tsconfig.json` sin `strict: true`** — aunque `tsc --noEmit` da 0 errores, no está en modo estricto.
-3. **Usuarios hardcodeados en `server/auth.js`** — deberían migrarse a la tabla `employees` completamente.
+3. ✅ **Resuelto — usuarios hardcodeados:** el login autentica contra la tabla `employees` desde la migración #001; `server/auth.js` ya no mantiene lista en memoria.
 4. **Migraciones 005/006 redundantes** con `initDB()` — código muerto.
-5. **No hay auto-refresh de JWT en frontend** — el endpoint de refresh existe pero el frontend nunca lo llama.
+5. ✅ **Resuelto — auto-refresh de JWT:** `api.ts` implementa refresh queue con promesa compartida ante 401.
 6. **MercadoPago bloqueado para Colombia** — requiere implementación con PSE/Nequi.
 7. **DIAN** — estructura de facturación lista pero sin integración real con proveedor tecnológico.
+8. **Canal WhatsApp no conectado** — el scheduler activa campañas programadas y despacha por email/push cuando existen suscripciones y credenciales. WhatsApp requiere una decisión de proveedor/API; no debe confundirse con una ausencia del scheduler.
 
 ---
 
-> _Documento actualizado: Julio 2026. Próxima revisión: post-deploy._
+> _Documento actualizado: Agosto 2026. Próxima revisión: post-deploy._

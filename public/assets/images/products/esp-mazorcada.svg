@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a1a1a" width="400" height="300"/>
+  <circle cx="200" cy="160" r="95" fill="#e8e4da"/>
+  <circle cx="200" cy="160" r="78" fill="#f7f4ec"/>
+  <circle cx="199.1" cy="159.7" r="5.5" fill="#e8d8c8" opacity="0.9"/><circle cx="182.6" cy="197.1" r="6.1" fill="#f5e6c8" opacity="0.9"/><circle cx="168.7" cy="160.2" r="9.4" fill="#8b5a2b" opacity="0.9"/><circle cx="175.9" cy="124.0" r="6.0" fill="#f9e79f" opacity="0.9"/><circle cx="172.5" cy="183.1" r="8.2" fill="#f8c471" opacity="0.9"/><circle cx="189.4" cy="160.8" r="8.9" fill="#a04000" opacity="0.9"/><circle cx="203.5" cy="147.0" r="9.1" fill="#e8d8c8" opacity="0.9"/><circle cx="225.5" cy="126.1" r="5.5" fill="#f5e6c8" opacity="0.9"/>
+  <text x="200" y="225" text-anchor="middle" fill="#f5deb3" font-size="15" font-family="Arial, sans-serif" font-weight="bold">Mazorcada</text>
+</svg>

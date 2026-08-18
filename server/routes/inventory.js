@@ -281,15 +281,45 @@ router.get(
       // join contra inventory_items, igual criterio de sede efectiva que
       // GET /api/inventory (antes esta ruta no filtraba por sede en
       // absoluto: cualquier OPERATOR veía el historial completo de ambas).
+      const { page, pageSize } = req.query;
       const locationId = effectiveLocationId(req);
       const params = [];
-      let query = 'SELECT m.* FROM inventory_movements m';
+      let join = '';
       if (locationId) {
         params.push(locationId);
-        query += ` JOIN inventory_items i ON i.id = m."itemId" AND i."locationId" = $${params.length}`;
+        join += ` JOIN inventory_items i ON i.id = m."itemId" AND i."locationId" = $${params.length}`;
       }
-      query += ' ORDER BY m.creado DESC LIMIT 50';
-      const result = await pool.query(query, params);
+
+      // Paginación real opcional: ?page=1&pageSize=50 → { data, total, page,
+      // pageSize, totalPages } (COUNT(*) + LIMIT/OFFSET). Sin page/pageSize →
+      // array con tope defensivo de 50 (back-compat con InventarioView, que
+      // muestra el historial reciente en la card; si necesita más, paginar).
+      const hasPagination = page !== undefined || pageSize !== undefined;
+      if (hasPagination) {
+        const p = Math.max(parseInt(page, 10) || 1, 1);
+        const ps = Math.min(Math.max(parseInt(pageSize, 10) || 50, 1), 500);
+        const offset = (p - 1) * ps;
+
+        const countResult = await pool.query(`SELECT COUNT(*)::int AS total FROM inventory_movements m${join}`, params);
+        const total = countResult.rows[0]?.total || 0;
+
+        const result = await pool.query(
+          `SELECT m.* FROM inventory_movements m${join} ORDER BY m.creado DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+          [...params, ps, offset]
+        );
+        return res.json({
+          data: result.rows,
+          total,
+          page: p,
+          pageSize: ps,
+          totalPages: Math.ceil(total / ps),
+        });
+      }
+
+      const result = await pool.query(
+        `SELECT m.* FROM inventory_movements m${join} ORDER BY m.creado DESC LIMIT 50`,
+        params
+      );
       res.json(result.rows);
     } catch (_e) {
       res.status(500).json({ error: 'Error fetching movements' });

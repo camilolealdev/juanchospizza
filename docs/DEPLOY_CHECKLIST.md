@@ -2,22 +2,22 @@
 
 > Runbook paso a paso para llevar el stack a producción: **VPS → DNS → TLS (certbot) → `docker compose up -d` → verificación de health endpoints**.
 > Stack real (4 servicios): `app` (Node 22 + Express + Vite/React, puerto **3001**) · `nginx` (TLS + reverse proxy, **80/443**) · `postgres:17-alpine` · `redis:8-alpine`.
-> Estado verificado el **2026-08-06**: `docker compose config` OK · suite 309/309 · `master` en `origin` (`4216639`) · JWT_SECRET y VAPID generados.
+> Estado base verificado el **2026-08-06**; revisado el **2026-08-18**. La suite actual y el workflow vigente deben considerarse la fuente de verdad. `FRONTEND_URL`, `ALLOWED_ORIGINS` y comandos de este documento usan `juanchospizza.com`.
 
 ---
 
 ## 📊 Estado pre-deploy (verificado en este repo)
 
-| Ítem                                                    | Estado                                                                      |
-| ------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `master` pusheado a `origin` (`4216639`)                | ✅                                                                          |
-| Suite de tests 309/309 · `tsc` limpio                   | ✅                                                                          |
-| `JWT_SECRET` + claves VAPID en `.env.production`        | ✅ generados                                                                |
-| `docker compose config --quiet` (con `.env.production`) | ✅ exit 0                                                                   |
-| 🔴 `VITE_API_URL` en `.env.production`                  | ❌ **falta** → el build inyecta `https://localhost` (frontend roto en prod) |
-| 🔴 `FRONTEND_URL` / `ALLOWED_ORIGINS`                   | ⚠️ apuntan a `localhost` → reemplazar por el dominio real                   |
-| 🔴 `certs/fullchain.pem`                                | ⚠️ **self-signed `CN=localhost`** → reemplazar con Let's Encrypt            |
-| Credenciales reales (pagos/SMTP/Gemini/DIAN)            | ⬜ pendiente (ver `docs/ENV_PRODUCTION_GUIDE.md`)                           |
+| Ítem                                                    | Estado                                                                         |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `master` pusheado a `origin` (`4216639`)                | ✅                                                                             |
+| Suite/lint/typecheck                                    | ✅ Verificados en la revisión 2026-08-18                                       |
+| `JWT_SECRET` + claves VAPID en `.env.production`        | ✅ generados                                                                   |
+| `docker compose config --quiet` (con `.env.production`) | ✅ exit 0                                                                      |
+| `VITE_API_URL` en `.env.production`                     | ✅ Puede quedar vacío → el frontend usa rutas relativas en `juanchospizza.com` |
+| 🔴 `FRONTEND_URL` / `ALLOWED_ORIGINS`                   | ⚠️ reemplazar `localhost` por `https://juanchospizza.com`                      |
+| 🔴 `certs/fullchain.pem`                                | ⚠️ **self-signed `CN=localhost`** → reemplazar con Let's Encrypt               |
+| Credenciales reales (pagos/SMTP/Gemini/DIAN)            | ⬜ pendiente (ver `docs/ENV_PRODUCTION_GUIDE.md`)                              |
 
 ---
 
@@ -25,10 +25,10 @@
 
 - [ ] **Dominio comprado** y acceso al panel DNS del registrador.
 - [ ] **`.env.production` finalizado** localmente (guía: `docs/ENV_PRODUCTION_GUIDE.md`) con al menos:
-  - `FRONTEND_URL=https://tudominio.com` (obligatoria, fail-fast al boot)
-  - `ALLOWED_ORIGINS=https://tudominio.com,https://www.tudominio.com`
-  - `VITE_API_URL=https://tudominio.com` (build-arg del frontend)
-  - `PUBLIC_URL=https://api.tudominio.com` (QR del menú)
+  - `FRONTEND_URL=https://juanchospizza.com` (obligatoria, fail-fast al boot)
+  - `ALLOWED_ORIGINS=https://juanchospizza.com,https://www.juanchospizza.com`
+  - `VITE_API_URL=` (vacía: API en el mismo origen; solo llenarla si se separa el backend)
+  - `PUBLIC_URL=https://juanchospizza.com` (QR del menú)
 - [ ] **GitHub Secrets** configurados para el deploy automático (Fase 7):
       `PROD_HOST`, `PROD_USER`, `PROD_SSH_KEY`, `PROD_PATH`, `PROD_URL`.
 - [ ] Validación local rápida antes de tocar el servidor:
@@ -72,8 +72,8 @@ A       www       <IP_DEL_VPS>
 - [ ] **Esperar propagación** y verificar desde tu máquina:
 
 ```bash
-dig +short tudominio.com        # → debe mostrar la IP del VPS
-dig +short www.tudominio.com    # → debe mostrar la IP del VPS
+dig +short juanchospizza.com        # → debe mostrar la IP del VPS
+dig +short www.juanchospizza.com    # → debe mostrar la IP del VPS
 ```
 
 > 💡 Si el DNS tarda, https://dnschecker.org ayuda a ver por región. **No seguir a la Fase 5 sin DNS resuelto** (certbot lo necesita).
@@ -130,11 +130,11 @@ scp .env.production deploy@<IP_DEL_VPS>:/opt/guido-pizza/.env.production
 
 # En el VPS: reemplazar los valores de localhost por el dominio real
 cd /opt/guido-pizza
-sed -i 's|^FRONTEND_URL=.*|FRONTEND_URL=https://tudominio.com|' .env.production
-sed -i 's|^ALLOWED_ORIGINS=.*|ALLOWED_ORIGINS=https://tudominio.com,https://www.tudominio.com|' .env.production
+sed -i 's|^FRONTEND_URL=.*|FRONTEND_URL=https://juanchospizza.com|' .env.production
+sed -i 's|^ALLOWED_ORIGINS=.*|ALLOWED_ORIGINS=https://juanchospizza.com,https://www.juanchospizza.com|' .env.production
 # Agregar (si no existen):
-grep -q '^VITE_API_URL=' .env.production || echo 'VITE_API_URL=https://tudominio.com' >> .env.production
-grep -q '^PUBLIC_URL=' .env.production || echo 'PUBLIC_URL=https://api.tudominio.com' >> .env.production
+grep -q '^VITE_API_URL=' .env.production || echo 'VITE_API_URL=https://juanchospizza.com' >> .env.production
+grep -q '^PUBLIC_URL=' .env.production || echo 'PUBLIC_URL=https://api.juanchospizza.com' >> .env.production
 
 # Verificación de que no queda nada en localhost (fail-fast de config.js: DATABASE_URL + FRONTEND_URL)
 grep -E '^(FRONTEND_URL|ALLOWED_ORIGINS|VITE_API_URL|PUBLIC_URL|DATABASE_URL)=' .env.production
@@ -158,17 +158,17 @@ openssl x509 -in /opt/guido-pizza/certs/fullchain.pem -noout -subject -issuer -d
 ```bash
 sudo apt install -y certbot
 sudo certbot certonly --standalone \
-  -d tudominio.com -d www.tudominio.com \
-  --non-interactive --agree-tos -m admin@tudominio.com
+  -d juanchospizza.com -d www.juanchospizza.com \
+  --non-interactive --agree-tos -m admin@juanchospizza.com
 
 # Copiar al directorio que monta nginx (docker-compose monta ./certs)
-sudo cp /etc/letsencrypt/live/tudominio.com/fullchain.pem /opt/guido-pizza/certs/
-sudo cp /etc/letsencrypt/live/tudominio.com/privkey.pem /opt/guido-pizza/certs/
+sudo cp /etc/letsencrypt/live/juanchospizza.com/fullchain.pem /opt/guido-pizza/certs/
+sudo cp /etc/letsencrypt/live/juanchospizza.com/privkey.pem /opt/guido-pizza/certs/
 sudo chown deploy:deploy /opt/guido-pizza/certs/*
 
 # Verificar
 openssl x509 -in /opt/guido-pizza/certs/fullchain.pem -noout -subject -dates
-#   subject=CN=tudominio.com · issuer=CN=R3,O=Let's Encrypt
+#   subject=CN=juanchospizza.com · issuer=CN=R3,O=Let's Encrypt
 ```
 
 ### 5.2 Renovación automática (cada 60-90 días)
@@ -179,7 +179,7 @@ openssl x509 -in /opt/guido-pizza/certs/fullchain.pem -noout -subject -dates
 
 ```cron
 # crontab -e  (usuario deploy)
-0 3 * * * sudo certbot renew --quiet --pre-hook "docker compose -f /opt/guido-pizza/docker-compose.yml stop nginx" --deploy-hook "cp /etc/letsencrypt/live/tudominio.com/fullchain.pem /opt/guido-pizza/certs/ && cp /etc/letsencrypt/live/tudominio.com/privkey.pem /opt/guido-pizza/certs/ && docker compose -f /opt/guido-pizza/docker-compose.yml up -d nginx" --post-hook "docker compose -f /opt/guido-pizza/docker-compose.yml start nginx"
+0 3 * * * sudo certbot renew --quiet --pre-hook "docker compose -f /opt/guido-pizza/docker-compose.yml stop nginx" --deploy-hook "cp /etc/letsencrypt/live/juanchospizza.com/fullchain.pem /opt/guido-pizza/certs/ && cp /etc/letsencrypt/live/juanchospizza.com/privkey.pem /opt/guido-pizza/certs/ && docker compose -f /opt/guido-pizza/docker-compose.yml up -d nginx" --post-hook "docker compose -f /opt/guido-pizza/docker-compose.yml start nginx"
 ```
 
 **Opción B (webroot, sin downtime)** — requiere un cambio de una línea en `docker-compose.yml` (servicio `nginx`, volumen `- ./certbot/www:/var/www/certbot:ro` y crear `certbot/www/`), después certbot `--webroot -w /opt/guido-pizza/certbot/www`. Útil si prefieres cero interrupciones.
@@ -213,7 +213,7 @@ curl -s http://localhost:3001/api/health
 #   {"status":"healthy","uptime":...,"timestamp":"...","services":{"database":"connected","redis":"connected"}}
 
 # B) A través de nginx + SSL (público)
-curl -s https://tudominio.com/api/health
+curl -s https://juanchospizza.com/api/health
 #   {"status":"healthy",...,"services":{"database":"connected","redis":"connected"}}
 ```
 
@@ -229,11 +229,11 @@ curl -s https://tudominio.com/api/health
 
 ```bash
 # 3. Frontend + headers
-curl -sI https://tudominio.com/ | head -12
+curl -sI https://juanchospizza.com/ | head -12
 # 4. Métricas
-curl -s https://tudominio.com/api/metrics | head -5
+curl -s https://juanchospizza.com/api/metrics | head -5
 # 5. CSRF (necesario para login)
-curl -s https://tudominio.com/api/csrf-token
+curl -s https://juanchospizza.com/api/csrf-token
 # 6. Logs — sin errores de conexión a postgres/redis
 docker compose logs --tail=30 app
 # 7. Estado de los servicios internos
@@ -247,7 +247,7 @@ docker compose exec redis redis-cli ping              # "PONG"
 # En /opt/guido-pizza/nginx.conf descomentar:
 #   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
 docker compose restart nginx
-curl -sI https://tudominio.com/ | grep -i strict-transport
+curl -sI https://juanchospizza.com/ | grep -i strict-transport
 ```
 
 - [ ] Verificar el certificado desde el navegador (candado 🔒, sin warnings) y opcionalmente https://www.ssllabs.com/ssltest/ (target A).
@@ -259,7 +259,7 @@ curl -sI https://tudominio.com/ | grep -i strict-transport
 El pipeline `deploy-prod.yml` ya existe y hace: **quality (tsc+build+tests) → docker build check → deploy SSH (`git pull` + `docker compose up -d --build` + healthcheck) → smoke e2e**.
 
 - [ ] Configurar en GitHub → Settings → Secrets and variables → Actions:
-      `PROD_HOST` (IP), `PROD_USER` (`deploy`), `PROD_SSH_KEY` (clave privada), `PROD_PATH` (`/opt/guido-pizza`), `PROD_URL` (`https://tudominio.com`).
+      `PROD_HOST` (IP), `PROD_USER` (`deploy`), `PROD_SSH_KEY` (clave privada), `PROD_PATH` (`/opt/guido-pizza`), `PROD_URL` (`https://juanchospizza.com`).
 - [ ] Desplegar desde la pestaña **Actions → "🚀 Deploy Production" → Run workflow** (rama `master`).
 - [ ] (Opcional) Descomentar el bloque `push:` del workflow para deploy automático en cada push a master.
 
@@ -267,8 +267,7 @@ El pipeline `deploy-prod.yml` ya existe y hace: **quality (tsc+build+tests) → 
 
 ## Fase 8 — Post-deploy operativo
 
-- [ ] **Backup de BD** diario (el workflow `backup.yml` existe; alternativa manual):
-      `docker compose exec -T postgres pg_dump -U postgres juanchos_pizza | gzip > /backups/backup_$(date +%F).sql.gz` (cron 04:00) + retención 14 días.
+- [ ] **Backup de BD** diario en el VPS: el workflow de GitHub Actions no alcanza el Postgres interno. El deploy hace backup pre-deploy; instalar además el cron local documentado en `docs/PENDIENTES_OPERACIONALES_2026-08-17.md` y probar restore.
 - [ ] **Monitoreo**: ping a `/api/health` cada minuto (UptimeRobot/BetterStack) + scrape de `/api/metrics` (Prometheus o workflow n8n propuesto en los docs).
 - [ ] **Credenciales reales** de pasarelas de pago (Bold recomendado), SMTP, Gemini y **DIAN** (certificado .p12 + homologación) — guía: `docs/ENV_PRODUCTION_GUIDE.md`.
 - [ ] **Espacio en disco**: `docker system prune -f` (imágenes viejas ya se limpian en cada deploy) y revisar tamaño de volúmenes.
