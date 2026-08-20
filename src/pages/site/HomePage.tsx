@@ -1,5 +1,6 @@
 import Hero from '../../components/Hero';
 import Destacados from '../../components/Destacados';
+import ExperienciaSection from '../../components/ExperienciaSection';
 import SobreNosotros from '../../components/SobreNosotros';
 import { Link } from 'react-router-dom';
 
@@ -8,6 +9,7 @@ export default function HomePage() {
     <>
       <Hero />
       <Destacados />
+      <ExperienciaSection />
 
       {/* Quick CTA to pizza builder */}
       <section className="bg-carbon py-16 text-center px-4">
