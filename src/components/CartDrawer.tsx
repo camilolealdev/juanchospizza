@@ -38,7 +38,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
           <div>
             <h2 className="font-heading text-3xl text-carbon">Tu Pedido</h2>
             <span className="text-carbon/60 text-sm">
-              {count()} {count() === 1 ? 'item' : 'items'}
+              {count()} {count() === 1 ? 'artículo' : 'artículos'}
             </span>
           </div>
           <button
@@ -81,8 +81,8 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     </div>
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="text-carbon/40 hover:text-tomato transition-colors ml-2 flex-shrink-0"
-                      aria-label="Eliminar item"
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-carbon/40 hover:text-tomato hover:bg-tomato/10 transition-colors flex-shrink-0"
+                      aria-label="Eliminar artículo"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -93,14 +93,15 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="w-7 h-7 rounded-full bg-carbon/10 text-carbon font-bold flex items-center justify-center hover:bg-carbon/20 transition-colors"
+                        disabled={item.quantity <= 1}
+                        className="w-10 h-10 rounded-full bg-carbon/10 text-carbon font-bold flex items-center justify-center hover:bg-carbon/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       >
-                        -
+                        −
                       </button>
-                      <span className="text-carbon font-heading text-lg w-6 text-center">{item.quantity}</span>
+                      <span className="text-carbon font-heading text-lg w-8 text-center">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="w-7 h-7 rounded-full bg-carbon/10 text-carbon font-bold flex items-center justify-center hover:bg-carbon/20 transition-colors"
+                        className="w-10 h-10 rounded-full bg-carbon/10 text-carbon font-bold flex items-center justify-center hover:bg-carbon/20 transition-colors"
                       >
                         +
                       </button>

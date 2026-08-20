@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { useSedeStore } from '../store/sedeStore';
+import { WHATSAPP_NUMBERS } from '../data/menu-data';
 
 const socialLinks = [
   {
@@ -50,6 +52,9 @@ const socialLinks = [
 ];
 
 export default function Footer() {
+  const sede = useSedeStore((s) => s.sede);
+  const whatsappNumber = WHATSAPP_NUMBERS[sede];
+
   return (
     <footer className="bg-carbon text-crema font-body">
       {/* ── Brand hero ── */}
@@ -208,7 +213,7 @@ export default function Footer() {
             <p className="text-sm text-crema/40 mt-1">Haz tu pedido por WhatsApp en segundos</p>
           </div>
           <a
-            href="https://wa.me/573108613690"
+            href={`https://wa.me/${whatsappNumber}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-3 px-8 py-4 bg-albahaca hover:bg-albahaca-500 text-white font-heading text-lg tracking-wider uppercase rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-albahaca/30 hover:scale-105 shrink-0"
@@ -229,7 +234,7 @@ export default function Footer() {
             <Link to="/terminos-y-condiciones" className="hover:text-crema/70 transition-colors">Términos y Condiciones</Link>
             <Link to="/eliminacion-de-datos" className="hover:text-crema/70 transition-colors">Eliminación de Datos</Link>
           </div>
-          <p className="text-xs text-crema/25 text-center md:text-right whitespace-nowrap">
+          <p className="text-xs text-crema/25 text-center md:text-right break-words">
             &copy; 2026 Juancho&apos;s Pizza y Comidas Rápidas &mdash; Nemocón &amp; Zipaquirá
           </p>
         </div>

@@ -96,7 +96,7 @@ const initAI = async () => {
     const client: GoogleGenerativeAI = new GoogleGenerativeAI(apiKey);
     aiModel = client.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
     isInitialized = true;
-    console.log('Gemini AI initialized successfully');
+    // Gemini AI initialized
   } catch (error) {
     console.warn('Gemini AI not available. Install @google/generative-ai and set GEMINI_API_KEY.', error);
   }

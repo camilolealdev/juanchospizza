@@ -152,10 +152,8 @@ const MenuSection: React.FC = () => {
       <ProductAddModal
         item={modalItem!}
         isOpen={modalItem !== null}
-        onClose={() => {
-          setModalItem(null);
-          showToast();
-        }}
+        onClose={() => setModalItem(null)}
+        onAdded={showToast}
       />
 
       {/* Toast */}
@@ -188,6 +186,9 @@ function ProductCard({
           alt={item.name}
           className="w-full h-full object-cover"
           loading="lazy"
+          onError={(e) => {
+            e.currentTarget.src = '/images/menu/pizza-1.jpg';
+          }}
         />
         {hasPopular && (
           <span className="absolute top-3 right-3 bg-gradient-to-r from-tomato to-tomato/90 text-white text-[10px] font-heading uppercase tracking-wider rounded-full px-3 py-1 shadow-lg">

@@ -75,8 +75,9 @@ const PizzaConfigurator: React.FC = () => {
 
   const handleAddToCart = useCallback(() => {
     if (!sizeInfo || selectedFlavors.size === 0) return;
+    const uniqueId = `pizza-${sizeInfo.id}-${Date.now()}`;
     addItem({
-      id: `pizza-${sizeInfo.id}`,
+      id: uniqueId,
       name: `Pizza ${sizeInfo.label} (${flavorNames.join(' + ')})`,
       price: sizeInfo.price,
       details: flavorNames.join(' + '),

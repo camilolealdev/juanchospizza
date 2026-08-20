@@ -565,8 +565,8 @@ export function formatPrice(price: number): string {
 const CATEGORY_IMAGES: Record<string, string[]> = {
   pizzas: ['pizza-1.jpg', 'pizza-2.jpg', 'pizza-3.jpg', 'pizza-4.jpg', 'pizza-5.jpg'],
   hamburguesas: ['burger-1.jpg', 'burger-2.jpg', 'burger-3.jpg'],
-  perros_calientes: ['hotdog-1.jpg', 'hotdog-2.jpg'],
-  apanadas: ['burger-1.jpg', 'burger-2.jpg', 'burger-3.jpg'],
+  'perros-calientes': ['hotdog-1.jpg', 'hotdog-2.jpg'],
+  'hamburguesa-apanada': ['burger-1.jpg', 'burger-2.jpg', 'burger-3.jpg'],
   salchipapas: ['fries-1.jpg', 'fries-2.jpg'],
   lasanas: ['lasagna-1.jpg'],
   spaguettis: ['spaghetti-1.png', 'spaghetti-2.jpg'],

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   MenuItem,
   formatPrice,
@@ -12,15 +12,26 @@ interface Props {
   item: MenuItem;
   isOpen: boolean;
   onClose: () => void;
+  onAdded?: () => void;
 }
 
-export default function ProductAddModal({ item, isOpen, onClose }: Props) {
+export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Props) {
   const [addonPapas, setAddonPapas] = useState(false);
   const [addonBebida, setAddonBebida] = useState('');
   const [isCombo, setIsCombo] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
   const addItem = useCartStore((s) => s.addItem);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setAddonPapas(false);
+      setAddonBebida('');
+      setIsCombo(false);
+      setQuantity(1);
+      setNotes('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -74,6 +85,7 @@ export default function ProductAddModal({ item, isOpen, onClose }: Props) {
       quantity,
       notes: notes.trim() || undefined,
     });
+    onAdded?.();
     onClose();
   };
 
@@ -98,7 +110,7 @@ export default function ProductAddModal({ item, isOpen, onClose }: Props) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-colors text-sm"
+            className="absolute top-3 right-3 w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-colors text-sm"
             aria-label="Cerrar"
           >
             ✕

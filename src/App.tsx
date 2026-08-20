@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, createContext, useContext, Suspense, lazy } from 'react';
-import { createPortal } from 'react-dom';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { UserRole, GastroModule, LocationId } from './types';
 import AdminLayout from './components/AdminLayout';
@@ -301,18 +300,6 @@ const App: React.FC = () => {
             </BrowserRouter>
           )}
 
-          {typeof document !== 'undefined' &&
-            document.getElementById('menu-mount') &&
-            createPortal(null, document.getElementById('menu-mount')!)}
-          {typeof document !== 'undefined' &&
-            document.getElementById('cart-mount') &&
-            createPortal(null, document.getElementById('cart-mount')!)}
-          {typeof document !== 'undefined' &&
-            document.getElementById('pizza-builder-mount') &&
-            createPortal(null, document.getElementById('pizza-builder-mount')!)}
-          {typeof document !== 'undefined' &&
-            document.getElementById('reviews-mount') &&
-            createPortal(null, document.getElementById('reviews-mount')!)}
         </AuthContext.Provider>
       </CartProvider>
     </MotionConfig>

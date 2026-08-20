@@ -16,7 +16,7 @@ export default function Destacados() {
             Nuestros Destacados
           </h2>
           <div className="w-20 h-1 bg-tomato/80 rounded-full mx-auto mt-5" />
-          <p className="text-carbon/45 text-sm mt-4">Pasa el mouse sobre un producto para verlo en detalle</p>
+          <p className="text-carbon/45 text-sm mt-4 hidden md:block">Pasa el mouse sobre un producto para verlo en detalle</p>
         </div>
       </div>
 
@@ -38,6 +38,9 @@ export default function Destacados() {
                   alt={item.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.src = '/images/menu/pizza-1.jpg';
+                  }}
                 />
                 {/* Default gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent transition-opacity duration-300 group-hover:opacity-0" />

@@ -205,7 +205,7 @@ export default function Header({ onCartClick }: HeaderProps) {
             </div>
             <button
               onClick={dismissBanner}
-              className="ml-2 w-6 h-6 rounded-full bg-carbon/20 hover:bg-carbon/40 flex items-center justify-center text-carbon/60 hover:text-carbon transition-colors"
+              className="ml-2 w-8 h-8 rounded-full bg-carbon/20 hover:bg-carbon/40 flex items-center justify-center text-carbon/60 hover:text-carbon transition-colors"
               aria-label="Cerrar"
             >
               <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
