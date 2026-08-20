@@ -4,7 +4,7 @@
   "name": "Juancho's Pizza y Comidas Rápidas",
   "description": "Pizzas artesanales, lasañas y spaguettis con sedes en Nemocón y Zipaquirá, Cundinamarca.",
   "url": "https://juanchospizza.com",
-  "telephone": "+57-311-707-4843",
+  "telephone": "+57-310-861-3690",
   "servesCuisine": "Pizza, Comida Rápida, Italiana",
   "areaServed": [
     "Nemocón",
@@ -28,7 +28,7 @@
         "addressRegion": "Cundinamarca",
         "addressCountry": "CO"
       },
-      "telephone": "+57-311-707-4843",
+      "telephone": "+57-310-861-3690",
       "openingHoursSpecification": {
         "@type": "OpeningHoursSpecification",
         "dayOfWeek": [
@@ -54,7 +54,7 @@
         "addressRegion": "Cundinamarca",
         "addressCountry": "CO"
       },
-      "telephone": "+57-311-707-4843",
+      "telephone": "+57-322-769-9056",
       "openingHoursSpecification": {
         "@type": "OpeningHoursSpecification",
         "dayOfWeek": [

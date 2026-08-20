@@ -47,7 +47,7 @@ const connect = (role?: string, locationId?: string) => {
     wsInstance = new WebSocket(url);
 
     wsInstance.onopen = () => {
-      console.log('🔌 WebSocket connected');
+      // WebSocket connected
       isConnecting = false;
       currentReconnectInterval = RECONNECT_INTERVAL;
     };
@@ -70,7 +70,7 @@ const connect = (role?: string, locationId?: string) => {
     };
 
     wsInstance.onclose = () => {
-      console.log('🔌 WebSocket disconnected');
+      // WebSocket disconnected
       wsInstance = null;
       isConnecting = false;
       scheduleReconnect(role, locationId);
@@ -115,7 +115,7 @@ const disconnect = () => {
  * @example
  * ```tsx
  * const { lastEvent } = useWebSocket('order:new', (data) => {
- *   console.log('New order:', data);
+ *   console.log('New order:', data); // example
  * });
  * ```
  */

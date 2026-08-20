@@ -283,7 +283,7 @@ const MenuDigital: React.FC<{ onClose?: () => void; variant?: 'overlay' | 'secti
     // gesture y los popup blockers lo bloquean (audit P2). Se abre la
     // ventana en blanco SINCRÓNICAMENTE (dentro del gesture del click) y se
     // navega tras el registro del pedido.
-    const url = `https://wa.me/573117074843?text=${encodeURIComponent(whatsappMessage)}`;
+    const url = `https://wa.me/573108613690?text=${encodeURIComponent(whatsappMessage)}`;
     const waWin = window.open('', '_blank');
     try {
       await api.createOrder({ ...buildOrderDraft(), paymentMethod: 'whatsapp' });

@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useRef, createContext, useContext, Suspense, lazy } from 'react';
-import { createPortal } from 'react-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { UserRole, GastroModule, LocationId } from './types';
 import AdminLayout from './components/AdminLayout';
-import MenuDigital from './components/MenuDigital';
-import CartSection from './components/CartSection';
-import PizzaBuilder from './components/PizzaBuilder';
-import { CartProvider } from './context/CartContext';
+import CustomerSite from './components/CustomerSite';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
-import ApprovedReviews from './components/ApprovedReviews';
+import { CartProvider } from './context/CartContext';
 import TrackOrderModal from './components/TrackOrderModal';
 import { useWebSocket } from './hooks/useWebSocket';
 import api, { AUTH_UNAUTHORIZED_EVENT, getStoredRole, getStoredUsername, setAuthSession } from './services/api';
 import { MotionConfig } from 'framer-motion';
 
-// CRM modules only ever render behind a staff login -- lazy-loaded so an
-// anonymous landing-page visitor's bundle isn't paying for admin code they
-// never see (this app has no router to split by route, so it's done here).
+// Customer pages
+const HomePage = lazy(() => import('./pages/site/HomePage'));
+const PizzaPage = lazy(() => import('./pages/site/PizzaPage'));
+const MenuPage = lazy(() => import('./pages/site/MenuPage'));
+const DomiciliosPage = lazy(() => import('./pages/site/DomiciliosPage'));
+const LegalPage = lazy(() => import('./pages/site/LegalPage'));
+
+// CRM modules
 const GastroProDashboard = lazy(() => import('./views/roles/GastroProDashboard'));
 const MenuInteligente = lazy(() => import('./views/roles/MenuInteligente'));
 const InventarioView = lazy(() => import('./views/roles/InventarioView'));
@@ -53,12 +55,8 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
-// LoginModal lazy-loaded desde LoginModal.tsx para no inflar el bundle
-// principal con el diálogo de inicio de sesión.
 const LoginModal = lazy(() => import('./components/LoginModal'));
 
-// Cosmetic display names only, kept separate from auth now that credentials
-// are verified against the real backend rather than a local test list.
 const ROLE_DISPLAY_NAMES: Partial<Record<UserRole, string>> = {
   [UserRole.ADMIN]: 'Administrador',
   [UserRole.OPERATOR]: 'Chef Principal',
@@ -93,16 +91,12 @@ const GASTRO_MODULES: GastroModule[] = [
 ];
 const isGastroModule = (value: string): value is GastroModule => (GASTRO_MODULES as string[]).includes(value);
 
-// /admin/<module> is deep-linkable (bookmark, refresh, back/forward) --
-// separate namespace from the landing page's own paths (index.html's
-// showPage) and from /confirmacion (handled above, short-circuits the tree).
 const moduleFromPath = (): GastroModule | null => {
   if (typeof window === 'undefined') return null;
   const match = window.location.pathname.match(/^\/admin\/([a-z]+)/);
   return match && isGastroModule(match[1]) ? match[1] : null;
 };
 
-// Map of which roles have access to which modules (URL guard)
 const ROLE_MODULE_ACCESS: Partial<Record<UserRole, GastroModule[]>> = {
   [UserRole.ADMIN]: GASTRO_MODULES,
   [UserRole.OPERATOR]: ['dashboard', 'menu', 'inventario', 'turnos', 'mesas', 'comandas', 'digiturno'],
@@ -113,24 +107,14 @@ const ROLE_MODULE_ACCESS: Partial<Record<UserRole, GastroModule[]>> = {
 const hasModuleAccess = (role: UserRole, module: GastroModule): boolean =>
   ROLE_MODULE_ACCESS[role]?.includes(module) ?? false;
 
-// Guard: fall back to dashboard if the user tries to deep-link to a module
-// they don't have access to (test 18 in full-audit.spec.ts caught this gap).
 const guardModuleAccess = (desired: GastroModule, role: UserRole): GastroModule =>
   hasModuleAccess(role, desired) ? desired : 'dashboard';
 
 const App: React.FC = () => {
-  // Initialize from whatever session was already persisted in local storage,
-  // so a page refresh doesn't silently drop a valid, still-live token.
   const [role, setRole] = useState<UserRole>(() => {
     const storedRole = getStoredRole();
     return isKnownRole(storedRole) ? storedRole : UserRole.CLIENT;
   });
-  // El JWT vive solo en la cookie HttpOnly -- JS no puede leerlo para saber
-  // si sigue siendo válido. username SÍ persiste en localStorage (no es
-  // secreto) y solo se setea en un login de staff real, así que su
-  // presencia es la señal optimista de "había sesión" en este refresh; si
-  // la cookie ya no es válida, la primera llamada API dispara un 401 →
-  // AUTH_UNAUTHORIZED_EVENT → esto se corrige solo (ver el listener abajo).
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getStoredUsername());
   const [showLogin, setShowLogin] = useState(false);
   const [showTrackOrder, setShowTrackOrder] = useState(false);
@@ -143,21 +127,8 @@ const App: React.FC = () => {
     }
     return pathModule || 'dashboard';
   });
-  // Sede seleccionada en el dropdown de AdminLayout -- filtra el dashboard y
-  // es la sede activa para abrir/cerrar turno. Vive acá (no en cada vista)
-  // porque tanto el selector (en AdminLayout) como las vistas que lo
-  // consumen (dashboard, turnos) son hermanos en el árbol.
   const [selectedLocation, setSelectedLocation] = useState<LocationId>('nemocon');
-  const menuMount = typeof document !== 'undefined' ? document.getElementById('menu-mount') : null;
-  const cartMount = typeof document !== 'undefined' ? document.getElementById('cart-mount') : null;
-  const reviewsMount = typeof document !== 'undefined' ? document.getElementById('reviews-mount') : null;
-  const pizzaBuilderMount = typeof document !== 'undefined' ? document.getElementById('pizza-builder-mount') : null;
 
-  // "¿Ya pediste? Rastrea tu pedido" solo vivía dentro del panel del carrito
-  // (CartSection.tsx) -- un cliente sin nada en el carrito no tenía forma de
-  // llegar ahí. #navTrackOrderBtn (index.html, junto al ícono del carrito)
-  // es un <button> vanilla fuera del árbol de React; este efecto lo conecta
-  // al mismo TrackOrderModal que ya usa CartSection, sin duplicar lógica.
   useEffect(() => {
     const btn = document.getElementById('navTrackOrderBtn');
     if (!btn) return;
@@ -166,9 +137,6 @@ const App: React.FC = () => {
     return () => btn.removeEventListener('click', handler);
   }, []);
 
-  // Keeps gastroModule and the URL in sync both ways: calling this pushes
-  // /admin/<module>, and browser back/forward (popstate below) calls
-  // setGastroModuleState directly to avoid re-pushing on every pop.
   const navigateToModule = (m: GastroModule) => {
     const guarded = guardModuleAccess(m, role);
     setGastroModuleState(guarded);
@@ -186,16 +154,6 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [role]);
 
-  // ── Acceso al panel vía URL o tecla oculta ─────────────────────
-  //
-  // El botón flotante de admin se eliminó de la vista pública para que
-  // los clientes no tengan acceso visual al panel. El login se activa
-  // mediante:
-  //   1. Navegar a /login     — ruta directa, bookmarkeable
-  //   2. Navegar a /admin     — ruta base del panel
-  //   3. Navegar a /admin/*   — deep-link, muestra login si no hay sesión
-  //   4. Ctrl+Shift+A         — shortcut secreto para staff
-  //
   const isAuthenticatedRef = useRef(isAuthenticated);
   isAuthenticatedRef.current = isAuthenticated;
 
@@ -204,21 +162,16 @@ const App: React.FC = () => {
     const isAdminBase = window.location.pathname === '/admin';
     const isAdminDeep = !!moduleFromPath();
 
-    // /login siempre abre el modal (sin redirigir)
     if (!isAuthenticated && isLoginPath) {
       setShowLogin(true);
-      // Limpia la URL — /login no es una ruta real, solo un trigger
       history.replaceState(null, '', '/');
       return;
     }
 
-    // /admin o /admin/* mientras no hay sesión → muestra login
     if (!isAuthenticated && (isAdminBase || isAdminDeep)) {
       setShowLogin(true);
     }
 
-    // Ctrl+Shift+A: shortcut oculto para staff
-    // Usamos ref para evitar stale closure de isAuthenticated
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'A') {
         e.preventDefault();
@@ -236,11 +189,6 @@ const App: React.FC = () => {
   }, []);
 
   const logout = () => {
-    // api.logout() ya limpia clearAuthSession() y llama a POST
-    // /api/auth/logout para vaciar la cookie HttpOnly server-side -- sin
-    // esto, cerrar sesión solo borraba el estado local y la cookie seguía
-    // siendo válida en el backend. No se espera la promesa: la UI se
-    // resetea de inmediato, el request corre en segundo plano.
     void api.logout();
     setRole(UserRole.CLIENT);
     setIsAuthenticated(false);
@@ -249,9 +197,6 @@ const App: React.FC = () => {
     }
   };
 
-  // If any request comes back 401 (missing/expired token), api.ts clears the
-  // stored session and fires this event - react by kicking the user back to
-  // the logged-out state so they land on the login screen.
   useEffect(() => {
     const handleUnauthorized = () => {
       setRole(UserRole.CLIENT);
@@ -262,20 +207,8 @@ const App: React.FC = () => {
     return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
   }, []);
 
-  // ── WebSocket raíz ──────────────────────────────────────────────
-  // Conecta el WebSocket automáticamente con el rol y sede actuales.
-  // El hook internamente llama a reconnectWS cuando cambian las deps.
-  // El WCAG focus trap y Escape key del LoginModal se manejan dentro
-  // del componente LoginModal.tsx (no aquí), para que el lazy-loading
-  // funcione correctamente sin duplicar lógica de accesibilidad.
   useWebSocket('*', undefined, { role, locationId: selectedLocation });
 
-  // Standalone page landed on after a Bold checkout -- bypasses the rest of
-  // the app tree entirely (no CRM/login chrome needed here). Still wrapped
-  // in <MotionConfig reducedMotion="user"> so any motion components inside
-  // OrderConfirmationPage also honor prefers-reduced-motion (2026-07-21 fix
-  // for ISSUES_2026-07-21.md P2-7; CSS-only @media was covering Tailwind
-  // animate-* utilities but framer-motion runs outside CSS).
   if (typeof window !== 'undefined' && window.location.pathname.startsWith('/confirmacion')) {
     return (
       <MotionConfig reducedMotion="user">
@@ -284,17 +217,8 @@ const App: React.FC = () => {
     );
   }
 
-  // username es el usuario real ingresado en LoginModal -- ya no se deriva
-  // de un rol elegido en un <select> (antes limitaba el login a las 4
-  // cuentas semilla fijas admin/cocina/repartidor/marketing; un empleado
-  // creado individualmente en el CRM, con su propio username, no podía
-  // loguearse porque la UI no tenía forma de seleccionarlo). El rol real
-  // sigue viniendo SIEMPRE del backend (result.role), nunca de la UI.
   const login = async (username: string, pin?: string, password?: string): Promise<boolean> => {
     if (!username || (!pin && !password)) return false;
-    // No try/catch swallowing here on purpose -- a network failure (backend
-    // unreachable) needs to reach LoginModal's own catch with its real
-    // message, not collapse into the same "PIN incorrecto" a wrong PIN gets.
     const result = await api.login(username, pin, password);
     if (!result?.role) return false;
     setAuthSession({ role: result.role, username: result.username });
@@ -302,10 +226,6 @@ const App: React.FC = () => {
     setRole(resolvedRole);
     setIsAuthenticated(true);
     setShowLogin(false);
-    // Landed here from the public site (crown button) -- move the URL into
-    // the /admin/* namespace so refresh/back-forward/bookmarks work from
-    // the module the user lands on (whatever gastroModule already is,
-    // e.g. still 'dashboard' on a fresh login).
     if (!window.location.pathname.startsWith('/admin/')) {
       history.pushState({ gastroModule }, '', `/admin/${gastroModule}`);
     }
@@ -357,70 +277,74 @@ const App: React.FC = () => {
     }
   };
 
-  // <MotionConfig reducedMotion="user"> is the single source of truth for
-  // honoring prefers-reduced-motion across all framer-motion components
-  // (LoginModal, MenuDigital animations, AnimatePresence transitions).
-  // The CSS rule in src/index.css already handles Tailwind animate-* utilities;
-  // this wrapper closes the framer-motion gap (P2-7).
+  const isStaffAdmin =
+    isAuthenticated &&
+    (role === UserRole.ADMIN ||
+      role === UserRole.OPERATOR ||
+      role === UserRole.REPARTIDOR ||
+      role === UserRole.MARKETING);
+
   return (
     <MotionConfig reducedMotion="user">
       <CartProvider>
         <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
-          {/* Hidden admin access: /login en URL, /admin/* deep-link, Ctrl+Shift+A */}
-
-          {/* Login Modal (lazy-loaded) */}
           {showLogin && !isAuthenticated && (
             <Suspense fallback={null}>
               <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />
             </Suspense>
           )}
 
-          {/* Track Order Modal -- abierto desde #navTrackOrderBtn (nav estático) */}
           {showTrackOrder && <TrackOrderModal onClose={() => setShowTrackOrder(false)} />}
 
-          {/* Admin CRM Overlay */}
-          {isAuthenticated &&
-            (role === UserRole.ADMIN ||
-              role === UserRole.OPERATOR ||
-              role === UserRole.REPARTIDOR ||
-              role === UserRole.MARKETING) && (
-              <div className="fixed inset-0 z-[9998] animate-fade-in">
-                <AdminLayout
-                  module={gastroModule}
-                  onModuleChange={navigateToModule}
-                  userName={ROLE_DISPLAY_NAMES[role] || role}
-                  userRole={role}
-                  onLogout={logout}
-                  locationId={selectedLocation}
-                  onLocationChange={setSelectedLocation}
+          {isStaffAdmin && (
+            <div className="fixed inset-0 z-[9998] animate-fade-in">
+              <AdminLayout
+                module={gastroModule}
+                onModuleChange={navigateToModule}
+                userName={ROLE_DISPLAY_NAMES[role] || role}
+                userRole={role}
+                onLogout={logout}
+                locationId={selectedLocation}
+                onLocationChange={setSelectedLocation}
+              >
+                <Suspense
+                  fallback={
+                    <div className="p-10 text-stone-500 text-sm font-bold uppercase tracking-widest">Cargando...</div>
+                  }
                 >
-                  <Suspense
-                    fallback={
-                      <div className="p-10 text-stone-500 text-sm font-bold uppercase tracking-widest">Cargando...</div>
-                    }
-                  >
-                    {renderGastroModule()}
-                  </Suspense>
-                </AdminLayout>
-              </div>
-            )}
+                  {renderGastroModule()}
+                </Suspense>
+              </AdminLayout>
+            </div>
+          )}
 
-          {/* MenuDigital — rendered as inline section via portal into #menu-mount */}
-          {menuMount && createPortal(<MenuDigital variant="section" />, menuMount)}
-
-          {/* PizzaBuilder — same component used by MenuDigital's "Personalizar"
-            modal, rendered full-page via portal into #pizza-builder-mount for
-            the static "Crea tu Pizza" nav entry. Replaces the old vanilla
-            #ctp-builder + the hidden "advanced" builder (both removed). */}
-          {pizzaBuilderMount && createPortal(<PizzaBuilder variant="section" />, pizzaBuilderMount)}
-
-          {/* CartSection — rendered as inline section via portal into #cart-mount */}
-          {cartMount && createPortal(<CartSection />, cartMount)}
-
-          {/* Approved reviews — rendered as inline section via portal into #reviews-mount.
-            Was previously only wired inside dead CustomerView.tsx (never rendered since
-            2026-06-05's move to this portal architecture) — moved onto the live surface. */}
-          {reviewsMount && createPortal(<ApprovedReviews />, reviewsMount)}
+          {!isStaffAdmin && (
+            <BrowserRouter>
+              <Suspense
+                fallback={
+                  <div className="min-h-screen bg-crema flex items-center justify-center">
+                    <div className="text-center">
+                      <span className="text-4xl block mb-3">🍕</span>
+                      <p className="font-heading text-lg text-carbon/50 uppercase tracking-wider">Cargando...</p>
+                    </div>
+                  </div>
+                }
+              >
+                <Routes>
+                  <Route element={<CustomerSite />}>
+                    <Route index element={<HomePage />} />
+                    <Route path="pizza" element={<PizzaPage />} />
+                    <Route path="menu" element={<MenuPage />} />
+                    <Route path="domicilios" element={<DomiciliosPage />} />
+                    <Route path="politica-de-privacidad" element={<LegalPage />} />
+                    <Route path="terminos-y-condiciones" element={<LegalPage />} />
+                    <Route path="eliminacion-de-datos" element={<LegalPage />} />
+                    <Route path="*" element={<HomePage />} />
+                  </Route>
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          )}
         </AuthContext.Provider>
       </CartProvider>
     </MotionConfig>

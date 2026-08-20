@@ -83,7 +83,7 @@ const CartSection: React.FC = () => {
       if (item.details) msg += `   _${item.details}_\n`;
     });
     msg += `\n*Total: $${cartTotal.toLocaleString()}*\n\n⏱️ _Tiempo estimado: 25-35 min_`;
-    const url = `https://wa.me/573117074843?text=${encodeURIComponent(msg)}`;
+    const url = `https://wa.me/573108613690?text=${encodeURIComponent(msg)}`;
     const waWin = window.open('', '_blank');
 
     setIsProcessing(true);
