@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a1a1a" width="400" height="300"/>
+  <circle cx="200" cy="160" r="95" fill="#e8e4da"/>
+  <circle cx="200" cy="160" r="78" fill="#f7f4ec"/>
+  <circle cx="190.5" cy="176.8" r="7.5" fill="#e8d8c8" opacity="0.9"/><circle cx="187.9" cy="126.2" r="6.8" fill="#f5e6c8" opacity="0.9"/><circle cx="200.9" cy="160.7" r="6.7" fill="#a04000" opacity="0.9"/><circle cx="190.3" cy="156.2" r="9.9" fill="#f8c471" opacity="0.9"/><circle cx="158.9" cy="152.5" r="9.8" fill="#d35400" opacity="0.9"/><circle cx="175.7" cy="141.6" r="6.3" fill="#c0392b" opacity="0.9"/><circle cx="225.1" cy="133.2" r="5.1" fill="#f0c060" opacity="0.9"/><circle cx="224.9" cy="192.7" r="8.0" fill="#e8d8c8" opacity="0.9"/>
+  <text x="200" y="225" text-anchor="middle" fill="#f5deb3" font-size="15" font-family="Arial, sans-serif" font-weight="bold">Súper especial</text>
+</svg>

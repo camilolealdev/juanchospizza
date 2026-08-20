@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a1a1a" width="400" height="300"/>
+  <path d="M160 120 L172 255 Q173 262 182 262 L218 262 Q227 262 228 255 L240 120 Z" fill="#f39c12"/>
+  <path d="M166 140 Q200 165 234 140 L230 160 Q200 185 170 160 Z" fill="#f5b041"/>
+  <rect x="196" y="88" width="8" height="50" rx="4" fill="#e74c3c"/>
+  <circle cx="192" cy="86" r="7" fill="#e74c3c"/>
+  <text x="200" y="225" text-anchor="middle" fill="#f5deb3" font-size="15" font-family="Arial, sans-serif" font-weight="bold">Gaseosa 500 ml</text>
+</svg>

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="bg512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ea580c"/>
+      <stop offset="50%" stop-color="#c2410c"/>
+      <stop offset="100%" stop-color="#9a3412"/>
+    </linearGradient>
+    <linearGradient id="pizzaBase" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8c48a"/>
+      <stop offset="100%" stop-color="#dcae73"/>
+    </linearGradient>
+    <linearGradient id="cheese" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="goldText" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded rect background -->
+  <rect width="512" height="512" rx="80" fill="url(#bg512)"/>
+  <!-- Decorative rings -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="3"/>
+  <circle cx="256" cy="256" r="200" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="1.5"/>
+  <!-- Pizza body -->
+  <circle cx="256" cy="260" r="160" fill="url(#pizzaBase)" stroke="#b8860b" stroke-width="8"/>
+  <circle cx="256" cy="260" r="148" fill="#fbbf24" opacity="0.3"/>
+  <circle cx="256" cy="260" r="140" fill="#dc2626" opacity="0.12"/>
+  <circle cx="256" cy="260" r="135" fill="url(#cheese)" opacity="0.25"/>
+  <!-- Pepperoni slices (15 pieces) -->
+  <circle cx="200" cy="190" r="28" fill="#dc2626"/>
+  <circle cx="310" cy="200" r="26" fill="#dc2626"/>
+  <circle cx="230" cy="290" r="26" fill="#dc2626"/>
+  <circle cx="175" cy="270" r="22" fill="#dc2626"/>
+  <circle cx="320" cy="280" r="24" fill="#dc2626"/>
+  <circle cx="250" cy="175" r="20" fill="#dc2626"/>
+  <circle cx="145" cy="220" r="18" fill="#dc2626"/>
+  <circle cx="365" cy="230" r="20" fill="#dc2626"/>
+  <circle cx="280" cy="340" r="22" fill="#dc2626"/>
+  <circle cx="195" cy="340" r="16" fill="#dc2626"/>
+  <circle cx="340" cy="320" r="18" fill="#dc2626"/>
+  <circle cx="165" cy="315" r="15" fill="#dc2626"/>
+  <circle cx="300" cy="165" r="16" fill="#dc2626"/>
+  <circle cx="230" cy="230" r="14" fill="#dc2626"/>
+  <circle cx="325" cy="360" r="14" fill="#dc2626"/>
+  <!-- Green peppers -->
+  <circle cx="280" cy="240" r="18" fill="#16a34a"/>
+  <circle cx="210" cy="245" r="15" fill="#16a34a"/>
+  <circle cx="340" cy="260" r="14" fill="#16a34a"/>
+  <circle cx="170" cy="185" r="13" fill="#16a34a"/>
+  <circle cx="260" cy="310" r="15" fill="#16a34a"/>
+  <!-- Black olives -->
+  <circle cx="240" cy="185" r="10" fill="#1f2937"/>
+  <circle cx="305" cy="295" r="10" fill="#1f2937"/>
+  <circle cx="185" cy="305" r="9" fill="#1f2937"/>
+  <circle cx="290" cy="215" r="8" fill="#1f2937"/>
+  <circle cx="210" cy="290" r="8" fill="#1f2937"/>
+  <!-- Sausage chunks -->
+  <circle cx="155" cy="250" r="11" fill="#78350f"/>
+  <circle cx="355" cy="210" r="10" fill="#78350f"/>
+  <!-- Cheese drips (melted edge effect) -->
+  <path d="M160 170 Q145 140 155 120" fill="none" stroke="#fde68a" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <path d="M350 165 Q365 140 358 120" fill="none" stroke="#fde68a" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <path d="M115 260 Q100 250 95 235" fill="none" stroke="#fde68a" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+  <path d="M395 275 Q412 265 418 250" fill="none" stroke="#fde68a" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+  <path d="M220 385 Q215 405 220 420" fill="none" stroke="#fde68a" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+  <path d="M300 388 Q305 410 298 420" fill="none" stroke="#fde68a" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+  <!-- Shine highlight -->
+  <ellipse cx="220" cy="210" rx="40" ry="18" fill="white" opacity="0.07" transform="rotate(-20 220 210)"/>
+  <!-- Maskable safe zone (the pizza stays within inner 80% = 409px circle) -->
+  <!-- Brand: Juancho's Pizza text -->
+  <text x="256" y="455" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="24" fill="url(#goldText)" letter-spacing="6">JUANCHO'S</text>
+  <text x="256" y="480" text-anchor="middle" font-family="Arial,sans-serif" font-weight="600" font-size="12" fill="rgba(255,255,255,0.45)" letter-spacing="5">PIZZA &#8226; NEMOCÓN &#8226; ZIPAQUIRÁ</text>
+</svg>

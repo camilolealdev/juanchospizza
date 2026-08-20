@@ -1,0 +1,242 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        # URL base usada por Vite en build time para WebSocket y fetch API.
+        # VALOR POR DEFECTO: vacío → el frontend usa rutas RELATIVAS
+        # ('/api/...'), que resuelven contra el origin real del visitante
+        # (https://juanchospizza.com, localhost, etc.). Es el patrón correcto
+        # en producción: el bundle YA NO hornea 'https://localhost' (que hacía
+        # que cada cliente intentara SU PROPIO localhost → bloqueado por CSP →
+        # menú/API muertos). Solo definir VITE_API_URL si el backend vive en
+        # un dominio distinto al del frontend.
+        VITE_API_URL: ${VITE_API_URL:-}
+        # VITE_VAPID_PUBLIC_KEY: clave pública VAPID (notificaciones push).
+        # Se hornea en el bundle frontend en build time (import.meta.env en
+        # src/services/push.ts) para que el navegador pueda suscribirse.
+        # Default vacío = push desactivado en el cliente (no-op, sin errores).
+        # Mismo valor que VAPID_PUBLIC_KEY del .env.production.
+        VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY:-}
+      # ── Network para build ────────────────────────────────────
+      # Docker Desktop en Windows tiene un proxy DNS virtual que
+      # falla con etiquetas IPv6 de npm registry. network: host
+      # hace que el build use la red del host directamente,
+      # saltando la virtualización DNS de Docker.
+      # Ver: https://docs.docker.com/engine/reference/commandline/buildx_build/#network
+      network: host
+    dns:
+      # DNS para contenedores en RUNTIME (fallback cuando el proxy
+      # DNS de Docker Desktop o el ISP fallan). NOTA: esto NO afecta
+      # `docker build` — el npm ci durante build usa el DNS del
+      # daemon de Docker. Para arreglar el build en Windows local,
+      # agregar a Docker Desktop > Settings > Docker Engine:
+      # { "dns": ["1.1.1.1", "8.8.8.8"] }
+      - 1.1.1.1
+      - 8.8.8.8
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/juanchos_pizza
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      BOLD_API_KEY: ${BOLD_API_KEY}
+      BOLD_WEBHOOK_SECRET: ${BOLD_WEBHOOK_SECRET}
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
+      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET}
+      WOMPI_MERCHANT_ID: ${WOMPI_MERCHANT_ID}
+      WOMPI_EVENTS_SECRET: ${WOMPI_EVENTS_SECRET}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      PG_POOL_MAX: ${PG_POOL_MAX:-20}
+      PG_IDLE_TIMEOUT: ${PG_IDLE_TIMEOUT:-30000}
+      PG_CONNECT_TIMEOUT: ${PG_CONNECT_TIMEOUT:-5000}
+    env_file: .env.production
+    # NOTA: NO bind-montear ./dist ni server/*.js desde el host acá.
+    # El Dockerfile (stage `build`) corre `vite build` y produce /app/dist
+    # dentro de la imagen; el stage `runtime` copia server/ limpio. dist/
+    # está en .gitignore (nunca se commitea) y el pipeline de deploy
+    # (.github/workflows/deploy-prod.yml) NO corre `vite build` en el VPS —
+    # solo hace git pull + `docker compose up -d --build`. Si se bind-montea
+    # ./dist:ro y no existe en el host (VPS nuevo o tras `down` con reset de
+    # paths), Docker crea un directorio VACÍO y lo monta sobre el dist/ que
+    # la imagen sí construyó -> frontend en blanco en producción. El
+    # contenedor debe correr 100% con lo que la imagen ya tiene adentro.
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=100M,noexec,nosuid
+      - /var/cache:size=50M,noexec,nosuid
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - app-network
+      - edge  # NECESARIO para tráfico saliente a internet (Bold, Gemini, SendGrid, etc.)
+             # app-network tiene internal:true y bloquea outbound. Sin edge,
+             # el contenedor no puede llamar APIs externas.
+
+  # worker: removido -- `server/worker.js` no existe. El sistema BullMQ
+  # completo (queues/, workers/, redis.js, worker.js) se eliminó del código
+  # hace tiempo (ver server/services/README.md: BullMQ pedía `ioredis`, el
+  # proyecto usa `redis` v4, incompatible; y ninguna ruta llamaba
+  # `queues.X.add()` -- cero integración real). Este servicio quedó huérfano
+  # en el compose y solo hace crash-loop (`Cannot find module
+  # '/app/server/worker.js'`, restart: unless-stopped lo reintenta para
+  # siempre). Los reemplazos reales (email/pdf/webhooks síncronos) viven en
+  # server/services/ y corren dentro de `app`, no necesitan un contenedor
+  # aparte. Si el negocio crece y hace falta procesamiento async real: seguir
+  # los 3 pasos documentados en server/services/README.md y volver a agregar
+  # este servicio con un server/worker.js que sí exista.
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - app
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # NET_BIND_SERVICE: bindear 80/443 (<1024) sin ser root.
+    # CHOWN/SETUID/SETGID: nginx corre su master como root y dropea
+    # privilegios al usuario "nginx" (uid 101, compilado por defecto en la
+    # imagen alpine) en cada arranque -- sin estas 3, ese chown()/setuid()
+    # inicial falla con "Operation not permitted" y el contenedor
+    # crash-loopea antes de poder servir nada. Requisito estándar de nginx
+    # bajo cap_drop: ALL, no un debilitamiento del hardening.
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - SETUID
+      - SETGID
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=100M,noexec,nosuid
+      - /var/run:size=10M,noexec,nosuid
+      - /tmp:size=50M,noexec,nosuid
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - app-network
+      - edge
+
+  postgres:
+    image: postgres:17-alpine
+    expose:
+      - 5432
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: juanchos_pizza
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - app-network
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  # app-network: internal:true -- app, postgres y redis NO pueden hacer
+  # conexiones salientes a internet. Esto es seguro para postgres y redis.
+  # El servicio `app` también está en `edge` para poder llamar APIs externas
+  # (Bold, Mercado Pago, Gemini, SendGrid, webhooks).
+  app-network:
+    driver: bridge
+    internal: true
+  # edge: red NO interna, solo nginx la usa -- punto de entrada público
+  # del stack (80/443).
+  edge:
+    driver: bridge

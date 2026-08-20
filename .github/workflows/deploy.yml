@@ -1,0 +1,75 @@
+# DESHABILITADO como trigger automático (auditoría 2026-07-26): este workflow
+# despliega vía PM2 + `git pull` sobre /var/www/juanchospizza -- una estrategia
+# completamente distinta a la que el proyecto realmente usa (Docker Compose
+# sobre un VPS, ver DEPLOY.md). Si esto disparaba en cada push a master, corría
+# en paralelo/en conflicto con cualquier deploy manual vía Docker.
+# Se deja solo como workflow_dispatch manual por si en algún momento se decide
+# usar PM2 en vez de Docker. El `pm2 start ... -- start` ya se corrigió para
+# usar el script real (`server`), así que el fallback manual sí funciona hoy.
+name: Deploy (manual, PM2 legacy -- no es el flujo de deploy actual)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  quality:
+    name: Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint 2>/dev/null
+        continue-on-error: true
+
+      - name: Unit tests
+        run: npm test 2>/dev/null
+        continue-on-error: true
+
+  deploy:
+    name: Deploy to Production
+    needs: quality
+    # Sin condición de push/ref: el único trigger que queda es
+    # workflow_dispatch manual, así que si alguien lo corre, este job debe
+    # correr también (la condición vieja `event_name == 'push'` quedaba
+    # siempre falsa y el fallback manual nunca ejecutaba nada).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /var/www/juanchospizza
+            git pull origin master
+            npm ci
+            npm run build
+            pm2 restart juanchospizza || pm2 start node --name juanchospizza -- server/index.js

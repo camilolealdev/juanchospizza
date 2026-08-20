@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a1a1a" width="400" height="300"/>
+  <ellipse cx="200" cy="105" rx="110" ry="42" fill="#e0a96d"/>
+  <ellipse cx="200" cy="98" rx="95" ry="30" fill="#f0c98a"/>
+  <circle cx="140" cy="128" r="8" fill="#8b5a2b" opacity="0.7"/>
+  <circle cx="260" cy="128" r="8" fill="#8b5a2b" opacity="0.7"/>
+  <rect x="100" y="128" width="200" height="26" rx="10" fill="#8b5a2b"/>
+  <rect x="100" y="140" width="200" height="10" fill="#f8c471"/>
+  <path d="M95 148 Q150 165 200 148 Q250 165 305 148 L305 165 Q200 185 95 165 Z" fill="#7dce82"/>
+  <rect x="100" y="162" width="200" height="24" rx="10" fill="#e0a96d"/>
+  <text x="200" y="225" text-anchor="middle" fill="#f5deb3" font-size="15" font-family="Arial, sans-serif" font-weight="bold">Sencilla doble carne</text>
+</svg>
