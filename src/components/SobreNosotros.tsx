@@ -71,98 +71,85 @@ export default function SobreNosotros() {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
           >
-            {/* Base layer — the local image always visible behind */}
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-carbon/15">
-              <img
-                src="/images/local.jpeg"
-                alt="Interior de Juancho's Pizza"
-                className="w-full aspect-[4/5] object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-carbon/60 via-carbon/10 to-transparent" />
-            </div>
+            {/* 3D stacked carousel cards */}
+            <div className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden" style={{ transformStyle: 'preserve-3d' }}>
+              {CAROUSEL_IMAGES.map((img, i) => {
+                const offset = ((i - active + CAROUSEL_IMAGES.length) % CAROUSEL_IMAGES.length);
+                const isActive = offset === 0;
+                const isPrev = offset === CAROUSEL_IMAGES.length - 1;
 
-            {/* 3D stacked carousel cards on top */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="relative w-[70%] aspect-[3/4]" style={{ transformStyle: 'preserve-3d' }}>
-                {CAROUSEL_IMAGES.map((img, i) => {
-                  const offset = ((i - active + CAROUSEL_IMAGES.length) % CAROUSEL_IMAGES.length);
-                  const isActive = offset === 0;
-                  const isPrev = offset === CAROUSEL_IMAGES.length - 1;
-                  // const isNext = offset === 1;
+                let translateZ = 0;
+                let rotateY = 0;
+                let translateX = 0;
+                let opacity = 0;
+                let scale = 1;
 
-                  let translateZ = 0;
-                  let rotateY = 0;
-                  let translateX = 0;
-                  let opacity = 0;
-                  let scale = 1;
+                if (isActive) {
+                  translateZ = 30;
+                  rotateY = 0;
+                  translateX = 0;
+                  opacity = 1;
+                  scale = 1;
+                } else if (isPrev) {
+                  translateZ = -15;
+                  rotateY = -6;
+                  translateX = -10;
+                  opacity = 0.6;
+                  scale = 0.93;
+                } else {
+                  translateZ = -30;
+                  rotateY = 6;
+                  translateX = 10;
+                  opacity = 0.3;
+                  scale = 0.86;
+                }
 
-                  if (isActive) {
-                    translateZ = 40;
-                    rotateY = 0;
-                    translateX = 0;
-                    opacity = 1;
-                    scale = 1;
-                  } else if (isPrev) {
-                    translateZ = -20;
-                    rotateY = -8;
-                    translateX = -12;
-                    opacity = 0.7;
-                    scale = 0.92;
-                  } else {
-                    translateZ = -40;
-                    rotateY = 8;
-                    translateX = 12;
-                    opacity = 0.4;
-                    scale = 0.85;
-                  }
+                return (
+                  <div
+                    key={img.src}
+                    className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl shadow-carbon/20 transition-all duration-700 ease-out"
+                    style={{
+                      transform: `translateZ(${translateZ}px) rotateY(${rotateY}deg) translateX(${translateX}%) scale(${scale})`,
+                      opacity,
+                      zIndex: isActive ? 20 : isPrev ? 10 : 5,
+                    }}
+                  >
+                    <img
+                      src={img.src}
+                      alt={img.alt}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-carbon/60 via-carbon/10 to-transparent" />
 
-                  return (
-                    <div
-                      key={img.src}
-                      className="absolute inset-0 rounded-2xl overflow-hidden shadow-2xl transition-all duration-700 ease-out"
-                      style={{
-                        transform: `translateZ(${translateZ}px) rotateY(${rotateY}deg) translateX(${translateX}%) scale(${scale})`,
-                        opacity,
-                        zIndex: isActive ? 20 : isPrev ? 10 : 5,
-                      }}
-                    >
-                      <img
-                        src={img.src}
-                        alt={img.alt}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
-
-                      {/* Label */}
-                      {isActive && (
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <div className="bg-white/95 backdrop-blur-sm rounded-xl px-4 py-3 shadow-xl inline-block">
-                            <p className="font-heading text-xs tracking-[0.2em] uppercase text-tomato mb-0.5">Nuestro Espacio</p>
-                            <p className="text-carbon/70 text-xs leading-relaxed">{img.alt}</p>
-                          </div>
+                    {/* Label */}
+                    {isActive && (
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <div className="bg-white/95 backdrop-blur-sm rounded-xl px-4 py-3 shadow-xl inline-block">
+                          <p className="font-heading text-xs tracking-[0.2em] uppercase text-tomato mb-0.5">Nuestro Espacio</p>
+                          <p className="text-carbon/70 text-xs leading-relaxed">{img.alt}</p>
                         </div>
-                      )}
+                      </div>
+                    )}
 
-                      {/* Corner badge on active */}
-                      {isActive && (
-                        <div className="absolute top-3 right-3 bg-tomato/90 backdrop-blur-sm text-white font-heading text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg">
-                          🍕
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                    {/* Corner badge on active */}
+                    {isActive && (
+                      <div className="absolute top-4 right-4 bg-tomato/90 backdrop-blur-sm text-white font-heading text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg">
+                        🍕
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Carousel dots */}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 pointer-events-auto">
+            <div className="flex items-center justify-center gap-2 mt-6">
               {CAROUSEL_IMAGES.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setActive(i)}
                   className={`h-1.5 rounded-full transition-all duration-400 ${
-                    i === active ? 'w-6 bg-queso' : 'w-2 bg-white/40 hover:bg-white/60'
+                    i === active ? 'w-6 bg-tomato' : 'w-2 bg-carbon/15 hover:bg-carbon/25'
                   }`}
                   aria-label={`Imagen ${i + 1}`}
                 />
