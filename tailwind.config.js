@@ -173,6 +173,9 @@ export default {
         'bounce-subtle': 'bounceSubtle 0.4s ease-out',
         'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
       },
+      transitionDuration: {
+        400: '400ms',
+      },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0', transform: 'translateY(10px)' },

@@ -7,13 +7,13 @@ export default function PizzaPage() {
       <PizzaConfigurator />
 
       {/* CTA to full menu */}
-      <section className="bg-crema py-14 text-center px-4">
-        <p className="text-carbon/50 text-base mb-4">
+      <section className="bg-crema py-10 sm:py-12 md:py-14 text-center px-4">
+        <p className="text-carbon/50 text-sm sm:text-base mb-3 sm:mb-4">
           ¿Prefieres algo más? También tenemos hamburguesas, pastas y más.
         </p>
         <Link
           to="/menu"
-          className="inline-flex items-center gap-2 bg-carbon text-queso font-heading text-base uppercase tracking-wider px-8 py-3 rounded-xl hover:bg-carbon-700 transition-all duration-300 hover:scale-105"
+          className="inline-flex items-center gap-2 bg-carbon text-queso font-heading text-sm sm:text-base uppercase tracking-wider px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl hover:bg-carbon-700 transition-all duration-300 hover:scale-105"
         >
           Ver Menú Completo
           <svg

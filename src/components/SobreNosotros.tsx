@@ -1,4 +1,11 @@
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+
+const CAROUSEL_IMAGES = [
+  { src: '/images/experiencia-adelante.webp', alt: 'Así nos ves por fuera' },
+  { src: '/images/experiencia-atras.webp', alt: 'Así nos encuentras' },
+  { src: '/images/local.webp', alt: 'Así se siente por dentro' },
+];
 
 const highlights = [
   {
@@ -40,29 +47,121 @@ const highlights = [
 ];
 
 export default function SobreNosotros() {
+  const [active, setActive] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const next = useCallback(() => {
+    setActive((i) => (i + 1) % CAROUSEL_IMAGES.length);
+  }, []);
+
+  useEffect(() => {
+    if (isPaused) return;
+    const id = setInterval(next, 3500);
+    return () => clearInterval(id);
+  }, [isPaused, next]);
+
   return (
     <section className="bg-crema overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          {/* Image side */}
-          <div className="relative">
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-carbon/15">
-              <img
-                src="/images/local.jpeg"
-                alt="Interior de Juancho's Pizza"
-                className="w-full aspect-[4/5] object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-carbon/60 via-carbon/10 to-transparent" />
-              {/* Floating badge */}
-              <div className="absolute bottom-6 left-6 right-6">
-                <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-5 shadow-xl">
-                  <p className="font-heading text-sm tracking-[0.2em] uppercase text-tomato mb-1">Nuestro Espacio</p>
-                  <p className="text-carbon/70 text-sm leading-relaxed">
-                    Un lugar donde cada pizza cuenta una historia. Ven y vive la experiencia Juancho&apos;s.
-                  </p>
-                </div>
-              </div>
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-14 sm:py-20 md:py-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
+          {/* Image side — 3D stacked carousel */}
+          <div
+            className="relative"
+            style={{ perspective: '1200px' }}
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={() => setIsPaused(true)}
+            onTouchEnd={() => {
+              setTimeout(() => setIsPaused(false), 3000);
+            }}
+          >
+            {/* 3D stacked carousel cards */}
+            <div
+              className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden"
+              style={{ transformStyle: 'preserve-3d' }}
+            >
+              {CAROUSEL_IMAGES.map((img, i) => {
+                const offset = (i - active + CAROUSEL_IMAGES.length) % CAROUSEL_IMAGES.length;
+                const isActive = offset === 0;
+                const isPrev = offset === CAROUSEL_IMAGES.length - 1;
+
+                let translateZ = 0;
+                let rotateY = 0;
+                let translateX = 0;
+                let opacity = 0;
+                let scale = 1;
+
+                if (isActive) {
+                  translateZ = 30;
+                  rotateY = 0;
+                  translateX = 0;
+                  opacity = 1;
+                  scale = 1;
+                } else if (isPrev) {
+                  translateZ = -15;
+                  rotateY = -6;
+                  translateX = -10;
+                  opacity = 0.6;
+                  scale = 0.93;
+                } else {
+                  translateZ = -30;
+                  rotateY = 6;
+                  translateX = 10;
+                  opacity = 0.3;
+                  scale = 0.86;
+                }
+
+                return (
+                  <div
+                    key={img.src}
+                    className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl shadow-carbon/20 transition-all duration-700 ease-out"
+                    style={{
+                      transform: `translateZ(${translateZ}px) rotateY(${rotateY}deg) translateX(${translateX}%) scale(${scale})`,
+                      opacity,
+                      zIndex: isActive ? 20 : isPrev ? 10 : 5,
+                    }}
+                  >
+                    <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-carbon/60 via-carbon/10 to-transparent" />
+
+                    {/* Label */}
+                    {isActive && (
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <div className="bg-white/95 backdrop-blur-sm rounded-xl px-4 py-3 shadow-xl inline-block">
+                          <p className="font-heading text-xs tracking-[0.2em] uppercase text-tomato mb-0.5">
+                            Nuestro Espacio
+                          </p>
+                          <p className="text-carbon/70 text-xs leading-relaxed">{img.alt}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Corner badge on active */}
+                    {isActive && (
+                      <div className="absolute top-4 right-4 bg-tomato/90 backdrop-blur-sm text-white font-heading text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg">
+                        🍕
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+
+            {/* Carousel dots */}
+            <div className="flex items-center justify-center gap-2 mt-6">
+              {CAROUSEL_IMAGES.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActive(i)}
+                  className={`h-3 min-w-[32px] rounded-full transition-all duration-400 ${
+                    i === active ? 'w-8 bg-tomato' : 'w-3 bg-carbon/15 hover:bg-carbon/25'
+                  }`}
+                  aria-label={`Imagen ${i + 1}`}
+                  aria-current={i === active ? 'true' : undefined}
+                />
+              ))}
+            </div>
+
             {/* Decorative elements */}
             <div className="absolute -top-4 -left-4 w-24 h-24 bg-tomato/10 rounded-2xl -z-10 rotate-6" />
             <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-queso/10 rounded-2xl -z-10 -rotate-3" />
@@ -78,13 +177,13 @@ export default function SobreNosotros() {
               <br />
               <span className="text-tomato">una experiencia</span>
             </h2>
-            <p className="text-carbon/60 text-lg leading-relaxed mb-10 max-w-lg">
+            <p className="text-carbon/60 text-base sm:text-lg leading-relaxed mb-6 sm:mb-10 max-w-lg">
               En Juancho&apos;s Pizza nació del amor por la pizza artesanal y las comidas rápidas con sabor casero. Cada
               ingrediente es seleccionado con cuidado, cada receta lleva nuestra firma.
             </p>
 
             {/* Highlights */}
-            <div className="space-y-5 mb-10">
+            <div className="space-y-3 sm:space-y-5 mb-6 sm:mb-10">
               {highlights.map((h) => (
                 <div
                   key={h.title}

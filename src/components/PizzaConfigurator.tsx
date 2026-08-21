@@ -67,15 +67,19 @@ const PizzaConfigurator: React.FC = () => {
 
   const handleAddToCart = useCallback(() => {
     if (!sizeInfo || selectedFlavors.size === 0) return;
-    const uniqueId = `pizza-${sizeInfo.id}-${Date.now()}`;
+    const flavorIds = PIZZA_FLAVORS.filter((f) => selectedFlavors.has(f.id))
+      .map((f) => f.id)
+      .sort()
+      .join('-');
+    const deterministicId = `pizza-${sizeInfo.id}-${flavorIds}`;
     addItem({
-      id: uniqueId,
+      id: deterministicId,
       name: `Pizza ${sizeInfo.label} (${flavorNames.join(' + ')})`,
       price: sizeInfo.price,
       details: flavorNames.join(' + '),
     });
     setToast(true);
-  }, [sizeInfo, flavorNames, addItem, selectedFlavors]);
+  }, [sizeInfo, flavorNames, selectedFlavors, addItem]);
 
   useEffect(() => {
     if (!toast) return;
@@ -85,7 +89,7 @@ const PizzaConfigurator: React.FC = () => {
 
   return (
     <section id="crea-tu-pizza" className="bg-carbon min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 py-12">
+      <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10 md:py-12">
         {/* Header */}
         <div className="text-center mb-10">
           <h2 className="font-heading text-5xl md:text-6xl text-queso mb-3 tracking-wider">CREA TU PIZZA</h2>
@@ -143,7 +147,7 @@ const PizzaConfigurator: React.FC = () => {
           <div className="lg:col-span-2 order-1 lg:order-none">
             <div className="lg:sticky lg:top-8">
               <div className="bg-crema/5 backdrop-blur-sm rounded-3xl p-6 border border-crema/10">
-                <div className="w-72 h-80 md:w-80 md:h-[22rem] mx-auto transition-transform duration-500 hover:scale-105">
+                <div className="w-56 h-64 sm:w-72 sm:h-80 md:w-80 md:h-[22rem] mx-auto transition-transform duration-500 hover:scale-105">
                   <ChefMascot
                     selectedFlavors={Array.from(selectedFlavors)}
                     flavorIcons={FLAVOR_ICONS}

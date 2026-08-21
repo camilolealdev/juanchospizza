@@ -4,7 +4,6 @@ import { UserRole, GastroModule, LocationId } from './types';
 import AdminLayout from './components/AdminLayout';
 import CustomerSite from './components/CustomerSite';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
-import { CartProvider } from './context/CartContext';
 import TrackOrderModal from './components/TrackOrderModal';
 import { useWebSocket } from './hooks/useWebSocket';
 import api, { AUTH_UNAUTHORIZED_EVENT, getStoredRole, getStoredUsername, setAuthSession } from './services/api';
@@ -286,67 +285,65 @@ const App: React.FC = () => {
 
   return (
     <MotionConfig reducedMotion="user">
-      <CartProvider>
-        <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
-          {showLogin && !isAuthenticated && (
-            <Suspense fallback={null}>
-              <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />
-            </Suspense>
-          )}
+      <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
+        {showLogin && !isAuthenticated && (
+          <Suspense fallback={null}>
+            <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />
+          </Suspense>
+        )}
 
-          {showTrackOrder && <TrackOrderModal onClose={() => setShowTrackOrder(false)} />}
+        {showTrackOrder && <TrackOrderModal onClose={() => setShowTrackOrder(false)} />}
 
-          {isStaffAdmin && (
-            <div className="fixed inset-0 z-[9998] animate-fade-in">
-              <AdminLayout
-                module={gastroModule}
-                onModuleChange={navigateToModule}
-                userName={ROLE_DISPLAY_NAMES[role] || role}
-                userRole={role}
-                onLogout={logout}
-                locationId={selectedLocation}
-                onLocationChange={setSelectedLocation}
-              >
-                <Suspense
-                  fallback={
-                    <div className="p-10 text-stone-500 text-sm font-bold uppercase tracking-widest">Cargando...</div>
-                  }
-                >
-                  {renderGastroModule()}
-                </Suspense>
-              </AdminLayout>
-            </div>
-          )}
-
-          {!isStaffAdmin && (
-            <BrowserRouter>
+        {isStaffAdmin && (
+          <div className="fixed inset-0 z-[9998] animate-fade-in">
+            <AdminLayout
+              module={gastroModule}
+              onModuleChange={navigateToModule}
+              userName={ROLE_DISPLAY_NAMES[role] || role}
+              userRole={role}
+              onLogout={logout}
+              locationId={selectedLocation}
+              onLocationChange={setSelectedLocation}
+            >
               <Suspense
                 fallback={
-                  <div className="min-h-screen bg-crema flex items-center justify-center">
-                    <div className="text-center">
-                      <span className="text-4xl block mb-3">🍕</span>
-                      <p className="font-heading text-lg text-carbon/50 uppercase tracking-wider">Cargando...</p>
-                    </div>
-                  </div>
+                  <div className="p-10 text-stone-500 text-sm font-bold uppercase tracking-widest">Cargando...</div>
                 }
               >
-                <Routes>
-                  <Route element={<CustomerSite />}>
-                    <Route index element={<HomePage />} />
-                    <Route path="pizza" element={<PizzaPage />} />
-                    <Route path="menu" element={<MenuPage />} />
-                    <Route path="domicilios" element={<DomiciliosPage />} />
-                    <Route path="politica-de-privacidad" element={<LegalPage />} />
-                    <Route path="terminos-y-condiciones" element={<LegalPage />} />
-                    <Route path="eliminacion-de-datos" element={<LegalPage />} />
-                    <Route path="*" element={<HomePage />} />
-                  </Route>
-                </Routes>
+                {renderGastroModule()}
               </Suspense>
-            </BrowserRouter>
-          )}
-        </AuthContext.Provider>
-      </CartProvider>
+            </AdminLayout>
+          </div>
+        )}
+
+        {!isStaffAdmin && (
+          <BrowserRouter>
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-crema flex items-center justify-center">
+                  <div className="text-center">
+                    <span className="text-4xl block mb-3">🍕</span>
+                    <p className="font-heading text-lg text-carbon/50 uppercase tracking-wider">Cargando...</p>
+                  </div>
+                </div>
+              }
+            >
+              <Routes>
+                <Route element={<CustomerSite />}>
+                  <Route index element={<HomePage />} />
+                  <Route path="pizza" element={<PizzaPage />} />
+                  <Route path="menu" element={<MenuPage />} />
+                  <Route path="domicilios" element={<DomiciliosPage />} />
+                  <Route path="politica-de-privacidad" element={<LegalPage />} />
+                  <Route path="terminos-y-condiciones" element={<LegalPage />} />
+                  <Route path="eliminacion-de-datos" element={<LegalPage />} />
+                  <Route path="*" element={<HomePage />} />
+                </Route>
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        )}
+      </AuthContext.Provider>
     </MotionConfig>
   );
 };
