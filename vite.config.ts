@@ -39,6 +39,15 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          // generateSW registra un NavigationRoute("index.html") SIEMPRE,
+          // aparte de runtimeCaching -- sin este denylist, visitar /api/* como
+          // navegación de documento (pegar la URL en la barra del navegador)
+          // lo interceptaba el service worker y servía el shell cacheado en
+          // vez de dejar pasar la request al servidor (bug real detectado
+          // 2026-08-21: /api/menu "no aparecía nada, solo el sitio viejo").
+          // No afecta al fetch() real de la app -- ese nunca tiene mode:
+          // 'navigate', así que nunca pasaba por NavigationRoute.
+          navigateFallbackDenylist: [/^\/api\//],
           // recharts (~363 KB) se excluye del precache: es un chunk dinámico
           // que solo se descarga cuando una vista con gráficos lo importa
           // (useLazyCharts). El personal que nunca abre Finanzas/Dashboard
