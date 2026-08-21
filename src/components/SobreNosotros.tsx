@@ -5,6 +5,7 @@ const CAROUSEL_IMAGES = [
   { src: '/images/experiencia-adelante.webp', alt: 'Así nos ves por fuera' },
   { src: '/images/experiencia-atras.webp', alt: 'Así nos encuentras' },
   { src: '/images/local.webp', alt: 'Así se siente por dentro' },
+  { src: '/images/local-nemo.webp', alt: 'Nuestro local en Nemocón' },
 ];
 
 const highlights = [
@@ -61,7 +62,7 @@ export default function SobreNosotros() {
   }, [isPaused, next]);
 
   return (
-    <section className="bg-crema overflow-hidden">
+    <section className="bg-crema overflow-hidden w-full max-w-full">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-14 sm:py-20 md:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
           {/* Image side — 3D stacked carousel */}

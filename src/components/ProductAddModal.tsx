@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MenuItem, formatPrice, getProductImage, BEBIDAS_ADDON, PAPAS_ADDON } from '../data/menu-data';
+import { MenuItem, formatPrice, getProductImage, BEBIDAS_ADDON, PAPAS_ADDON, COMBO_GASEOSAS } from '../data/menu-data';
 import { useCartStore } from '../store/cartStore';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { lockBodyScroll, unlockBodyScroll } from '../utils/useBodyScrollLock';
@@ -15,6 +15,8 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
   const [addonPapas, setAddonPapas] = useState(false);
   const [addonBebida, setAddonBebida] = useState('');
   const [isCombo, setIsCombo] = useState(false);
+  const [comboBebida, setComboBebida] = useState('combo-gaseosa-500');
+  const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
   const addItem = useCartStore((s) => s.addItem);
@@ -24,6 +26,8 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
       setAddonPapas(false);
       setAddonBebida('');
       setIsCombo(false);
+      setComboBebida('combo-gaseosa-500');
+      setSelectedVariantIdx(0);
       setQuantity(1);
       setNotes('');
     }
@@ -50,38 +54,63 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
     item.category === 'lasanas' ||
     item.category === 'spaguettis' ||
     item.category === 'especiales';
-  const canCombo = isPerro && !!item.priceCombo;
+  const hasVariants = item.variants && item.variants.length > 0;
+  const canCombo = !!item.priceCombo;
 
+  // Base price: variant > combo > default
   let basePrice = item.price;
-  if (canCombo && isCombo) {
+  if (hasVariants) {
+    basePrice = item.variants![selectedVariantIdx].price;
+  } else if (canCombo && isCombo) {
     basePrice = item.priceCombo ?? item.price;
   }
 
+  // Combo extra cost (selected gaseosa upgrade if any)
+  let comboExtra = 0;
+  if (canCombo && isCombo) {
+    const selected = COMBO_GASEOSAS.find((g) => g.id === comboBebida);
+    comboExtra = selected?.price ?? 0;
+  }
+
+  // Individual add-ons (only when combo is OFF)
   let addonsTotal = 0;
   const addonNames: string[] = [];
-  if (addonPapas) {
-    addonsTotal += PAPAS_ADDON.price;
-    addonNames.push(PAPAS_ADDON.name);
-  }
-  if (addonBebida) {
-    const b = BEBIDAS_ADDON.find((x) => x.id === addonBebida);
-    if (b) {
-      addonsTotal += b.price;
-      addonNames.push(b.name);
+  if (!isCombo) {
+    if (addonPapas) {
+      addonsTotal += PAPAS_ADDON.price;
+      addonNames.push(PAPAS_ADDON.name);
+    }
+    if (addonBebida) {
+      const b = BEBIDAS_ADDON.find((x) => x.id === addonBebida);
+      if (b) {
+        addonsTotal += b.price;
+        addonNames.push(b.name);
+      }
     }
   }
 
-  const unitPrice = basePrice + addonsTotal;
+  const unitPrice = basePrice + comboExtra + addonsTotal;
   const total = unitPrice * quantity;
 
   const detailsParts: string[] = [];
-  if (canCombo && isCombo) detailsParts.push('Combo');
+  if (hasVariants) detailsParts.push(item.variants![selectedVariantIdx].label);
+  if (canCombo && isCombo) {
+    detailsParts.push('Combo (Papas + Bebida)');
+    const sel = COMBO_GASEOSAS.find((g) => g.id === comboBebida);
+    if (sel && sel.price === 0) detailsParts.push(sel.name);
+    else if (sel) detailsParts.push(`+ ${sel.name}`);
+  }
   detailsParts.push(...addonNames);
   const details = detailsParts.join(' + ');
 
   const handleAdd = () => {
+    const cartId = hasVariants
+      ? `${item.id}-${item.variants![selectedVariantIdx].label.toLowerCase()}`
+      : isCombo
+        ? `${item.id}-combo`
+        : item.id;
     addItem({
-      id: item.id,
+      id: cartId,
       name: item.name,
       price: unitPrice,
       category: item.category,
@@ -128,10 +157,33 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
           {/* Description */}
           {item.description && <p className="text-carbon/60 text-sm leading-relaxed">{item.description}</p>}
 
-          {/* Perro combo toggle */}
+          {/* Variant selector (Fresas Biscolatta, Cono Fresas, etc.) */}
+          {hasVariants && (
+            <div>
+              <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">Tamaño</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {item.variants!.map((v, i) => (
+                  <button
+                    key={v.label}
+                    onClick={() => setSelectedVariantIdx(i)}
+                    className={`rounded-xl p-3 text-left border-2 transition-all ${
+                      selectedVariantIdx === i
+                        ? 'border-tomato bg-tomato/5 shadow-sm'
+                        : 'border-carbon/10 hover:border-carbon/20'
+                    }`}
+                  >
+                    <span className="font-heading text-sm text-carbon">{v.label}</span>
+                    <p className="font-heading text-sm text-tomato mt-0.5">{formatPrice(v.price)}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Combo toggle */}
           {canCombo && (
             <div>
-              <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">Presentación</h4>
+              <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">¿Armamos combo?</h4>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setIsCombo(false)}
@@ -140,7 +192,9 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
                   }`}
                 >
                   <span className="font-heading text-sm text-carbon">Individual</span>
-                  <p className="font-heading text-sm text-tomato mt-0.5">{formatPrice(item.price)}</p>
+                  <p className="font-heading text-sm text-tomato mt-0.5">
+                    {formatPrice(hasVariants ? item.variants![selectedVariantIdx].price : item.price)}
+                  </p>
                 </button>
                 <button
                   onClick={() => setIsCombo(true)}
@@ -152,14 +206,45 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
                   <p className="font-heading text-sm text-tomato mt-0.5">
                     {formatPrice(item.priceCombo ?? item.price)}
                   </p>
-                  <p className="text-[11px] text-albahaca">Papas + bebida</p>
+                  <p className="text-xs text-albahaca">Papas + Bebida</p>
                 </button>
               </div>
             </div>
           )}
 
-          {/* Add-ons */}
-          {(canAddPapas || canAddBebida) && (
+          {/* Combo gaseosa selector — only when combo is ON */}
+          {canCombo && isCombo && (
+            <div>
+              <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">
+                Tu bebida en el combo
+              </h4>
+              <div className="space-y-1">
+                {COMBO_GASEOSAS.map((g) => (
+                  <label
+                    key={g.id}
+                    className="flex items-center gap-3 py-2.5 px-3 rounded-xl border border-carbon/10 hover:bg-white cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="radio"
+                      name="combo-bebida"
+                      checked={comboBebida === g.id}
+                      onChange={() => setComboBebida(g.id)}
+                      className="w-4 h-4 accent-tomato flex-shrink-0"
+                    />
+                    <span className="text-sm text-carbon flex-1">{g.name}</span>
+                    {g.price === 0 ? (
+                      <span className="text-xs text-albahaca font-medium">Incluida</span>
+                    ) : (
+                      <span className="text-xs text-carbon/50">+{formatPrice(g.price)}</span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Individual add-ons — only when combo is OFF */}
+          {!isCombo && (
             <div>
               <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">¿Algo más?</h4>
               <div className="space-y-2">
