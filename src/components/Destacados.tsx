@@ -39,7 +39,7 @@ export default function Destacados() {
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   loading="lazy"
                   onError={(e) => {
-                    e.currentTarget.src = '/images/menu/pizza-1.jpg';
+                    e.currentTarget.src = '/images/menu/pizza-1.webp';
                   }}
                 />
                 {/* Default gradient */}

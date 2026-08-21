@@ -187,7 +187,7 @@ function ProductCard({
           className="w-full h-full object-cover"
           loading="lazy"
           onError={(e) => {
-            e.currentTarget.src = '/images/menu/pizza-1.jpg';
+            e.currentTarget.src = '/images/menu/pizza-1.webp';
           }}
         />
         {hasPopular && (
