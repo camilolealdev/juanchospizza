@@ -23,6 +23,8 @@ export interface MenuItem {
   priceCombo?: number;
   tags?: string[];
   image?: string;
+  subcat?: string;
+  variants?: { label: string; price: number }[];
 }
 
 export interface Category {
@@ -66,6 +68,7 @@ export const CATEGORIES: Category[] = [
   { id: 'perros-calientes', name: 'Perros Calientes', icon: '🌭' },
   { id: 'especiales', name: 'Especiales', icon: '⭐' },
   { id: 'bebidas', name: 'Bebidas', icon: '🥤' },
+  { id: 'postres', name: 'Postres', icon: '🍦' },
 ];
 
 export const MENU_ITEMS: MenuItem[] = [
@@ -572,6 +575,7 @@ const CATEGORY_IMAGES: Record<string, string[]> = {
   spaguettis: ['spaghetti-1.webp', 'spaghetti-2.webp'],
   especiales: ['steak-1.webp', 'steak-2.webp'],
   bebidas: ['drink-1.webp', 'drink-2.webp', 'drink-3.webp'],
+  postres: ['pizza-1.webp'],
 };
 
 const ITEM_IMAGE: Record<string, string> = {
@@ -631,6 +635,25 @@ const ITEM_IMAGE: Record<string, string> = {
   'gaseosa-250-plastico': 'gaseosa-250-plastico.webp',
   'hit-litro': 'hit-litro.webp',
   'gaseosa-250-vidrio': 'gaseosa-250-vidrio.webp',
+  // Postres — heladería real
+  'hel-sencillo': 'hel-sencillo.webp',
+  'hel-doble': 'hel-doble.webp',
+  'hel-triple': 'hel-triple.webp',
+  'waf-sencillo': 'waf-sencillo.webp',
+  'waf-achocolatado': 'waf-achocolatado.webp',
+  'esp-banana-split': 'esp-banana-split.webp',
+  'ens-junior': 'ens-junior.webp',
+  'ens-sencilla': 'ens-sencilla.webp',
+  'ens-mixta': 'ens-mixta.webp',
+  'ens-mega': 'ens-mega.webp',
+  'malt-clasica': 'malt-clasica.webp',
+  'can-tradicional': 'can-tradicional.webp',
+  'can-chococanasta': 'can-chococanasta.webp',
+  'fre-sencillas': 'fre-sencillas.webp',
+  'fre-biscolatta': 'fre-biscolatta.webp',
+  'oblea-tradicional': 'oblea-tradicional.webp',
+  'oblea-especial': 'oblea-especial.webp',
+  'mer-juancho': 'mer-juancho.webp',
 };
 
 export function getProductImage(category: string, itemId: string): string {
@@ -649,6 +672,13 @@ export const BEBIDAS_ADDON = [
   { id: 'gaseosa-500', name: 'Gaseosa 500ml', price: 4000 },
   { id: 'hit-litro', name: 'Hit de Litro', price: 5500 },
   { id: 'agua-grande', name: 'Agua Grande', price: 3000 },
+];
+
+export const COMBO_GASEOSAS = [
+  { id: 'combo-gaseosa-500', name: 'Gaseosa 500ml', price: 0 },
+  { id: 'combo-gaseosa-250', name: 'Gaseosa 250ml', price: 0 },
+  { id: 'combo-hit-litro', name: 'Hit de Litro', price: 1500 },
+  { id: 'combo-agua', name: 'Agua Grande', price: 0 },
 ];
 
 // ─── WHATSAPP MESSAGE BUILDER ────────────────────────────────────────────────

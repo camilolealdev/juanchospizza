@@ -5,6 +5,7 @@ const CAROUSEL_IMAGES = [
   { src: '/images/experiencia-adelante.webp', alt: "Así nos ves por fuera" },
   { src: '/images/experiencia-atras.webp', alt: "Así nos encuentras" },
   { src: '/images/local.webp', alt: "Así se siente por dentro" },
+  { src: '/images/local-nemo.webp', alt: "Nuestro local en Nemocón" },
 ];
 
 const highlights = [

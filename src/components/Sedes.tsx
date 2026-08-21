@@ -44,7 +44,7 @@ const trustItems = [
 const features = [
   { emoji: '📦', label: 'Domicilios Rápidos' },
   { emoji: '🕐', label: '4:00 PM - 10:00 PM' },
-  { emoji: '🚴', label: 'Envío Gratis' },
+  { emoji: '🚴', label: 'Domicilio según zona' },
 ];
 
 const Sedes: React.FC = () => {
