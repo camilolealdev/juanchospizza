@@ -374,7 +374,19 @@ export function requireSameLocation(getLocationId) {
   return (req, res, next) => {
     if (req.auth?.role === 'ADMIN' || !req.auth?.locationId) return next();
     const targetLocationId = getLocationId(req);
-    if (targetLocationId && targetLocationId !== req.auth.locationId) {
+    if (!targetLocationId) {
+      // Auditoría ALTA #1 (2026-08-18) / MEDIA original: si el caller no manda
+      // locationId, el chequeo se saltaba entero -- un empleado de Nemocón
+      // podía tocar/listar datos de Zipaquirá con solo omitir el query/body
+      // param. Ahora, en vez de dejar pasar sin filtro, se fuerza la sede del
+      // propio token como default en query y body (los 15 call-sites de
+      // requireSameLocation leen uno u otro), así el handler downstream queda
+      // scoped aunque el caller no la haya mandado.
+      if (req.query && req.query.locationId === undefined) req.query.locationId = req.auth.locationId;
+      if (req.body && req.body.locationId === undefined) req.body.locationId = req.auth.locationId;
+      return next();
+    }
+    if (targetLocationId !== req.auth.locationId) {
       return res.status(403).json({ error: 'No autorizado para operar en esta sede' });
     }
     next();

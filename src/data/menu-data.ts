@@ -555,26 +555,26 @@ export const SEDES = {
   nemocon: {
     name: 'Nemocón',
     address: 'Cra 6 No. 5-40, Vía Principal, Nemocón, Cundinamarca',
-    phone: '310 861 3690',
-    phoneLink: 'https://wa.me/573108613690',
-    telLink: 'tel:+573108613690',
+    phone: '311 707 4843',
+    phoneLink: 'https://wa.me/573117074843',
+    telLink: 'tel:+573117074843',
     coverage: 'Nemocón y veredas',
     mapsQuery: 'Cra+6+No.+5-40+Nemoc%C3%B3n+Cundinamarca+Colombia',
   },
   zipaquira: {
     name: 'Zipaquirá',
     address: 'Diagonal 4 #29-10, Barrio Las Villas, Zipaquirá, Cundinamarca',
-    phone: '322 769 9056',
-    phoneLink: 'https://wa.me/573227699056',
-    telLink: 'tel:+573227699056',
+    phone: '314 473 7097',
+    phoneLink: 'https://wa.me/573144737097',
+    telLink: 'tel:+573144737097',
     coverage: 'Zipaquirá urbano',
     mapsQuery: 'Diagonal+4+%2329-10+Zipaquir%C3%A1+Cundinamarca+Colombia',
   },
 };
 
 export const WHATSAPP_NUMBERS = {
-  nemocon: '573108613690',
-  zipaquira: '573227699056',
+  nemocon: '573117074843',
+  zipaquira: '573144737097',
 };
 
 export function formatPrice(price: number): string {

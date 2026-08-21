@@ -48,7 +48,7 @@ const socialLinks = [
   },
   {
     name: 'WhatsApp',
-    href: 'https://wa.me/573108613690',
+    href: 'https://wa.me/573117074843',
     baseColor: 'text-[#25D366]',
     hoverBg: 'hover:bg-[#25D366]',
     icon: (
@@ -165,20 +165,20 @@ export default function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="tel:+573108613690"
+                  href="tel:+573117074843"
                   className="flex items-center gap-3 text-sm hover:text-queso transition-colors group/link"
                 >
                   <span className="w-2 h-2 rounded-full bg-albahaca/60 flex-shrink-0" />
-                  <span className="font-medium text-crema/80 group-hover/link:text-queso">310 861 3690</span>
+                  <span className="font-medium text-crema/80 group-hover/link:text-queso">311 707 4843</span>
                 </a>
               </li>
               <li>
                 <a
-                  href="tel:+573227699056"
+                  href="tel:+573144737097"
                   className="flex items-center gap-3 text-sm hover:text-queso transition-colors group/link"
                 >
                   <span className="w-2 h-2 rounded-full bg-albahaca/60 flex-shrink-0" />
-                  <span className="font-medium text-crema/80 group-hover/link:text-queso">322 769 9056</span>
+                  <span className="font-medium text-crema/80 group-hover/link:text-queso">314 473 7097</span>
                 </a>
               </li>
             </ul>

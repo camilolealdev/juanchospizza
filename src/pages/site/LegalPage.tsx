@@ -25,12 +25,12 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
             </li>
             <li>
               <strong>Teléfonos:</strong>{' '}
-              <a href="tel:+573108613690" className="text-tomato hover:underline">
-                310 861 3690
+              <a href="tel:+573117074843" className="text-tomato hover:underline">
+                311 707 4843
               </a>{' '}
               ·{' '}
-              <a href="tel:+573227699056" className="text-tomato hover:underline">
-                322 769 9056
+              <a href="tel:+573144737097" className="text-tomato hover:underline">
+                314 473 7097
               </a>
             </li>
             <li>
@@ -140,12 +140,12 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
             <li>
               <strong>WhatsApp:</strong>{' '}
               <a
-                href="https://wa.me/573108613690"
+                href="https://wa.me/573117074843"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-tomato hover:underline"
               >
-                310 861 3690
+                311 707 4843
               </a>
             </li>
             <li>
@@ -176,12 +176,12 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
                 </a>
               </li>
               <li>
-                <a href="tel:+573108613690" className="text-tomato hover:underline">
-                  310 861 3690
+                <a href="tel:+573117074843" className="text-tomato hover:underline">
+                  311 707 4843
                 </a>{' '}
                 ·{' '}
-                <a href="tel:+573227699056" className="text-tomato hover:underline">
-                  322 769 9056
+                <a href="tel:+573144737097" className="text-tomato hover:underline">
+                  314 473 7097
                 </a>
               </li>
               <li>Autoridad de control: Superintendencia de Industria y Comercio</li>
@@ -231,8 +231,8 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
             </li>
             <li>
               <strong>Contacto:</strong>{' '}
-              <a href="tel:+573108613690" className="text-tomato hover:underline">
-                310 861 3690
+              <a href="tel:+573117074843" className="text-tomato hover:underline">
+                311 707 4843
               </a>{' '}
               ·{' '}
               <a href="mailto:contacto@juanchospizza.com" className="text-tomato hover:underline">
@@ -297,12 +297,12 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
           <p className="text-carbon/70 leading-relaxed">
             Si algo no está perfecto — producto incorrecto, incompleto o en mal estado — escríbenos por WhatsApp al{' '}
             <a
-              href="https://wa.me/573108613690"
+              href="https://wa.me/573117074843"
               target="_blank"
               rel="noopener noreferrer"
               className="text-tomato hover:underline"
             >
-              310 861 3690
+              311 707 4843
             </a>{' '}
             y lo resolvemos.
           </p>
@@ -322,12 +322,12 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
           <div className="bg-crema rounded-xl p-6">
             <ul className="list-disc list-inside text-carbon/70 space-y-1 ml-4">
               <li>
-                <a href="tel:+573108613690" className="text-tomato hover:underline">
-                  310 861 3690
+                <a href="tel:+573117074843" className="text-tomato hover:underline">
+                  311 707 4843
                 </a>{' '}
                 ·{' '}
-                <a href="tel:+573227699056" className="text-tomato hover:underline">
-                  322 769 9056
+                <a href="tel:+573144737097" className="text-tomato hover:underline">
+                  314 473 7097
                 </a>
               </li>
               <li>
@@ -337,7 +337,7 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
               </li>
               <li>
                 <a
-                  href="https://wa.me/573108613690"
+                  href="https://wa.me/573117074843"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-tomato hover:underline"
@@ -387,12 +387,12 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
             <li>
               <strong>Por WhatsApp:</strong> envíanos un mensaje al{' '}
               <a
-                href="https://wa.me/573108613690?text=Hola%2C%20quiero%20solicitar%20la%20eliminaci%C3%B3n%20de%20mis%20datos%20personales"
+                href="https://wa.me/573117074843?text=Hola%2C%20quiero%20solicitar%20la%20eliminaci%C3%B3n%20de%20mis%20datos%20personales"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-tomato hover:underline"
               >
-                310 861 3690
+                311 707 4843
               </a>
             </li>
             <li>
@@ -417,7 +417,7 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
           <h2 className="font-heading text-2xl text-carbon mb-3">4. Contacto</h2>
           <div className="bg-crema rounded-xl p-6 flex flex-wrap gap-4">
             <a
-              href="https://wa.me/573108613690?text=Hola%2C%20quiero%20solicitar%20la%20eliminaci%C3%B3n%20de%20mis%20datos%20personales"
+              href="https://wa.me/573117074843?text=Hola%2C%20quiero%20solicitar%20la%20eliminaci%C3%B3n%20de%20mis%20datos%20personales"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-green-600 text-white text-sm font-heading uppercase px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
