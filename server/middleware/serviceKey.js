@@ -15,9 +15,12 @@ const VALID_SERVICES = new Map();
 // Inicializar al arranque del servidor
 export function initServiceKeys() {
   // Se pueden definir múltiples servicios: SERVICE_KEY_N8N, SERVICE_KEY_CRON, etc.
+  // ponytail: rol por integración vía env (SERVICE_ROLE_N8N/_CRON), default
+  // ADMIN por compat -- setear a un rol menos privilegiado en .env apenas
+  // se sepa qué necesita cada integración realmente (auditoría ALTA #1).
   const patterns = [
-    { env: 'SERVICE_KEY_N8N', name: 'n8n', role: 'ADMIN' },
-    { env: 'SERVICE_KEY_CRON', name: 'cron', role: 'ADMIN' },
+    { env: 'SERVICE_KEY_N8N', name: 'n8n', role: process.env.SERVICE_ROLE_N8N || 'ADMIN' },
+    { env: 'SERVICE_KEY_CRON', name: 'cron', role: process.env.SERVICE_ROLE_CRON || 'ADMIN' },
   ];
 
   VALID_SERVICES.clear();
@@ -25,7 +28,10 @@ export function initServiceKeys() {
     const key = process.env[pattern.env];
     if (key) {
       VALID_SERVICES.set(key, { name: pattern.name, role: pattern.role });
-      logger.info({ service: pattern.name, role: pattern.role }, `Service key registered: ${pattern.name} (${pattern.role})`);
+      logger.info(
+        { service: pattern.name, role: pattern.role },
+        `Service key registered: ${pattern.name} (${pattern.role})`
+      );
     }
   }
 
@@ -59,6 +65,13 @@ export function serviceKeyMiddleware(req, res, next) {
     type: 'service',
     serviceName: service.name,
   };
+
+  // ponytail: rastro de auditoría por request -- antes solo se logueaba el
+  // registro de la clave al arranque, nunca su uso (auditoría ALTA #1).
+  logger.info(
+    { service: service.name, role: service.role, method: req.method, path: req.path, ip: req.ip },
+    'Service key usada'
+  );
 
   next();
 }

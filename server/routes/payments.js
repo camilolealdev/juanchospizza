@@ -6,6 +6,7 @@ import { sendPushToPhone } from '../push.js';
 import { deliverWebhook } from '../services/webhooks.js';
 import { validate } from '../middleware/validate.js';
 import { createPaymentSchema } from '../schemas/payments.js';
+import logger from '../services/logger.js';
 
 const router = express.Router();
 
@@ -41,8 +42,17 @@ async function ensureWebhookIdempotent(pool, provider, sourceId, orderId) {
     );
     return result.rows.length > 0;
   } catch (err) {
-    console.warn(`[Idempotency] Error en check para ${provider}/${sourceId}: ${err.message}`);
-    return true; // fail-open: si la DB falla, procesar igual
+    // ponytail: verificado el call site (line ~402, `if (!result) skip`) --
+    // true acá SÍ procesa el pago, no lo pierde (auditoría ALTA #2 lo
+    // etiquetó al revés). Fail-open es la opción correcta: el 200 a Bold ya
+    // se mandó antes de esta función, así que fail-closed no dispara ningún
+    // retry, solo deja el pago del cliente sin confirmar en nuestra DB.
+    // Lo que sí faltaba era loguearlo estructurado para poder alertar.
+    logger.error(
+      { provider, sourceId, err: err.message },
+      '[Idempotency] Error en check de webhook, procesando de todos modos'
+    );
+    return true;
   }
 }
 

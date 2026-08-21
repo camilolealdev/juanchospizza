@@ -63,8 +63,8 @@ export const DIAN_CONFIG = {
       fechaAutorizacion: '2025-01-01',
       // [MANUAL] Número de resolución DIAN
       numeroResolucion: '1876000000001',
-      // [MANUAL] Clave técnica (prefijo de la numeración)
-      claveTecnica: 'FCB48B9A-4C1A-4B1A-9E7F-3F9E8C7B6A5D',
+      // [MANUAL] Clave técnica (prefijo de la numeración) -- DIAN_CLAVE_TECNICA en .env
+      claveTecnica: process.env.DIAN_CLAVE_TECNICA || 'FCB48B9A-4C1A-4B1A-9E7F-3F9E8C7B6A5D',
     },
     // [MANUAL] Ambiente: '1' (Pruebas) | '2' (Producción)
     ambiente: '1',
@@ -76,14 +76,36 @@ export const DIAN_CONFIG = {
   // INFORMACION DEL SOFTWARE / PROVEEDOR TECNOLOGICO (PSE)
   // ═══════════════════════════════════════════════════════════════
   software: {
-    // [MANUAL] ID del software (asignado por DIAN al registrar el software)
-    softwareId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    // [MANUAL] PIN del software (asignado por DIAN)
-    softwarePin: '00000000000000000000',
+    // [MANUAL] ID del software (asignado por DIAN al registrar el software) -- DIAN_SOFTWARE_ID en .env
+    softwareId: process.env.DIAN_SOFTWARE_ID || 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    // [MANUAL] PIN del software (asignado por DIAN) -- DIAN_SOFTWARE_PIN en .env
+    softwarePin: process.env.DIAN_SOFTWARE_PIN || '00000000000000000000',
     // [MANUAL] Nombre del proveedor tecnologico (ej: 'MUISCA', 'DATAICO')
-    proveedorTecnologico: 'MUISCA',
+    proveedorTecnologico: process.env.DIAN_PROVEEDOR_TECNOLOGICO || 'MUISCA',
   },
 };
+
+// ponytail: si alguien pone ambiente:'2' (Producción) sin haber reemplazado
+// los placeholders [MANUAL] vía env, la DIAN va a rechazar todo -- mejor
+// fallar el boot ahora que descubrirlo en el primer envío real (auditoría
+// ALTA #3, mismo patrón que validateConfig() en server/config.js).
+const PLACEHOLDER_SOFTWARE_PIN = '00000000000000000000';
+const PLACEHOLDER_CLAVE_TECNICA = 'FCB48B9A-4C1A-4B1A-9E7F-3F9E8C7B6A5D';
+
+export function validateDianConfig() {
+  if (DIAN_CONFIG.facturacion.ambiente !== '2') return; // pruebas: placeholders OK
+  const errors = [];
+  if (DIAN_CONFIG.software.softwarePin === PLACEHOLDER_SOFTWARE_PIN) errors.push('DIAN_SOFTWARE_PIN');
+  if (DIAN_CONFIG.facturacion.rangoNumeracion.claveTecnica === PLACEHOLDER_CLAVE_TECNICA) {
+    errors.push('DIAN_CLAVE_TECNICA');
+  }
+  if (errors.length > 0) {
+    throw new Error(
+      `[DIAN] ambiente=2 (Producción) con placeholders sin reemplazar: ${errors.join(', ')}. ` +
+        'Configurar en .env antes de desplegar.'
+    );
+  }
+}
 
 // ================================================================
 // GENERADOR DE XML (ESTRUCTURA COMPLETA)

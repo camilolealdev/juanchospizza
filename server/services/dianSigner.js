@@ -212,9 +212,23 @@ export function calcularCUFE(invoiceData) {
   const claveTecnica = process.env.DIAN_CLAVE_TECNICA || resolucion.claveTecnica || '';
 
   const cadena =
-    numFac + fecFac + horFac + nitFac + docAdq + ttlAdq + totIva + cargos +
-    descuentos + valorIva + valorOtrosImp + ivas + iva + otrosImpuestos +
-    valorTotal + nitFirmante + claveTecnica;
+    numFac +
+    fecFac +
+    horFac +
+    nitFac +
+    docAdq +
+    ttlAdq +
+    totIva +
+    cargos +
+    descuentos +
+    valorIva +
+    valorOtrosImp +
+    ivas +
+    iva +
+    otrosImpuestos +
+    valorTotal +
+    nitFirmante +
+    claveTecnica;
 
   return sha384(cadena);
 }
@@ -349,8 +363,7 @@ export function signXml(rawXml, invoiceData = {}) {
   // firmamos en producción real.
   let signedXml = rawXml
     .replace(
-      '<!-- [MANUAL] FIRMA DIGITAL XAdES-EPES -->\n' +
-        '        <sts:DianExtensions>',
+      '<!-- [MANUAL] FIRMA DIGITAL XAdES-EPES -->\n' + '        <sts:DianExtensions>',
       `${firmaXml}\n        <sts:DianExtensions>`
     )
     .replace('PENDIENTE', cufe);
@@ -358,21 +371,14 @@ export function signXml(rawXml, invoiceData = {}) {
   return { xml: signedXml, cufe, firmanteNit: cert.subject.attributes.find((a) => a.shortName === 'CN')?.value || '' };
 }
 
-// ── Bloque legacy (template) ──────────────────────────────────────────────
-// Mantenido porque otras partes del código lo referencian. En Sprint S3+
-// eliminar cuando la firma real esté validada contra sandbox.
-export const FIRMA_XML_TEMPLATE = `<!-- Plantilla legacy. Ver docs/GAPS_REMEDIATION_PLAN.md.
-     Sprint S3+: eliminación pendiente. -->`;
-
-export const CERTIFICADO_CONFIG = {
-  archivo: 'certificado.p12',
-  password: process.env.DIAN_CERT_PASSWORD || 'changeme-on-first-deploy',
-  entidad: 'ANDRES DIAZ - SF',
-};
+// ponytail: FIRMA_XML_TEMPLATE y CERTIFICADO_CONFIG (con password
+// hardcodeado 'changeme-on-first-deploy') no tenían ningún import en el
+// resto del repo -- dead code legacy, se borran en vez de parchear un
+// default inseguro que nadie usa (auditoría ALTA #3). loadCertificate()
+// arriba ya es la ruta real, lee DIAN_CERT_PASSWORD del env sin fallback.
 
 export default {
   signXml,
   calcularCUFE,
-  CERTIFICADO_CONFIG,
   reloadDianCertificate,
 };

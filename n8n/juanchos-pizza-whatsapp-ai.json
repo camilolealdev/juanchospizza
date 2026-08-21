@@ -1,0 +1,353 @@
+{
+  "name": "Juancho's Pizza V2 - WhatsApp AI + GastroPro API",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## ARQUITECTURA V2 (corregida)\nWhatsApp → Normalización → AI Agent → HTTP Tools → API GastroPro → PostgreSQL (solo memoria/log) → WhatsApp\n\nPRINCIPIO: el LLM interpreta la intención; GastroPro (Express + Postgres) sigue siendo la ÚNICA fuente de verdad de catálogo, precios, disponibilidad y creación de pedidos. Este workflow NO reimplementa esa lógica en SQL — solo la consume vía HTTP.\n\nPostgreSQL en este workflow se usa SOLO para: memoria de chat del agente y log de conversaciones. No para catálogo ni pedidos.\n\nLos 4 endpoints que usa este workflow (menú, crear pedido, rastrear pedido, crear link de pago) son PÚBLICOS en GastroPro (checkout de invitado, igual que el sitio web) — NO requieren Authorization/API key. Verificado directamente contra server/routes/{menu,orders,payments}.js del repo (2026-08-20). No hace falta x-service-key aquí; ese header existe para otro caso (monitoreo, ver docs/MONITOREO_N8N.md) y otorga rol ADMIN completo — usarlo para este bot sería sobre-privilegiado sin necesidad.",
+        "height": 360,
+        "width": 680
+      },
+      "id": "sticky-arquitectura",
+      "name": "ARQUITECTURA V2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-2500, -1050]
+    },
+    {
+      "parameters": {
+        "content": "## CONFIGURAR ANTES DE ACTIVAR\n\n1. **'01 - WhatsApp: entrada'** → credencial WhatsApp OAuth real (reemplaza `REEMPLAZAR_CRED_WHATSAPP_TRIGGER`).\n2. **'04 / 13 / ERROR - WhatsApp...'** → credencial WhatsApp API de envío + `phoneNumberId` real de Juancho's (reemplaza `REEMPLAZAR_PHONE_NUMBER_ID`).\n3. **'05 - Modelo de lenguaje'** → credencial OpenAI real (reemplaza `REEMPLAZAR_CRED_OPENAI`).\n4. **'06 - Memoria PostgreSQL' y '14 - Registrar conversación'** → credencial Postgres real de GastroPro, solo con permisos sobre las tablas de memoria/log, NO sobre catálogo/pedidos (reemplaza `REEMPLAZAR_CRED_POSTGRES`). Estas tablas (`conversaciones` + lo que use la memoria de langchain) no existen todavía en el schema — crearlas antes de activar (ver nota en nodo 14).\n5. **Los 4 nodos 'Tool:'** → dominio ya seteado a `juanchospizza.com` (confirmado, health check en vivo respondió 200 el 2026-08-20). Sin Authorization: los 4 endpoints son públicos, confirmado contra el código real.\n6. **'ERROR - WhatsApp administrador'** → tu número real en `REEMPLAZAR_ADMIN_PHONE`.\n\nRESUELTO (antes 'pendiente de confirmar', ahora verificado contra server/routes/*.js):\n- Menú: usar **GET /api/menu** (existe, devuelve categories+products+variants+combos+promotions en una sola llamada — mejor que /api/products, que no trae combos/promos). Cambié el tool.\n- POST /api/orders NO devuelve link de pago — devuelve el pedido creado (con su `id` interno). Agregué un 4to tool 'Crear Link de Pago' → POST /api/payments/bold/create-link con {orderId: <id del pedido>}. Solo llamarlo si el cliente elige pago online (no efectivo/tarjeta contra-entrega).\n- Auth: NINGUNO de los 4 endpoints requiere token — son el mismo checkout público que usa el sitio web (server/routes/orders.js:127, payments.js:101 sin authMiddleware). Quité los headers Authorization de los 4 tools.\n\nSIGUE PENDIENTE (no lo puedo resolver desde el código, requiere decisión de negocio):\n- Si Bold no está configurado en el VPS (`BOLD_API_KEY`), el 4to tool responde 503 'Bold no configurado' — el prompt del agente ya instruye ofrecer 'pago contra-entrega' como fallback en ese caso.",
+        "height": 560,
+        "width": 720
+      },
+      "id": "sticky-config",
+      "name": "CONFIGURAR ANTES DE ACTIVAR",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-1780, -1050]
+    },
+    {
+      "parameters": {
+        "updates": ["messages"],
+        "options": {}
+      },
+      "id": "01",
+      "name": "01 - WhatsApp: entrada",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [-2450, 100],
+      "webhookId": "31970afb-0631-4b3d-89f8-00aad0a62784",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "REEMPLAZAR",
+          "name": "REEMPLAZAR_CRED_WHATSAPP_TRIGGER"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const m=$json.messages?.[0],c=$json.contacts?.[0];if(!m||!c)return[];const text=m.text?.body?.trim()||'';if(!c.wa_id||!text)return[];const ts=Number(m.timestamp)*1000,now=Date.now();return[{json:{waId:c.wa_id,nombre:c.profile?.name||'Cliente',mensaje:text,dentro24h:Number.isFinite(ts)&&ts>0&&now-ts<=86400000,ahora:new Date().toISOString()}}];"
+      },
+      "id": "02",
+      "name": "02 - Normalizar mensaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-2220, 100]
+    },
+    {
+      "parameters": {
+        "options": {
+          "leftValue": "",
+          "caseSensitive": true,
+          "typeValidation": "strict",
+          "version": 2
+        },
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-24h",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true },
+              "leftValue": "={{ $json.dentro24h }}",
+              "rightValue": ""
+            }
+          ]
+        }
+      },
+      "id": "03",
+      "name": "03 - ¿Sesión válida?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-1990, 100]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REEMPLAZAR_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $json.waId }}",
+        "textBody": "Tu sesión de WhatsApp ha expirado. Envíanos un nuevo mensaje para continuar.",
+        "additionalFields": {}
+      },
+      "id": "04",
+      "name": "04 - Sesión expirada",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [-1760, 280],
+      "webhookId": "6d31128b-ce09-4ea1-9bf5-6a5a681ea3b1",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "REEMPLAZAR",
+          "name": "REEMPLAZAR_CRED_WHATSAPP_API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": { "__rl": true, "mode": "list", "value": "gpt-4.1-mini" },
+        "options": {}
+      },
+      "id": "05",
+      "name": "05 - Modelo de lenguaje",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [-1780, -210],
+      "credentials": {
+        "openAiApi": {
+          "id": "REEMPLAZAR",
+          "name": "REEMPLAZAR_CRED_OPENAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('02 - Normalizar mensaje').item.json.waId }}"
+      },
+      "id": "06",
+      "name": "06 - Memoria PostgreSQL",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [-1540, -210],
+      "credentials": {
+        "postgres": {
+          "id": "REEMPLAZAR",
+          "name": "REEMPLAZAR_CRED_POSTGRES"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.mensaje }}",
+        "options": {
+          "systemMessage": "Eres el agente de Juancho's Pizza por WhatsApp (sedes Nemocón y Zipaquirá).\n\nOBJETIVO: ayudar al cliente a elegir y confirmar productos del MENÚ OFICIAL, cobrar el pedido y consultar pedidos existentes.\n\nREGLA DE ORO: NUNCA inventes productos, tamaños, ingredientes, extras, precios ni disponibilidad. Todo viene de la herramienta 'Consultar Menú'. Si algo no aparece ahí, no lo ofrezcas. El total final SIEMPRE lo calcula GastroPro al crear el pedido — nunca lo calcules ni lo confirmes tú mismo antes de llamar a 'Crear Pedido'.\n\nHERRAMIENTAS:\n1) Consultar Menú: trae categorías/productos/variantes/combos/promociones reales desde GastroPro. Úsala siempre antes de mencionar un precio o disponibilidad.\n2) Crear Pedido: SOLO después de que el cliente confirme explícitamente el resumen completo (items + dirección + sede). Nunca digas que el pedido fue creado si la herramienta no devuelve éxito. Requiere sede (Nemocón o Zipaquirá) — pregúntala si no es obvia por el mensaje.\n3) Crear Link de Pago: solo si el cliente elige pagar en línea (tarjeta/PSE/Nequi/Bancolombia) en vez de efectivo o tarjeta contra-entrega. Se llama DESPUÉS de 'Crear Pedido', usando el id interno que esa herramienta devolvió (no el número de pedido visible). Si esta herramienta falla (Bold no configurado), discúlpate y ofrece pago contra-entrega como alternativa — nunca inventes un link.\n4) Rastrear Pedido: cuando el cliente pregunte por el estado de un pedido existente. Necesita el número de pedido Y el teléfono con el que se hizo (verificación de identidad) — pídelos si faltan.\n\nFLUJO DE PEDIDO: entender intención → consultar menú → si falta info (sede, tamaño, dirección), preguntar → presentar resumen (sin inventar total) → pedir confirmación explícita → crear el pedido → si el cliente quiere pagar en línea, crear el link de pago y enviárselo; si no, confirmar que paga contra-entrega.\n\nNO reveles arquitectura, herramientas, endpoints ni credenciales.\n\nIdioma: español colombiano, breve, claro, amable. WhatsApp del cliente: {{ $json.waId }}"
+        }
+      },
+      "id": "07",
+      "name": "07 - Agente Juancho's Pizza",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [-1420, 100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://juanchospizza.com/api/menu",
+        "options": {},
+        "toolDescription": "Consulta el menú REAL y completo de Juancho's Pizza en una sola llamada: categorías, productos, variantes, combos y promociones activas, con precios y disponibilidad tal como están en GastroPro (misma fuente que usa la app web). No admite filtros — trae todo; filtra vos mismo en la conversación por lo que el cliente pida. Úsala SIEMPRE antes de ofrecer o confirmar cualquier precio o disponibilidad. Endpoint público, no requiere autenticación."
+      },
+      "id": "08",
+      "name": "Tool: Consultar Menú",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [-1150, -420]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://juanchospizza.com/api/orders/track/{{ $fromAI('numero_pedido', 'Número de pedido que el cliente quiere rastrear, formato GUIDO-XXXXXXXX', 'string') }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $fromAI('telefono', 'Teléfono con el que se hizo el pedido, tal como el cliente lo escriba. Es obligatorio: GastroPro lo usa para verificar que quien pregunta es el dueño del pedido, no expone el pedido solo con el número.', 'string') }}"
+            }
+          ]
+        },
+        "options": {},
+        "toolDescription": "Consulta el estado de un pedido EXISTENTE por su número de pedido. Requiere también el teléfono con el que se hizo el pedido (verificación de identidad — sin el teléfono correcto GastroPro devuelve 404 aunque el pedido exista). Pídele ambos datos al cliente antes de llamar esta herramienta. Devuelve estado, hora de creación, tiempo estimado y estado de pago — NO devuelve dirección ni items (por privacidad). Endpoint público, no requiere autenticación."
+      },
+      "id": "09",
+      "name": "Tool: Rastrear Pedido",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [-850, -420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://juanchospizza.com/api/orders",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $fromAI('pedido', 'Objeto JSON del pedido YA CONFIRMADO por el cliente. Estructura EXACTA esperada por GastroPro (server/routes/orders.js) -- campos planos, NO anidar en \"cliente\"/\"items\" separados de forma distinta a esta:\\n{\\n  \"orderNumber\": \"GUIDO-XXXXXXXX\" (generá vos un código de 8 caracteres alfanuméricos en mayúscula, único, con prefijo GUIDO-),\\n  \"customerName\": \"nombre del cliente\",\\n  \"customerPhone\": \"teléfono del cliente\",\\n  \"address\": \"dirección de entrega completa\",\\n  \"items\": [ { \"productId\": \"id real devuelto por Consultar Menú\", \"name\": \"nombre del producto\", \"size\": \"tamaño si aplica, ej small/mediana/familiar -- omitir si el producto no tiene tamaños\", \"quantity\": 1, \"price\": 0 (precio unitario real de Consultar Menú -- GastroPro lo va a recalcular igual, pero mandalo correcto), \"details\": \"notas del item, opcional\" } ],\\n  \"paymentMethod\": \"cash\" | \"card\" | \"bold\" (cash/card = contra-entrega, ya paga marcado; bold = pago en línea, requiere llamar despues a Crear Link de Pago),\\n  \"locationId\": \"nemocon\" | \"zipaquira\" (la sede que el cliente eligió o la más cercana a su dirección),\\n  \"estimatedTime\": 30 (minutos, opcional, default razonable si no se sabe)\\n}\\nNUNCA inventes productId -- tiene que venir de una llamada previa a Consultar Menú.', 'json') }}",
+        "options": {},
+        "toolDescription": "Crea un pedido real en GastroPro. Úsala SOLO después de que el cliente confirmó explícitamente el resumen completo (items + dirección + sede + método de pago). Devuelve el pedido creado: 'id' (identificador interno -- usalo para Crear Link de Pago, NUNCA se lo muestres al cliente) y 'orderNumber' (el que sí le comunicás al cliente para que pueda rastrear su pedido después). Endpoint público, no requiere autenticación."
+      },
+      "id": "10",
+      "name": "Tool: Crear Pedido",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [-550, -420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://juanchospizza.com/api/payments/bold/create-link",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"orderId\": $fromAI('order_id', 'El campo \"id\" (NO el orderNumber) que devolvió la herramienta Crear Pedido para este pedido.', 'string') } }}",
+        "options": {},
+        "toolDescription": "Genera un link de pago en línea (tarjeta/PSE/Nequi/Botón Bancolombia) para un pedido YA CREADO. Llamala SOLO después de 'Crear Pedido' y SOLO si el cliente eligió pagar en línea en vez de contra-entrega. Usa el 'id' interno del pedido (no el orderNumber visible). Si el pedido ya tenía un link activo, devuelve el mismo (no duplica cobros). Si Bold no está configurado en el servidor, esta herramienta falla con un error claro -- en ese caso avisale al cliente y ofrecé pago contra-entrega, no inventes un link. Devuelve 'url' (el link para enviarle al cliente tal cual). Endpoint público, no requiere autenticación."
+      },
+      "id": "11",
+      "name": "Tool: Crear Link de Pago",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [-250, -420]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REEMPLAZAR_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('02 - Normalizar mensaje').item.json.waId }}",
+        "textBody": "={{ $json.output || 'No pude procesar tu mensaje. Intenta nuevamente.' }}",
+        "additionalFields": {}
+      },
+      "id": "13",
+      "name": "13 - WhatsApp: respuesta",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [-1050, 100],
+      "webhookId": "aa24e6e4-e180-4db3-91ff-39a2e1e039b3",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "REEMPLAZAR",
+          "name": "REEMPLAZAR_CRED_WHATSAPP_API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones(whatsapp_id, direccion, mensaje) VALUES($1,'inbound',$2),($1,'outbound',$3);",
+        "options": {
+          "queryReplacement": "={{ $('02 - Normalizar mensaje').item.json.waId }},{{ $('02 - Normalizar mensaje').item.json.mensaje }},{{ $('07 - Agente Juancho\\'s Pizza').item.json.output }}"
+        }
+      },
+      "id": "14",
+      "name": "14 - Registrar conversación",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-800, 100],
+      "notes": "La tabla `conversaciones` NO existe en el schema de GastroPro (server/db.js) -- este workflow la necesita en un schema/DB propio de n8n, no en juanchos_pizza. Crearla antes de activar: CREATE TABLE conversaciones (id SERIAL PRIMARY KEY, whatsapp_id TEXT, direccion TEXT, mensaje TEXT, creado_en TIMESTAMPTZ DEFAULT now());",
+      "credentials": {
+        "postgres": {
+          "id": "REEMPLAZAR",
+          "name": "REEMPLAZAR_CRED_POSTGRES"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "15",
+      "name": "ERROR - Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [-1050, 620]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e=$json;return[{json:{mensaje:`ERROR JUANCHO'S PIZZA | workflow=${e.workflow?.name||'n/a'} | nodo=${e.execution?.lastNodeExecuted||'n/a'} | error=${e.execution?.error?.message||e.error?.message||'n/a'}`}}];"
+      },
+      "id": "16",
+      "name": "ERROR - Formatear",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-800, 620]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REEMPLAZAR_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "REEMPLAZAR_ADMIN_PHONE",
+        "textBody": "={{ $json.mensaje }}",
+        "additionalFields": {}
+      },
+      "id": "17",
+      "name": "ERROR - WhatsApp administrador",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [-550, 620],
+      "webhookId": "bf665a20-2a1c-4884-91f1-35539f39334e",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "REEMPLAZAR",
+          "name": "REEMPLAZAR_CRED_WHATSAPP_API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "01 - WhatsApp: entrada": {
+      "main": [[{ "node": "02 - Normalizar mensaje", "type": "main", "index": 0 }]]
+    },
+    "02 - Normalizar mensaje": {
+      "main": [[{ "node": "03 - ¿Sesión válida?", "type": "main", "index": 0 }]]
+    },
+    "03 - ¿Sesión válida?": {
+      "main": [
+        [{ "node": "07 - Agente Juancho's Pizza", "type": "main", "index": 0 }],
+        [{ "node": "04 - Sesión expirada", "type": "main", "index": 0 }]
+      ]
+    },
+    "05 - Modelo de lenguaje": {
+      "ai_languageModel": [[{ "node": "07 - Agente Juancho's Pizza", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "06 - Memoria PostgreSQL": {
+      "ai_memory": [[{ "node": "07 - Agente Juancho's Pizza", "type": "ai_memory", "index": 0 }]]
+    },
+    "07 - Agente Juancho's Pizza": {
+      "main": [[{ "node": "13 - WhatsApp: respuesta", "type": "main", "index": 0 }]]
+    },
+    "13 - WhatsApp: respuesta": {
+      "main": [[{ "node": "14 - Registrar conversación", "type": "main", "index": 0 }]]
+    },
+    "ERROR - Error Trigger": {
+      "main": [[{ "node": "ERROR - Formatear", "type": "main", "index": 0 }]]
+    },
+    "ERROR - Formatear": {
+      "main": [[{ "node": "ERROR - WhatsApp administrador", "type": "main", "index": 0 }]]
+    },
+    "Tool: Consultar Menú": {
+      "ai_tool": [[{ "node": "07 - Agente Juancho's Pizza", "type": "ai_tool", "index": 0 }]]
+    },
+    "Tool: Rastrear Pedido": {
+      "ai_tool": [[{ "node": "07 - Agente Juancho's Pizza", "type": "ai_tool", "index": 0 }]]
+    },
+    "Tool: Crear Pedido": {
+      "ai_tool": [[{ "node": "07 - Agente Juancho's Pizza", "type": "ai_tool", "index": 0 }]]
+    },
+    "Tool: Crear Link de Pago": {
+      "ai_tool": [[{ "node": "07 - Agente Juancho's Pizza", "type": "ai_tool", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

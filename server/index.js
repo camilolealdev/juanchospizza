@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import logger from './services/logger.js';
 import { validateConfig } from './config.js';
+import { validateDianConfig } from './services/dianXml.js';
 import { pool, initDB } from './db.js';
 import { initPush } from './push.js';
 import { generalRateLimit, serviceRateLimit } from './middleware/rateLimit.js';
@@ -266,6 +267,7 @@ app.use(errorHandler);
 // pasarelas de pago redirigen ahí) y avisa si falta GEMINI_API_KEY (menú
 // inteligente deshabilitado). Antes estos chequeos estaban duplicados acá.
 validateConfig();
+validateDianConfig();
 
 initRedis();
 trackRedisStatus(isRedisAvailable());
