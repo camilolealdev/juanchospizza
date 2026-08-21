@@ -1,7 +1,7 @@
 import express from 'express';
 import logger from '../services/logger.js';
 import { pool } from '../db.js';
-import { authMiddleware, requireRole } from '../auth.js';
+import { authMiddleware, requireRole, requireSameLocation } from '../auth.js';
 import { sendPushToPhone } from '../push.js';
 import { sendTemplatedEmail, templates } from '../services/email.js';
 import { deliverWebhook } from '../services/webhooks.js';
@@ -13,76 +13,82 @@ import { computeVerifiedTotal, OrderPricingError } from '../services/orderPricin
 const router = express.Router();
 
 // ORDERS
-router.get('/api/orders', authMiddleware, requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'), async (req, res) => {
-  try {
-    const { status, paidOnly, locationId, page, pageSize } = req.query;
-    const conditions = [];
-    const params = [];
+router.get(
+  '/api/orders',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR', 'REPARTIDOR'),
+  requireSameLocation((req) => req.query.locationId),
+  async (req, res) => {
+    try {
+      const { status, paidOnly, locationId, page, pageSize } = req.query;
+      const conditions = [];
+      const params = [];
 
-    if (status && status !== 'all') {
-      params.push(status);
-      conditions.push(`status = $${params.length}`);
+      if (status && status !== 'all') {
+        params.push(status);
+        conditions.push(`status = $${params.length}`);
+      }
+
+      if (locationId) {
+        params.push(locationId);
+        conditions.push(`"locationId" = $${params.length}`);
+      }
+
+      // Cocina/Operador/Repartidor deben usar esto para no ver pedidos con
+      // pago online todavía sin confirmar por el webhook del proveedor.
+      // Efectivo/tarjeta (pago contra-entrega) siempre pasan, sin importar
+      // paymentStatus, porque nunca dependen de una confirmación externa.
+      // 'whatsapp' se agrega acá por el mismo motivo: ese pedido se negocia
+      // fuera de la app (el cliente paga contra-entrega o transferencia
+      // coordinada por chat), no hay webhook de proveedor que vaya a marcarlo
+      // paymentStatus='paid' -- antes de este fix quedaba paymentStatus='pending'
+      // para siempre y este filtro lo escondía de cocina/ops indefinidamente,
+      // aunque el pedido existiera en la DB.
+      if (paidOnly === 'true') {
+        conditions.push(`("paymentStatus" = 'paid' OR "paymentMethod" IN ('cash', 'card', 'whatsapp'))`);
+      }
+
+      const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
+
+      // Paginación real opcional: ?page=1&pageSize=50 → { data, total, page,
+      // pageSize, totalPages } (COUNT(*) + LIMIT/OFFSET). Sin page/pageSize →
+      // array completo con el tope deliberado de 2000 de siempre (back-compat
+      // con dashboard/reportes, que agregan client-side). El comentario
+      // original aplica a ese camino: si el volumen crece, usar paginación
+      // explícita o filtros de fecha reales, no subir el número.
+      const hasPagination = page !== undefined || pageSize !== undefined;
+      if (hasPagination) {
+        const p = Math.max(parseInt(page, 10) || 1, 1);
+        const ps = Math.min(Math.max(parseInt(pageSize, 10) || 50, 1), 500);
+        const offset = (p - 1) * ps;
+
+        const countResult = await pool.query(`SELECT COUNT(*)::int AS total FROM orders${where}`, params);
+        const total = countResult.rows[0]?.total || 0;
+
+        const result = await pool.query(
+          `SELECT * FROM orders${where} ORDER BY "createdAt" DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+          [...params, ps, offset]
+        );
+        return res.json({ data: result.rows, total, page: p, pageSize: ps, totalPages: Math.ceil(total / ps) });
+      }
+
+      let query = 'SELECT * FROM orders';
+      if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+      // Tope de seguridad -- sin esto, cada carga de dashboard/reportes trae
+      // la tabla completa y crece sin límite con el volumen de pedidos. 2000
+      // es generoso a propósito (no queremos truncar en silencio el análisis
+      // histórico de Reportes); si el negocio crece más que eso, lo correcto
+      // es usar la paginación explícita de arriba o agregar filtros de fecha
+      // reales a esta ruta, no subir el número.
+      query += ' ORDER BY "createdAt" DESC LIMIT 2000';
+
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (_e) {
+      res.status(500).json({ error: 'Error fetching orders' });
     }
-
-    if (locationId) {
-      params.push(locationId);
-      conditions.push(`"locationId" = $${params.length}`);
-    }
-
-    // Cocina/Operador/Repartidor deben usar esto para no ver pedidos con
-    // pago online todavía sin confirmar por el webhook del proveedor.
-    // Efectivo/tarjeta (pago contra-entrega) siempre pasan, sin importar
-    // paymentStatus, porque nunca dependen de una confirmación externa.
-    // 'whatsapp' se agrega acá por el mismo motivo: ese pedido se negocia
-    // fuera de la app (el cliente paga contra-entrega o transferencia
-    // coordinada por chat), no hay webhook de proveedor que vaya a marcarlo
-    // paymentStatus='paid' -- antes de este fix quedaba paymentStatus='pending'
-    // para siempre y este filtro lo escondía de cocina/ops indefinidamente,
-    // aunque el pedido existiera en la DB.
-    if (paidOnly === 'true') {
-      conditions.push(`("paymentStatus" = 'paid' OR "paymentMethod" IN ('cash', 'card', 'whatsapp'))`);
-    }
-
-    const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
-
-    // Paginación real opcional: ?page=1&pageSize=50 → { data, total, page,
-    // pageSize, totalPages } (COUNT(*) + LIMIT/OFFSET). Sin page/pageSize →
-    // array completo con el tope deliberado de 2000 de siempre (back-compat
-    // con dashboard/reportes, que agregan client-side). El comentario
-    // original aplica a ese camino: si el volumen crece, usar paginación
-    // explícita o filtros de fecha reales, no subir el número.
-    const hasPagination = page !== undefined || pageSize !== undefined;
-    if (hasPagination) {
-      const p = Math.max(parseInt(page, 10) || 1, 1);
-      const ps = Math.min(Math.max(parseInt(pageSize, 10) || 50, 1), 500);
-      const offset = (p - 1) * ps;
-
-      const countResult = await pool.query(`SELECT COUNT(*)::int AS total FROM orders${where}`, params);
-      const total = countResult.rows[0]?.total || 0;
-
-      const result = await pool.query(
-        `SELECT * FROM orders${where} ORDER BY "createdAt" DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-        [...params, ps, offset]
-      );
-      return res.json({ data: result.rows, total, page: p, pageSize: ps, totalPages: Math.ceil(total / ps) });
-    }
-
-    let query = 'SELECT * FROM orders';
-    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-    // Tope de seguridad -- sin esto, cada carga de dashboard/reportes trae
-    // la tabla completa y crece sin límite con el volumen de pedidos. 2000
-    // es generoso a propósito (no queremos truncar en silencio el análisis
-    // histórico de Reportes); si el negocio crece más que eso, lo correcto
-    // es usar la paginación explícita de arriba o agregar filtros de fecha
-    // reales a esta ruta, no subir el número.
-    query += ' ORDER BY "createdAt" DESC LIMIT 2000';
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (_e) {
-    res.status(500).json({ error: 'Error fetching orders' });
   }
-});
+);
 
 // Tracking público para clientes invitados (sin cuenta): requiere el
 // teléfono como verificación mínima ya que "orderNumber" es un número
@@ -114,11 +120,18 @@ router.get('/api/orders/:id', authMiddleware, requireRole('ADMIN', 'OPERATOR', '
   try {
     const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
 
-    if (result.rows.length > 0) {
-      res.json(result.rows[0]);
-    } else {
-      res.status(404).json({ error: 'Order not found' });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
     }
+    const order = result.rows[0];
+    // Aislamiento por sede: sin esto, un OPERATOR/REPARTIDOR podía traer
+    // por ID cualquier pedido de la otra sede (esta ruta no tenía ningún
+    // filtro de locationId). 404 en vez de 403 -- no le confirma a un
+    // empleado de otra sede que ese ID existe.
+    if (req.auth.role !== 'ADMIN' && order.locationId !== req.auth.locationId) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    res.json(order);
   } catch (_e) {
     res.status(500).json({ error: 'Error fetching order' });
   }

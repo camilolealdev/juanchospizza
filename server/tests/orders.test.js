@@ -33,12 +33,18 @@ vi.mock('../db.js', () => ({
   },
 }));
 
+const mockAuth = { role: 'ADMIN', locationId: null };
+
 vi.mock('../auth.js', () => ({
-  authMiddleware: (req, res, next) => next(),
+  authMiddleware: (req, res, next) => {
+    req.auth = mockAuth;
+    next();
+  },
   requireRole:
     (..._roles) =>
     (req, res, next) =>
       next(),
+  requireSameLocation: () => (_req, _res, next) => next(),
 }));
 
 vi.mock('../push.js', () => ({
