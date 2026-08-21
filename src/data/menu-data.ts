@@ -498,7 +498,7 @@ export const DESTACADOS = [
     name: 'Pizza Especial Juancho\'s',
     description: 'Nuestra joya de la corona. Sabor que conquista al primer bocado y te hace volver por más.',
     price: 24900,
-    image: '/images/featured.jpeg',
+    image: '/images/featured.webp',
   },
   {
     id: 'dest-lasana',

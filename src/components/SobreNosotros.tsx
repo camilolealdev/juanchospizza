@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
 const CAROUSEL_IMAGES = [
-  { src: '/images/experiencia-adelante.jpg', alt: "Así nos ves por fuera" },
-  { src: '/images/experiencia-atras.jpg', alt: "Así nos encuentras" },
-  { src: '/images/local.jpeg', alt: "Así se siente por dentro" },
+  { src: '/images/experiencia-adelante.webp', alt: "Así nos ves por fuera" },
+  { src: '/images/experiencia-atras.webp', alt: "Así nos encuentras" },
+  { src: '/images/local.webp', alt: "Así se siente por dentro" },
 ];
 
 const highlights = [

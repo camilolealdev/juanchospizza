@@ -45,7 +45,7 @@ export default function Header({ onCartClick }: HeaderProps) {
         {/* Left – Brand */}
         <Link to="/" className="flex items-center gap-2 flex-shrink-0 group" aria-label="Ir al inicio">
           <img
-            src="/images/logo.png"
+            src="/images/logo.webp"
             alt=""
             className="h-10 w-10 rounded-full object-cover ring-2 ring-queso/30 group-hover:ring-queso/60 transition-all"
             loading="eager"

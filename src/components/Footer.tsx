@@ -65,7 +65,7 @@ export default function Footer() {
           {/* Logo + Tagline — centered */}
           <div className="flex flex-col items-center text-center mb-10">
             <img
-              src="/images/logo.png"
+              src="/images/logo.webp"
               alt="Juancho's Pizza"
               className="h-24 w-24 md:h-28 md:w-28 rounded-2xl object-cover ring-4 ring-queso/25 shadow-xl shadow-queso/10 mb-5"
               loading="lazy"
