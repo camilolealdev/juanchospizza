@@ -50,8 +50,11 @@ export default function Header({ onCartClick }: HeaderProps) {
             className="h-10 w-10 rounded-full object-cover ring-2 ring-queso/30 group-hover:ring-queso/60 transition-all"
             loading="eager"
           />
-          <span className="font-heading text-xl text-queso tracking-wider uppercase leading-none">
+          <span className="font-heading text-base sm:text-xl text-queso tracking-wider uppercase leading-none hidden sm:inline">
             Juancho&apos;s Pizza
+          </span>
+          <span className="font-heading text-base text-queso tracking-wider uppercase leading-none sm:hidden">
+            JP
           </span>
         </Link>
 

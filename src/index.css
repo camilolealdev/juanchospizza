@@ -6,12 +6,19 @@
   html {
     font-family: 'Inter', sans-serif;
     scroll-padding-top: 80px;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     @apply bg-carbon text-crema antialiased;
     touch-action: manipulation;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  img {
+    -webkit-tap-highlight-color: transparent;
   }
 
   video {

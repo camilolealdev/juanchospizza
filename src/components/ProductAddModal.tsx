@@ -111,11 +111,11 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
       <div
-        className="relative bg-crema rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto animate-slide-up"
+        className="relative bg-crema rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] sm:max-h-[92vh] overflow-y-auto animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Image */}
-        <div className="relative h-44 sm:h-52 overflow-hidden rounded-t-2xl sm:rounded-t-2xl">
+        <div className="relative h-40 sm:h-44 md:h-52 overflow-hidden rounded-t-2xl sm:rounded-t-2xl">
           <img
             src={getProductImage(item.category, item.id)}
             alt={item.name}
@@ -139,7 +139,7 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
           </div>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-4 sm:p-5 space-y-4 sm:space-y-5">
           {/* Description */}
           {item.description && (
             <p className="text-carbon/60 text-sm leading-relaxed">{item.description}</p>

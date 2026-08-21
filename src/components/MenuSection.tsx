@@ -45,14 +45,14 @@ const MenuSection: React.FC = () => {
   const isSearching = searchResults !== null;
 
   return (
-    <section id="menu" className="relative bg-gradient-to-b from-crema via-crema to-crema/95 py-20">
+    <section id="menu" className="relative bg-gradient-to-b from-crema via-crema to-crema/95 py-12 sm:py-16 md:py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Heading */}
         <div className="text-center mb-12">
-          <span className="inline-block mb-3 px-4 py-1.5 rounded-full bg-carbon/5 text-carbon/60 text-xs font-body font-semibold tracking-widest uppercase">
+          <span className="inline-block mb-2 sm:mb-3 px-3 sm:px-4 py-1.5 rounded-full bg-carbon/5 text-carbon/60 text-[10px] sm:text-xs font-body font-semibold tracking-widest uppercase">
             🍽️ Descubre nuestro sabor
           </span>
-          <h2 className="font-heading text-5xl md:text-6xl text-carbon mb-4">
+          <h2 className="font-heading text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-carbon mb-4">
             Nuestro Menú
           </h2>
           <div className="w-24 h-1 bg-gradient-to-r from-queso to-tomato mx-auto rounded-full" />

@@ -5,14 +5,14 @@ export default function Destacados() {
   const items = [...DESTACADOS, ...DESTACADOS];
 
   return (
-    <section className="bg-crema py-24 px-4 md:px-8 overflow-hidden">
+    <section className="bg-crema py-14 sm:py-20 md:py-24 px-4 md:px-8 overflow-hidden">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-14">
           <span className="inline-block font-heading text-sm tracking-[0.3em] uppercase text-tomato mb-3">
             Lo más pedido
           </span>
-          <h2 className="font-heading text-5xl md:text-6xl lg:text-7xl text-carbon leading-none">
+          <h2 className="font-heading text-3xl sm:text-4xl md:text-5xl lg:text-7xl text-carbon leading-none">
             Nuestros Destacados
           </h2>
           <div className="w-20 h-1 bg-tomato/80 rounded-full mx-auto mt-5" />

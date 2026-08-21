@@ -62,8 +62,8 @@ export default function SobreNosotros() {
 
   return (
     <section className="bg-crema overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-14 sm:py-20 md:py-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
           {/* Image side — 3D stacked carousel */}
           <div
             className="relative"
@@ -176,13 +176,13 @@ export default function SobreNosotros() {
               <br />
               <span className="text-tomato">una experiencia</span>
             </h2>
-            <p className="text-carbon/60 text-lg leading-relaxed mb-10 max-w-lg">
+            <p className="text-carbon/60 text-base sm:text-lg leading-relaxed mb-6 sm:mb-10 max-w-lg">
               En Juancho&apos;s Pizza nació del amor por la pizza artesanal y las comidas rápidas con sabor casero.
               Cada ingrediente es seleccionado con cuidado, cada receta lleva nuestra firma.
             </p>
 
             {/* Highlights */}
-            <div className="space-y-5 mb-10">
+            <div className="space-y-3 sm:space-y-5 mb-6 sm:mb-10">
               {highlights.map((h) => (
                 <div
                   key={h.title}
