@@ -18,7 +18,7 @@ const HeroVideo = memo(function HeroVideo() {
 
 const Hero: React.FC = () => {
   return (
-    <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden w-full max-w-full">
       <HeroVideo />
 
       {/* Strong overlay for text readability */}

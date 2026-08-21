@@ -32,7 +32,7 @@ export default function WhatsAppButton() {
           ? `Pedir por WhatsApp con ${itemCount} ${itemCount === 1 ? 'artículo' : 'artículos'} en el carrito`
           : 'Pedir por WhatsApp'
       }
-      className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-green-500 text-white shadow-lg transition-all duration-200 hover:bg-green-600 hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
+      className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-50 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-green-500 text-white shadow-lg transition-all duration-200 hover:bg-green-600 hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 overflow-hidden"
       style={{
         animation: 'whatsapp-pulse 2s ease-in-out infinite',
       }}
@@ -54,7 +54,7 @@ export default function WhatsAppButton() {
       </svg>
 
       {itemCount > 0 && (
-        <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-tomato rounded-full">
+        <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-tomato rounded-full">
           {itemCount > 99 ? '99+' : itemCount}
         </span>
       )}

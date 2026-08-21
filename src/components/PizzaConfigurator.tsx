@@ -97,7 +97,7 @@ const PizzaConfigurator: React.FC = () => {
   }, [toast]);
 
   return (
-    <section id="crea-tu-pizza" className="bg-carbon min-h-screen">
+    <section id="crea-tu-pizza" className="bg-carbon min-h-screen overflow-hidden w-full max-w-full">
       <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10 md:py-12">
         {/* Header */}
         <div className="text-center mb-10">
@@ -150,7 +150,7 @@ const PizzaConfigurator: React.FC = () => {
           <div className="lg:col-span-2 order-1 lg:order-none">
             <div className="lg:sticky lg:top-8">
               <div className="bg-crema/5 backdrop-blur-sm rounded-3xl p-6 border border-crema/10">
-                <div className="w-56 h-64 sm:w-72 sm:h-80 md:w-80 md:h-[22rem] mx-auto transition-transform duration-500 hover:scale-105">
+                <div className="w-56 h-64 sm:w-72 sm:h-80 md:w-80 md:h-[22rem] mx-auto transition-transform duration-500 hover:scale-105 overflow-hidden">
                   <ChefMascot
                     selectedFlavors={Array.from(selectedFlavors)}
                     flavorIcons={FLAVOR_ICONS}

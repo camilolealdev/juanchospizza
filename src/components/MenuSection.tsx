@@ -83,7 +83,7 @@ const MenuSection: React.FC = () => {
   }, [isPostres, displayItems]);
 
   return (
-    <section id="menu" className="relative bg-gradient-to-b from-crema via-crema to-crema/95 py-12 sm:py-16 md:py-20">
+    <section id="menu" className="relative bg-gradient-to-b from-crema via-crema to-crema/95 py-12 sm:py-16 md:py-20 w-full max-w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Heading */}
         <div className="text-center mb-12">

@@ -5,7 +5,7 @@ export default function Destacados() {
   const items = [...DESTACADOS, ...DESTACADOS];
 
   return (
-    <section className="bg-crema py-14 sm:py-20 md:py-24 px-4 md:px-8 overflow-hidden">
+    <section className="bg-crema py-14 sm:py-20 md:py-24 px-4 md:px-8 overflow-hidden w-full max-w-full">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-14">

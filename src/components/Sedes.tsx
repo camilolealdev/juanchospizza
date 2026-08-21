@@ -53,7 +53,7 @@ const Sedes: React.FC = () => {
   return (
     <>
       {/* ═══════════ HERO BANNER ═══════════ */}
-      <section className="relative bg-gradient-to-b from-carbon via-carbon to-crema py-10 sm:py-14 md:py-16 px-4 sm:px-8 md:px-20 overflow-hidden">
+      <section className="relative bg-gradient-to-b from-carbon via-carbon to-crema py-10 sm:py-14 md:py-16 px-4 sm:px-8 md:px-20 overflow-hidden w-full max-w-full">
         {/* Decorative background circles */}
         <div className="absolute top-10 left-10 w-40 h-40 bg-tomato/10 rounded-full blur-3xl" />
         <div className="absolute bottom-10 right-10 w-56 h-56 bg-queso/8 rounded-full blur-3xl" />

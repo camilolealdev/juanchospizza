@@ -58,7 +58,7 @@ export default function Footer() {
   return (
     <footer className="bg-carbon text-crema font-body">
       {/* ── Brand hero ── */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden w-full max-w-full">
         <div className="absolute inset-0 bg-gradient-to-br from-tomato/10 via-transparent to-queso/5" />
         <div className="relative max-w-7xl mx-auto px-4 md:px-8 py-12">
 
