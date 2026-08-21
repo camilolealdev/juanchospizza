@@ -418,6 +418,13 @@ export const MENU_ITEMS: MenuItem[] = [
     description: '',
     price: 7000,
   },
+  {
+    id: 'adicionales',
+    category: 'especiales',
+    name: 'Adicionales',
+    description: 'Ingrediente extra',
+    price: 3500,
+  },
 
   // ─── BEBIDAS ───
   {
@@ -433,6 +440,13 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Jugo Natural en Leche',
     description: 'Jugo natural de frutas en leche',
     price: 7000,
+  },
+  {
+    id: 'agua-pequena',
+    category: 'bebidas',
+    name: 'Botella de Agua Pequeña',
+    description: '',
+    price: 2000,
   },
   {
     id: 'agua-grande',
@@ -482,6 +496,13 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Gaseosa 250ml (Plástica)',
     description: '',
     price: 2800,
+  },
+  {
+    id: 'gaseosa-350',
+    category: 'bebidas',
+    name: 'Gaseosa 350ml',
+    description: '',
+    price: 3800,
   },
   {
     id: 'gaseosa-500',
@@ -626,6 +647,7 @@ const ITEM_IMAGE: Record<string, string> = {
   'gaseosa-500': 'gaseosa-500.webp',
   'agua-bretana': 'agua-bretana.webp',
   'agua-grande': 'agua-grande.webp',
+  'agua-pequena': 'agua-pequena.webp',
   'coca-1500': 'coca-1500.webp',
   'postobon-1500': 'postobon-1500.webp',
   'gaseosa-250-plastico': 'gaseosa-250-plastico.webp',
