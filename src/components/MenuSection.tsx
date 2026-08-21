@@ -68,12 +68,14 @@ const MenuSection: React.FC = () => {
             placeholder="Buscar pizza, hamburguesa, ingrediente..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            aria-label="Buscar en el menú"
             className="w-full rounded-full border-2 border-carbon/10 focus:border-queso bg-white px-5 py-3.5 pl-12 text-carbon placeholder:text-carbon/40 outline-none transition-colors shadow-sm focus:shadow-md"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-carbon/40 hover:text-carbon transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-carbon/40 hover:text-carbon transition-colors"
+              aria-label="Limpiar búsqueda"
             >
               ✕
             </button>
@@ -161,6 +163,8 @@ const MenuSection: React.FC = () => {
         className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-carbon text-queso font-heading text-sm uppercase px-6 py-3 rounded-full shadow-lg transition-all duration-300 z-50 ${
           toast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
         }`}
+        role="status"
+        aria-live="polite"
       >
         ¡Agregado! ✓
       </div>
@@ -191,7 +195,7 @@ function ProductCard({
           }}
         />
         {hasPopular && (
-          <span className="absolute top-3 right-3 bg-gradient-to-r from-tomato to-tomato/90 text-white text-[10px] font-heading uppercase tracking-wider rounded-full px-3 py-1 shadow-lg">
+          <span className="absolute top-3 right-3 bg-gradient-to-r from-tomato to-tomato/90 text-white text-xs font-heading uppercase tracking-wider rounded-full px-3 py-1 shadow-lg">
             ⭐ Más pedida
           </span>
         )}
@@ -221,7 +225,7 @@ function ProductCard({
           </div>
           <button
             onClick={() => onOpenModal(item)}
-            className="bg-gradient-to-r from-queso to-queso-500 text-carbon font-heading text-xs uppercase rounded-xl px-4 py-2.5 hover:bg-queso-500 active:scale-95 transition-all duration-200 flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+            className="bg-gradient-to-r from-queso to-queso-500 text-carbon font-heading text-sm uppercase rounded-xl px-4 py-3 min-h-[44px] hover:bg-queso-500 active:scale-95 transition-all duration-200 flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
           >
             <span className="text-base leading-none">+</span>
             Agregar

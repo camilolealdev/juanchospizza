@@ -1,5 +1,6 @@
 import React from 'react';
-import { SEDES } from '../data/menu-data';
+import { SEDES, WHATSAPP_NUMBERS } from '../data/menu-data';
+import { useSedeStore } from '../store/sedeStore';
 import { Link } from 'react-router-dom';
 
 const sedes = [
@@ -47,76 +48,10 @@ const features = [
 ];
 
 const Sedes: React.FC = () => {
+  const sede = useSedeStore((s) => s.sede);
+  const whatsappNumber = WHATSAPP_NUMBERS[sede];
   return (
     <>
-      <style>{`
-        .trust-card {
-          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .trust-card:hover {
-          transform: translateY(-8px) scale(1.02);
-        }
-        .trust-card:hover .trust-icon {
-          transform: scale(1.2) rotate(-5deg);
-        }
-        .trust-icon {
-          transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .sede-card {
-          transition: all 0.3s ease;
-        }
-        .sede-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-        }
-        .sede-card:hover .sede-emoji {
-          transform: scale(1.15);
-        }
-        .sede-emoji {
-          transition: transform 0.3s ease;
-        }
-        .feature-pill {
-          transition: all 0.3s ease;
-        }
-        .feature-pill:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-        }
-        .accent-line {
-          width: 0;
-          transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .trust-card:hover .accent-line {
-          width: 60px;
-        }
-        .whatsapp-btn {
-          transition: all 0.3s ease;
-        }
-        .whatsapp-btn:hover {
-          transform: translateY(-2px) scale(1.03);
-          box-shadow: 0 12px 30px rgba(37, 211, 102, 0.35);
-        }
-        .cta-card {
-          transition: all 0.3s ease;
-        }
-        .cta-card:hover {
-          transform: translateY(-3px);
-        }
-        @keyframes float-emoji {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-4px); }
-        }
-        .float-anim {
-          animation: float-emoji 3s ease-in-out infinite;
-        }
-        .float-anim-delay {
-          animation: float-emoji 3s ease-in-out 0.5s infinite;
-        }
-        .float-anim-delay2 {
-          animation: float-emoji 3s ease-in-out 1s infinite;
-        }
-      `}</style>
-
       {/* ═══════════ HERO BANNER ═══════════ */}
       <section className="relative bg-gradient-to-b from-carbon via-carbon to-crema py-16 px-4 md:px-20 overflow-hidden">
         {/* Decorative background circles */}
@@ -220,7 +155,7 @@ const Sedes: React.FC = () => {
               <h3 className="font-heading text-3xl text-crema mb-3">¿Listo para ordenar?</h3>
               <p className="text-crema/60 mb-8 text-lg">Haz tu pedido ahora y lo recibes en minutos.</p>
               <a
-                href="https://wa.me/573108613690?text=Hola,%20quiero%20hacer%20un%20pedido%20🍕"
+                href={`https://wa.me/${whatsappNumber}?text=Hola,%20quiero%20hacer%20un%20pedido%20🍕`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="whatsapp-btn inline-flex items-center gap-3 bg-green-600 text-white font-heading text-xl px-10 py-4 rounded-2xl shadow-xl shadow-green-600/25"

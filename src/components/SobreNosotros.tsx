@@ -70,6 +70,10 @@ export default function SobreNosotros() {
             style={{ perspective: '1200px' }}
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={() => setIsPaused(true)}
+            onTouchEnd={() => {
+              setTimeout(() => setIsPaused(false), 3000);
+            }}
           >
             {/* 3D stacked carousel cards */}
             <div className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden" style={{ transformStyle: 'preserve-3d' }}>
@@ -148,10 +152,11 @@ export default function SobreNosotros() {
                 <button
                   key={i}
                   onClick={() => setActive(i)}
-                  className={`h-1.5 rounded-full transition-all duration-400 ${
-                    i === active ? 'w-6 bg-tomato' : 'w-2 bg-carbon/15 hover:bg-carbon/25'
+                  className={`h-3 min-w-[32px] rounded-full transition-all duration-400 ${
+                    i === active ? 'w-8 bg-tomato' : 'w-3 bg-carbon/15 hover:bg-carbon/25'
                   }`}
                   aria-label={`Imagen ${i + 1}`}
+                  aria-current={i === active ? 'true' : undefined}
                 />
               ))}
             </div>
@@ -172,7 +177,7 @@ export default function SobreNosotros() {
               <span className="text-tomato">una experiencia</span>
             </h2>
             <p className="text-carbon/60 text-lg leading-relaxed mb-10 max-w-lg">
-              En Juan&apos;s Pizza nació del amor por la pizza artesanal y las comidas rápidas con sabor casero.
+              En Juancho&apos;s Pizza nació del amor por la pizza artesanal y las comidas rápidas con sabor casero.
               Cada ingrediente es seleccionado con cuidado, cada receta lleva nuestra firma.
             </p>
 

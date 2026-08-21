@@ -229,12 +229,12 @@ export default function Footer() {
       {/* ── Bottom legal ── */}
       <div className="border-t border-crema/10">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-5 flex flex-col md:flex-row items-center justify-between gap-3">
-          <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs text-crema/35">
+          <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs text-crema/50">
             <Link to="/politica-de-privacidad" className="hover:text-crema/70 transition-colors">Política de Privacidad</Link>
             <Link to="/terminos-y-condiciones" className="hover:text-crema/70 transition-colors">Términos y Condiciones</Link>
             <Link to="/eliminacion-de-datos" className="hover:text-crema/70 transition-colors">Eliminación de Datos</Link>
           </div>
-          <p className="text-xs text-crema/25 text-center md:text-right break-words">
+          <p className="text-xs text-crema/40 text-center md:text-right break-words">
             &copy; 2026 Juancho&apos;s Pizza y Comidas Rápidas &mdash; Nemocón &amp; Zipaquirá
           </p>
         </div>

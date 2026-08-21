@@ -4,7 +4,6 @@ import { UserRole, GastroModule, LocationId } from './types';
 import AdminLayout from './components/AdminLayout';
 import CustomerSite from './components/CustomerSite';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
-import { CartProvider } from './context/CartContext';
 import TrackOrderModal from './components/TrackOrderModal';
 import { useWebSocket } from './hooks/useWebSocket';
 import api, { AUTH_UNAUTHORIZED_EVENT, getStoredRole, getStoredUsername, setAuthSession } from './services/api';
@@ -246,7 +245,6 @@ const App: React.FC = () => {
 
   return (
     <MotionConfig reducedMotion="user">
-      <CartProvider>
         <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
           {showLogin && !isAuthenticated && (
             <Suspense fallback={null}>
@@ -301,7 +299,6 @@ const App: React.FC = () => {
           )}
 
         </AuthContext.Provider>
-      </CartProvider>
     </MotionConfig>
   );
 };

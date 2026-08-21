@@ -104,7 +104,7 @@ export default function Header({ onCartClick }: HeaderProps) {
           {/* Cart button */}
           <button
             onClick={() => onCartClick?.()}
-            className="relative w-10 h-10 rounded-lg bg-tomato flex items-center justify-center text-crema hover:bg-tomato-600 transition-colors"
+            className="relative w-11 h-11 rounded-lg bg-tomato flex items-center justify-center text-crema hover:bg-tomato-600 transition-colors"
             aria-label={`Carrito de compras — ${count} artículo${count !== 1 ? 's' : ''}`}
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -125,7 +125,7 @@ export default function Header({ onCartClick }: HeaderProps) {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen((v) => !v)}
-            className="md:hidden w-10 h-10 rounded-lg bg-carbon-700/60 border border-crema/10 flex items-center justify-center text-crema/70 hover:text-queso transition-colors"
+            className="md:hidden w-11 h-11 rounded-lg bg-carbon-700/60 border border-crema/10 flex items-center justify-center text-crema/70 hover:text-queso transition-colors"
             aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
             aria-expanded={mobileOpen}
             aria-controls="mobile-nav"
@@ -184,7 +184,7 @@ export default function Header({ onCartClick }: HeaderProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => selectSede('nemocon')}
-                className={`px-3 py-1 rounded-full text-xs font-heading font-bold tracking-wider uppercase transition-all ${
+                className={`px-4 py-2 rounded-full text-xs font-heading font-bold tracking-wider uppercase transition-all ${
                   sede === 'nemocon'
                     ? 'bg-carbon text-queso shadow-lg scale-105'
                     : 'bg-carbon/20 text-carbon hover:bg-carbon/30'
@@ -194,7 +194,7 @@ export default function Header({ onCartClick }: HeaderProps) {
               </button>
               <button
                 onClick={() => selectSede('zipaquira')}
-                className={`px-3 py-1 rounded-full text-xs font-heading font-bold tracking-wider uppercase transition-all ${
+                className={`px-4 py-2 rounded-full text-xs font-heading font-bold tracking-wider uppercase transition-all ${
                   sede === 'zipaquira'
                     ? 'bg-carbon text-queso shadow-lg scale-105'
                     : 'bg-carbon/20 text-carbon hover:bg-carbon/30'
@@ -205,7 +205,7 @@ export default function Header({ onCartClick }: HeaderProps) {
             </div>
             <button
               onClick={dismissBanner}
-              className="ml-2 w-8 h-8 rounded-full bg-carbon/20 hover:bg-carbon/40 flex items-center justify-center text-carbon/60 hover:text-carbon transition-colors"
+              className="ml-2 w-10 h-10 rounded-full bg-carbon/20 hover:bg-carbon/40 flex items-center justify-center text-carbon/60 hover:text-carbon transition-colors"
               aria-label="Cerrar"
             >
               <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

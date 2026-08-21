@@ -75,15 +75,20 @@ const PizzaConfigurator: React.FC = () => {
 
   const handleAddToCart = useCallback(() => {
     if (!sizeInfo || selectedFlavors.size === 0) return;
-    const uniqueId = `pizza-${sizeInfo.id}-${Date.now()}`;
+    const flavorIds = PIZZA_FLAVORS
+      .filter((f) => selectedFlavors.has(f.id))
+      .map((f) => f.id)
+      .sort()
+      .join('-');
+    const deterministicId = `pizza-${sizeInfo.id}-${flavorIds}`;
     addItem({
-      id: uniqueId,
+      id: deterministicId,
       name: `Pizza ${sizeInfo.label} (${flavorNames.join(' + ')})`,
       price: sizeInfo.price,
       details: flavorNames.join(' + '),
     });
     setToast(true);
-  }, [sizeInfo, flavorNames, addItem]);
+  }, [sizeInfo, flavorNames, selectedFlavors, addItem]);
 
   useEffect(() => {
     if (!toast) return;

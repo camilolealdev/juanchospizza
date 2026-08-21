@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCartStore } from '../store/cartStore';
 import { useSedeStore } from '../store/sedeStore';
 import { buildWhatsAppMessage, formatPrice, WHATSAPP_NUMBERS } from '../data/menu-data';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { lockBodyScroll, unlockBodyScroll } from '../utils/useBodyScrollLock';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -12,10 +14,19 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const { items, updateQuantity, removeItem, clearCart, total, count } = useCartStore();
   const sede = useSedeStore((s) => s.sede);
 
+  useFocusTrap(isOpen, onClose);
+
+  useEffect(() => {
+    if (isOpen) {
+      lockBodyScroll();
+      return () => unlockBodyScroll();
+    }
+  }, [isOpen]);
+
   const handleOrder = () => {
     const message = buildWhatsAppMessage(items, sede);
     const number = WHATSAPP_NUMBERS[sede];
-    window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -23,6 +34,9 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
       className={`fixed inset-0 z-50 transition-opacity duration-300 ${
         isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Carrito de compras"
     >
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -81,7 +95,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     </div>
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="w-9 h-9 rounded-lg flex items-center justify-center text-carbon/40 hover:text-tomato hover:bg-tomato/10 transition-colors flex-shrink-0"
+                      className="w-11 h-11 rounded-lg flex items-center justify-center text-carbon/40 hover:text-tomato hover:bg-tomato/10 transition-colors flex-shrink-0"
                       aria-label="Eliminar artículo"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -94,14 +108,14 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       <button
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
                         disabled={item.quantity <= 1}
-                        className="w-10 h-10 rounded-full bg-carbon/10 text-carbon font-bold flex items-center justify-center hover:bg-carbon/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="w-11 h-11 rounded-full bg-carbon/10 text-carbon font-bold flex items-center justify-center hover:bg-carbon/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         −
                       </button>
                       <span className="text-carbon font-heading text-lg w-8 text-center">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="w-10 h-10 rounded-full bg-carbon/10 text-carbon font-bold flex items-center justify-center hover:bg-carbon/20 transition-colors"
+                        className="w-11 h-11 rounded-full bg-carbon/10 text-carbon font-bold flex items-center justify-center hover:bg-carbon/20 transition-colors"
                       >
                         +
                       </button>

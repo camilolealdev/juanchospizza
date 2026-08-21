@@ -7,6 +7,8 @@ import {
   PAPAS_ADDON,
 } from '../data/menu-data';
 import { useCartStore } from '../store/cartStore';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { lockBodyScroll, unlockBodyScroll } from '../utils/useBodyScrollLock';
 
 interface Props {
   item: MenuItem;
@@ -30,6 +32,15 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
       setIsCombo(false);
       setQuantity(1);
       setNotes('');
+    }
+  }, [isOpen]);
+
+  useFocusTrap(isOpen, onClose);
+
+  useEffect(() => {
+    if (isOpen) {
+      lockBodyScroll();
+      return () => unlockBodyScroll();
     }
   }, [isOpen]);
 
@@ -93,6 +104,9 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
     <div
       className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={item.name}
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
