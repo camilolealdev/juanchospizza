@@ -1,7 +1,12 @@
 import PizzaConfigurator from '../../components/PizzaConfigurator';
 import { Link } from 'react-router-dom';
+import { useDocumentMeta } from '../../hooks/useDocumentMeta';
 
 export default function PizzaPage() {
+  useDocumentMeta(
+    'Arma tu Pizza Personalizada',
+    'Elige el tamaño y combina hasta 3 sabores para crear tu pizza ideal. Pide por WhatsApp en segundos — entregas en Nemocón y Zipaquirá.'
+  );
   return (
     <>
       <PizzaConfigurator />

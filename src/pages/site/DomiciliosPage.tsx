@@ -1,7 +1,12 @@
 import Sedes from '../../components/Sedes';
 import { Link } from 'react-router-dom';
+import { useDocumentMeta } from '../../hooks/useDocumentMeta';
 
 export default function DomiciliosPage() {
+  useDocumentMeta(
+    'Domicilios en Nemocón y Zipaquirá',
+    'Pide a domicilio en Nemocón y Zipaquirá. Entrega rápida, pago contra entrega o en línea. Consulta cobertura, horarios y sedes.'
+  );
   return (
     <>
       <div className="bg-white pt-6 sm:pt-8 pb-0 text-center px-4">

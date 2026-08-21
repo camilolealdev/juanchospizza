@@ -1,4 +1,5 @@
-import { useParams, Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
+import { useDocumentMeta } from '../../hooks/useDocumentMeta';
 
 const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string; content: React.ReactNode }> = {
   'politica-de-privacidad': {
@@ -437,8 +438,16 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
 };
 
 export default function LegalPage() {
-  const { slug } = useParams<{ slug: string }>();
-  const page = LEGAL_PAGES[slug || ''];
+  // ponytail: las 3 rutas (App.tsx) son paths fijos sin :slug -- useParams()
+  // siempre daba undefined acá, por eso las 3 páginas legales mostraban
+  // "no encontrada" en producción. El slug real es el último segmento de la URL.
+  const location = useLocation();
+  const slug = location.pathname.replace(/^\/+|\/+$/g, '');
+  const page = LEGAL_PAGES[slug];
+
+  // Hooks no pueden ser condicionales -- se llama siempre, con fallback si
+  // el slug no matchea (no debería pasar tras el fix de arriba).
+  useDocumentMeta(page?.title ?? 'Página no encontrada', page?.kicker);
 
   if (!page) {
     return (

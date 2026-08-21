@@ -15,7 +15,7 @@
     },
     {
       "parameters": {
-        "content": "## CONFIGURAR ANTES DE ACTIVAR\n\n1. **'01 - WhatsApp: entrada'** → credencial WhatsApp OAuth real (reemplaza `REEMPLAZAR_CRED_WHATSAPP_TRIGGER`).\n2. **'04 / 13 / ERROR - WhatsApp...'** → credencial WhatsApp API de envío + `phoneNumberId` real de Juancho's (reemplaza `REEMPLAZAR_PHONE_NUMBER_ID`).\n3. **'05 - Modelo de lenguaje'** → credencial OpenAI real (reemplaza `REEMPLAZAR_CRED_OPENAI`).\n4. **'06 - Memoria PostgreSQL' y '14 - Registrar conversación'** → credencial Postgres real de GastroPro, solo con permisos sobre las tablas de memoria/log, NO sobre catálogo/pedidos (reemplaza `REEMPLAZAR_CRED_POSTGRES`). Estas tablas (`conversaciones` + lo que use la memoria de langchain) no existen todavía en el schema — crearlas antes de activar (ver nota en nodo 14).\n5. **Los 4 nodos 'Tool:'** → dominio ya seteado a `juanchospizza.com` (confirmado, health check en vivo respondió 200 el 2026-08-20). Sin Authorization: los 4 endpoints son públicos, confirmado contra el código real.\n6. **'ERROR - WhatsApp administrador'** → tu número real en `REEMPLAZAR_ADMIN_PHONE`.\n\nRESUELTO (antes 'pendiente de confirmar', ahora verificado contra server/routes/*.js):\n- Menú: usar **GET /api/menu** (existe, devuelve categories+products+variants+combos+promotions en una sola llamada — mejor que /api/products, que no trae combos/promos). Cambié el tool.\n- POST /api/orders NO devuelve link de pago — devuelve el pedido creado (con su `id` interno). Agregué un 4to tool 'Crear Link de Pago' → POST /api/payments/bold/create-link con {orderId: <id del pedido>}. Solo llamarlo si el cliente elige pago online (no efectivo/tarjeta contra-entrega).\n- Auth: NINGUNO de los 4 endpoints requiere token — son el mismo checkout público que usa el sitio web (server/routes/orders.js:127, payments.js:101 sin authMiddleware). Quité los headers Authorization de los 4 tools.\n\nSIGUE PENDIENTE (no lo puedo resolver desde el código, requiere decisión de negocio):\n- Si Bold no está configurado en el VPS (`BOLD_API_KEY`), el 4to tool responde 503 'Bold no configurado' — el prompt del agente ya instruye ofrecer 'pago contra-entrega' como fallback en ese caso.",
+        "content": "## CONFIGURAR ANTES DE ACTIVAR\n\n1. **'01 - WhatsApp: entrada'** → credencial WhatsApp OAuth real (reemplaza `REEMPLAZAR_CRED_WHATSAPP_TRIGGER`).\n2. **'04 / 13 / ERROR - WhatsApp...'** → credencial WhatsApp API de envío (reemplaza `REEMPLAZAR_CRED_WHATSAPP_API`). El `phoneNumberId` YA NO está hardcodeado: lee la variable de entorno `WHATSAPP_PHONE_NUMBER_ID` de n8n. Así se prueba con el número de test de Meta y se pasa al real sin tocar el workflow -- solo cambiando el valor de esa variable (Settings → Environments en n8n Cloud, o `.env` si es self-hosted) y reactivando. Mientras la app de Meta no esté publicada, el número de test de Meta solo entrega mensajes a los hasta 5 destinatarios que agregues manualmente en el panel -- no a clientes reales.\n3. **'05 - Modelo de lenguaje'** → credencial OpenAI real (reemplaza `REEMPLAZAR_CRED_OPENAI`).\n4. **'06 - Memoria PostgreSQL' y '14 - Registrar conversación'** → credencial Postgres real de GastroPro, solo con permisos sobre las tablas de memoria/log, NO sobre catálogo/pedidos (reemplaza `REEMPLAZAR_CRED_POSTGRES`). Estas tablas (`conversaciones` + lo que use la memoria de langchain) no existen todavía en el schema — crearlas antes de activar (ver nota en nodo 14).\n5. **Los 4 nodos 'Tool:'** → dominio ya seteado a `juanchospizza.com` (confirmado, health check en vivo respondió 200 el 2026-08-20). Sin Authorization: los 4 endpoints son públicos, confirmado contra el código real.\n6. **'ERROR - WhatsApp administrador'** → tu número real en `REEMPLAZAR_ADMIN_PHONE`.\n\nRESUELTO (antes 'pendiente de confirmar', ahora verificado contra server/routes/*.js):\n- Menú: usar **GET /api/menu** (existe, devuelve categories+products+variants+combos+promotions en una sola llamada — mejor que /api/products, que no trae combos/promos). Cambié el tool.\n- POST /api/orders NO devuelve link de pago — devuelve el pedido creado (con su `id` interno). Agregué un 4to tool 'Crear Link de Pago' → POST /api/payments/bold/create-link con {orderId: <id del pedido>}. Solo llamarlo si el cliente elige pago online (no efectivo/tarjeta contra-entrega).\n- Auth: NINGUNO de los 4 endpoints requiere token — son el mismo checkout público que usa el sitio web (server/routes/orders.js:127, payments.js:101 sin authMiddleware). Quité los headers Authorization de los 4 tools.\n\nSIGUE PENDIENTE (no lo puedo resolver desde el código, requiere decisión de negocio):\n- Si Bold no está configurado en el VPS (`BOLD_API_KEY`), el 4to tool responde 503 'Bold no configurado' — el prompt del agente ya instruye ofrecer 'pago contra-entrega' como fallback en ese caso.",
         "height": 560,
         "width": 720
       },
@@ -82,7 +82,7 @@
     {
       "parameters": {
         "operation": "send",
-        "phoneNumberId": "REEMPLAZAR_PHONE_NUMBER_ID",
+        "phoneNumberId": "={{ $env.WHATSAPP_PHONE_NUMBER_ID }}",
         "recipientPhoneNumber": "={{ $json.waId }}",
         "textBody": "Tu sesión de WhatsApp ha expirado. Envíanos un nuevo mensaje para continuar.",
         "additionalFields": {}
@@ -218,7 +218,7 @@
     {
       "parameters": {
         "operation": "send",
-        "phoneNumberId": "REEMPLAZAR_PHONE_NUMBER_ID",
+        "phoneNumberId": "={{ $env.WHATSAPP_PHONE_NUMBER_ID }}",
         "recipientPhoneNumber": "={{ $('02 - Normalizar mensaje').item.json.waId }}",
         "textBody": "={{ $json.output || 'No pude procesar tu mensaje. Intenta nuevamente.' }}",
         "additionalFields": {}
@@ -278,7 +278,7 @@
     {
       "parameters": {
         "operation": "send",
-        "phoneNumberId": "REEMPLAZAR_PHONE_NUMBER_ID",
+        "phoneNumberId": "={{ $env.WHATSAPP_PHONE_NUMBER_ID }}",
         "recipientPhoneNumber": "REEMPLAZAR_ADMIN_PHONE",
         "textBody": "={{ $json.mensaje }}",
         "additionalFields": {}

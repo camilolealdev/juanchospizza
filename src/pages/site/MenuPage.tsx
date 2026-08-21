@@ -1,7 +1,12 @@
 import MenuSection from '../../components/MenuSection';
 import { Link } from 'react-router-dom';
+import { useDocumentMeta } from '../../hooks/useDocumentMeta';
 
 export default function MenuPage() {
+  useDocumentMeta(
+    'Menú Completo',
+    'Explora el menú completo de Juancho’s Pizza: pizzas artesanales, hamburguesas, lasañas, spaguettis, salchipapas y más. Pide a domicilio en Nemocón y Zipaquirá.'
+  );
   return (
     <>
       <div className="bg-crema pt-6 sm:pt-8 pb-0 text-center px-4">

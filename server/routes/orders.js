@@ -187,6 +187,29 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
         sanitized.customerPhone,
       ]);
       resolvedClientId = clientMatch.rows[0]?.id || null;
+
+      // Alta automática al CRM: un pedido con teléfono nuevo (WhatsApp, sitio,
+      // o cualquier canal de checkout de invitado) es la captura de un lead
+      // real. Sin esto el cliente quedaba pegado al pedido pero nunca entraba
+      // a `clients` -- sin puntos, sin nivel, invisible para Fidelización/
+      // Marketing hasta que el staff lo cargara a mano. Misma transacción
+      // (`client`, ya con BEGIN abierto), mismo formato de id que routes/clients.js.
+      // idx_clients_telefono es UNIQUE PARCIAL (WHERE telefono IS NOT NULL) --
+      // el ON CONFLICT tiene que repetir ese predicado exacto o Postgres no lo
+      // reconoce como el índice arbitro y el INSERT falla en cualquier carrera.
+      if (!resolvedClientId) {
+        const newClientId = `cli_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        await client.query(
+          `INSERT INTO clients (id, nombre, telefono, direccion, creado)
+           VALUES ($1, $2, $3, $4, NOW())
+           ON CONFLICT (telefono) WHERE telefono IS NOT NULL DO NOTHING`,
+          [newClientId, sanitized.customerName, sanitized.customerPhone, sanitized.address]
+        );
+        const reCheck = await client.query('SELECT id FROM clients WHERE telefono = $1 LIMIT 1', [
+          sanitized.customerPhone,
+        ]);
+        resolvedClientId = reCheck.rows[0]?.id || newClientId;
+      }
     }
     sanitized.clientId = resolvedClientId;
 
