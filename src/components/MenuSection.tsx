@@ -284,7 +284,7 @@ function ProductCard({
             {item.name}
           </h3>
           {item.description && (
-            <p className="text-xs text-carbon/50 line-clamp-2 leading-relaxed">
+            <p className="text-xs sm:text-sm text-carbon/50 line-clamp-2 leading-relaxed">
               {item.description}
             </p>
           )}

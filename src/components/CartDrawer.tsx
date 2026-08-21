@@ -87,7 +87,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     <div className="flex-1 min-w-0">
                       <h4 className="font-heading text-lg text-carbon">{item.name}</h4>
                       {item.details && (
-                        <p className="text-carbon/50 text-xs truncate">{item.details}</p>
+                        <p className="text-carbon/50 text-xs sm:text-sm truncate">{item.details}</p>
                       )}
                       {item.notes && (
                         <p className="text-carbon/40 text-xs italic mt-0.5 truncate">📝 {item.notes}</p>

@@ -53,7 +53,7 @@ const Sedes: React.FC = () => {
   return (
     <>
       {/* ═══════════ HERO BANNER ═══════════ */}
-      <section className="relative bg-gradient-to-b from-carbon via-carbon to-crema py-10 sm:py-14 md:py-16 px-4 md:px-20 overflow-hidden">
+      <section className="relative bg-gradient-to-b from-carbon via-carbon to-crema py-10 sm:py-14 md:py-16 px-4 sm:px-8 md:px-20 overflow-hidden">
         {/* Decorative background circles */}
         <div className="absolute top-10 left-10 w-40 h-40 bg-tomato/10 rounded-full blur-3xl" />
         <div className="absolute bottom-10 right-10 w-56 h-56 bg-queso/8 rounded-full blur-3xl" />
@@ -86,7 +86,7 @@ const Sedes: React.FC = () => {
       </section>
 
       {/* ═══════════ SEDE CARDS ═══════════ */}
-      <section id="domicilios" className="bg-white py-10 sm:py-14 md:py-16 px-4 md:px-20">
+      <section id="domicilios" className="bg-white py-10 sm:py-14 md:py-16 px-4 sm:px-8 md:px-20">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             {sedes.map(({ key, emoji, color }) => {
@@ -181,7 +181,7 @@ const Sedes: React.FC = () => {
                     <iframe
                       src={`https://www.google.com/maps?q=${sede.mapsQuery}&output=embed`}
                       width="100%"
-                      height="300"
+                      className="w-full aspect-video"
                       style={{ border: 0 }}
                       allowFullScreen
                       loading="lazy"
@@ -197,7 +197,7 @@ const Sedes: React.FC = () => {
       </section>
 
       {/* ═══════════ TRUST ROW ═══════════ */}
-      <section className="bg-gradient-to-b from-crema to-white py-10 sm:py-14 md:py-16 px-4 md:px-20">
+      <section className="bg-gradient-to-b from-crema to-white py-10 sm:py-14 md:py-16 px-4 sm:px-8 md:px-20">
         <div className="max-w-6xl mx-auto">
           <h3 className="font-heading text-2xl sm:text-3xl md:text-4xl text-carbon text-center mb-6 sm:mb-10">
             ¿Por qué pedir con nosotros?
@@ -235,7 +235,7 @@ const Sedes: React.FC = () => {
       </section>
 
       {/* ═══════════ BOTTOM CTA ═══════════ */}
-      <section className="bg-crema py-8 sm:py-10 md:py-12 text-center px-4">
+      <section className="bg-crema py-8 sm:py-10 md:py-12 text-center px-4 sm:px-8">
         <p className="text-carbon/60 text-base sm:text-lg mb-3 sm:mb-4">
           ¿Ya sabes qué vas a pedir?
         </p>

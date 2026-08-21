@@ -104,7 +104,7 @@ export default function Footer() {
                   >
                     {s.icon}
                   </span>
-                  <span className="text-[10px] font-heading tracking-wider uppercase text-crema/30 group-hover:text-crema/70 transition-colors">
+                  <span className="text-[10px] sm:text-xs font-heading tracking-wider uppercase text-crema/30 group-hover:text-crema/70 transition-colors">
                     {s.name}
                   </span>
                 </a>
