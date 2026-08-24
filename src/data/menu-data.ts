@@ -470,7 +470,7 @@ export const MENU_ITEMS: MenuItem[] = [
     category: 'bebidas',
     name: 'Hit de Litro',
     description: '',
-    price: 5500,
+    price: 6000,
   },
   {
     id: 'gaseosa-250-vidrio',
@@ -491,7 +491,7 @@ export const MENU_ITEMS: MenuItem[] = [
     category: 'bebidas',
     name: 'Gaseosa 500ml',
     description: '',
-    price: 4000,
+    price: 4800,
   },
 ];
 
@@ -536,12 +536,12 @@ export const DESTACADOS = [
 export const SEDES = {
   nemocon: {
     name: 'Nemocón',
-    address: 'Cra 6 No. 5-40, Vía Principal, Nemocón, Cundinamarca',
+    address: 'Cra 5 #5-68, Nemocón, Cundinamarca',
     phone: '310 861 3690',
     phoneLink: 'https://wa.me/573108613690',
     telLink: 'tel:+573108613690',
     coverage: 'Nemocón y veredas',
-    mapsQuery: 'Cra+6+No.+5-40+Nemoc%C3%B3n+Cundinamarca+Colombia',
+    mapsQuery: 'Cra+5+%235-68+Nemoc%C3%B3n+Cundinamarca+Colombia',
   },
   zipaquira: {
     name: 'Zipaquirá',
@@ -669,8 +669,8 @@ export function getProductImage(category: string, itemId: string): string {
 export const PAPAS_ADDON = { id: 'papas-fritas', name: 'Papas Fritas', price: 7000 };
 
 export const BEBIDAS_ADDON = [
-  { id: 'gaseosa-500', name: 'Gaseosa 500ml', price: 4000 },
-  { id: 'hit-litro', name: 'Hit de Litro', price: 5500 },
+  { id: 'gaseosa-500', name: 'Gaseosa 500ml', price: 4800 },
+  { id: 'hit-litro', name: 'Hit de Litro', price: 6000 },
   { id: 'agua-grande', name: 'Agua Grande', price: 3000 },
 ];
 

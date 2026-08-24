@@ -15,7 +15,7 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
             <strong>Juancho's Pizza y Comidas Rápidas</strong> es el responsable del tratamiento de los datos personales recopilados a través de nuestro sitio web, pedidos por WhatsApp y canales de venta.
           </p>
           <ul className="list-disc list-inside text-carbon/70 space-y-1 ml-4">
-            <li><strong>Sede Nemocón:</strong> Cra 6 No. 5-40, Vía Principal, Nemocón, Cundinamarca.</li>
+            <li><strong>Sede Nemocón:</strong> Cra 5 #5-68, Nemocón, Cundinamarca.</li>
             <li><strong>Sede Zipaquirá:</strong> Diagonal 4 #29-10, Barrio Las Villas, Zipaquirá, Cundinamarca.</li>
             <li><strong>Teléfonos:</strong> <a href="tel:+573108613690" className="text-tomato hover:underline">310 861 3690</a> · <a href="tel:+573227699056" className="text-tomato hover:underline">322 769 9056</a></li>
             <li><strong>Correo:</strong> <a href="mailto:contacto@juanchospizza.com" className="text-tomato hover:underline">contacto@juanchospizza.com</a></li>
@@ -123,7 +123,7 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
           <h2 className="font-heading text-2xl text-carbon mb-3">2. Información general</h2>
           <p className="text-carbon/70 leading-relaxed mb-3"><strong>Juancho's Pizza y Comidas Rápidas</strong> opera dos sedes en Cundinamarca, Colombia:</p>
           <ul className="list-disc list-inside text-carbon/70 space-y-1 ml-4">
-            <li><strong>Nemocón:</strong> Cra 6 No. 5-40, Vía Principal.</li>
+            <li><strong>Nemocón:</strong> Cra 5 #5-68.</li>
             <li><strong>Zipaquirá:</strong> Diagonal 4 #29-10, Barrio Las Villas.</li>
             <li><strong>Contacto:</strong> <a href="tel:+573108613690" className="text-tomato hover:underline">310 861 3690</a> · <a href="mailto:contacto@juanchospizza.com" className="text-tomato hover:underline">contacto@juanchospizza.com</a></li>
           </ul>

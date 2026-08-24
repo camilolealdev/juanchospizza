@@ -43,7 +43,7 @@ const trustItems = [
 
 const features = [
   { emoji: '📦', label: 'Domicilios Rápidos' },
-  { emoji: '🕐', label: '4:00 PM - 10:00 PM' },
+  { emoji: '🕐', label: '3:00 PM - 11:00 PM' },
   { emoji: '🚴', label: 'Domicilio según zona' },
 ];
 
@@ -122,7 +122,7 @@ const Sedes: React.FC = () => {
                       </a>
                       <div className="flex items-center gap-3 text-carbon/70 text-sm bg-white/60 rounded-xl px-4 py-2.5">
                         <span className="text-lg">🕐</span>
-                        <span>4:00 PM - 10:00 PM</span>
+                        <span>3:00 PM - 11:00 PM</span>
                       </div>
                       <span className="inline-block bg-albahaca/15 text-albahaca text-xs font-semibold px-4 py-1.5 rounded-full border border-albahaca/20">
                         Cobertura: {sede.coverage}

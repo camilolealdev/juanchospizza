@@ -17,7 +17,7 @@ export const SUBCATEGORIES = [
   { id: 'malteadas', name: 'Malteadas', icon: '🥤', accent: 'text-rose-400', bg: 'bg-rose-50', border: 'border-rose-200' },
   { id: 'canastas', name: 'Canastas', icon: '🧺', accent: 'text-orange-500', bg: 'bg-orange-50', border: 'border-orange-200' },
   { id: 'fresas-crema', name: 'Fresas con Crema', icon: '🍓', accent: 'text-red-400', bg: 'bg-red-50', border: 'border-red-200' },
-  { id: 'obleas-merengues', name: 'Obleas y Merengues', icon: '🥞', accent: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200' },
+  { id: 'obleas-merengues', name: 'Obleas y Merengónes', icon: '🥞', accent: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200' },
 ] as const;
 
 export type Subcategory = (typeof SUBCATEGORIES)[number]['id'];
@@ -208,8 +208,8 @@ const OBLEAS_MERENGUES: PostreItem[] = [
     id: 'mer-juancho',
     subcat: 'obleas-merengues',
     category: 'postres',
-    name: 'Merengue Juancho',
-    description: 'Merengue, fruta a elección, queso, salsa de caramelo y decoración',
+    name: 'Merengón Juancho',
+    description: 'Merengón, fruta a elección, queso, salsa de caramelo y decoración',
     price: 15000,
     image: '/images/menu/mer-juancho.webp',
   },

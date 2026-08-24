@@ -121,7 +121,7 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'dul_15', nombre: 'Mango Fresco', descripcion: 'Cubos de mango dulce', precio_extra: 2500, categoria: 'dulce', disponible: true },
   { id: 'dul_16', nombre: 'Piña Fresca', descripcion: 'Trozos de piña natural', precio_extra: 2000, categoria: 'dulce', disponible: true },
   { id: 'dul_17', nombre: 'Miel', descripcion: 'Miel de abejas pura', precio_extra: 1500, categoria: 'dulce', disponible: true },
-  { id: 'dul_18', nombre: 'Merengue', descripcion: 'Trozos de merengue crujiente', precio_extra: 2000, categoria: 'dulce', disponible: true },
+  { id: 'dul_18', nombre: 'Merengón', descripcion: 'Trozos de merengón crujiente', precio_extra: 2000, categoria: 'dulce', disponible: true },
   { id: 'dul_19', nombre: 'Azúcar Morena', descripcion: 'Azúcar morena orgánica', precio_extra: 1000, categoria: 'dulce', disponible: true },
 
   // EXTRAS ESPECIALES (13)

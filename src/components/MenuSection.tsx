@@ -215,6 +215,11 @@ const MenuSection: React.FC = () => {
             ))}
           </div>
         )}
+
+        {/* Photo disclaimer */}
+        <p className="text-center text-carbon/35 text-xs mt-8 sm:mt-10">
+          * Las imágenes son de referencia y la presentación puede variar.
+        </p>
       </div>
 
       {/* Add-to-cart modal */}

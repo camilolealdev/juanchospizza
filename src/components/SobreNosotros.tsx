@@ -178,7 +178,7 @@ export default function SobreNosotros() {
               <span className="text-tomato">una experiencia</span>
             </h2>
             <p className="text-carbon/60 text-base sm:text-lg leading-relaxed mb-6 sm:mb-10 max-w-lg">
-              En Juancho&apos;s Pizza nació del amor por la pizza artesanal y las comidas rápidas con sabor casero.
+              En Juancho&apos;s Pizza nació del amor por la pizza y las comidas rápidas con sabor casero.
               Cada ingrediente es seleccionado con cuidado, cada receta lleva nuestra firma.
             </p>
 
