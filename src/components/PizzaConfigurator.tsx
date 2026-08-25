@@ -181,17 +181,6 @@ const PizzaConfigurator: React.FC = () => {
                   </div>
                 )}
               </div>
-
-              {/* Add to cart button - fixed below visual */}
-              {canAdd && (
-                <button
-                  type="button"
-                  onClick={handleAddToCart}
-                  className="mt-4 w-full py-4 rounded-2xl bg-albahaca text-white font-heading text-lg uppercase tracking-wider hover:bg-albahaca-500 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-albahaca/20 hover:scale-[1.02] animate-fade-in"
-                >
-                  🛒 Agregar al Carrito
-                </button>
-              )}
             </div>
           </div>
 
@@ -387,6 +376,17 @@ const PizzaConfigurator: React.FC = () => {
                     <span className="font-heading text-2xl text-queso">{formatPrice(sizeInfo.price)}</span>
                   </div>
                 </div>
+
+                {/* Add to cart button - below Step 3 */}
+                {canAdd && (
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    className="mt-5 w-full py-4 rounded-2xl bg-albahaca text-white font-heading text-lg uppercase tracking-wider hover:bg-albahaca-500 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-albahaca/20 hover:scale-[1.02] animate-fade-in cursor-pointer"
+                  >
+                    🛒 Agregar al Carrito
+                  </button>
+                )}
               </div>
             )}
           </div>
