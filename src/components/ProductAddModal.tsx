@@ -1,12 +1,5 @@
 import { useState, useEffect } from 'react';
-import {
-  MenuItem,
-  formatPrice,
-  getProductImage,
-  BEBIDAS_ADDON,
-  PAPAS_ADDON,
-  COMBO_GASEOSAS,
-} from '../data/menu-data';
+import { MenuItem, formatPrice, getProductImage, BEBIDAS_ADDON, PAPAS_ADDON, COMBO_GASEOSAS } from '../data/menu-data';
 import { useCartStore } from '../store/cartStore';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { lockBodyScroll, unlockBodyScroll } from '../utils/useBodyScrollLock';
@@ -51,6 +44,16 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
 
   if (!isOpen) return null;
 
+  const isHamburguesa = item.category === 'hamburguesas' || item.category === 'hamburguesa-apanada';
+  const isPerro = item.category === 'perros-calientes';
+  const canAddPapas = isHamburguesa;
+  const canAddBebida =
+    isHamburguesa ||
+    isPerro ||
+    item.category === 'salchipapas' ||
+    item.category === 'lasanas' ||
+    item.category === 'spaguettis' ||
+    item.category === 'especiales';
   const hasVariants = item.variants && item.variants.length > 0;
   const canCombo = !!item.priceCombo;
 
@@ -135,11 +138,7 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
       >
         {/* Image */}
         <div className="relative h-40 sm:h-44 md:h-52 overflow-hidden rounded-t-2xl sm:rounded-t-2xl">
-          <img
-            src={getProductImage(item.category, item.id)}
-            alt={item.name}
-            className="w-full h-full object-cover"
-          />
+          <img src={getProductImage(item.category, item.id)} alt={item.name} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           <button
             onClick={onClose}
@@ -149,27 +148,19 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
             ✕
           </button>
           <div className="absolute bottom-4 left-4 right-4">
-            <h3 className="font-heading text-2xl sm:text-3xl text-white drop-shadow-lg">
-              {item.name}
-            </h3>
-            <p className="font-heading text-lg text-queso drop-shadow mt-0.5">
-              {formatPrice(item.price)}
-            </p>
+            <h3 className="font-heading text-2xl sm:text-3xl text-white drop-shadow-lg">{item.name}</h3>
+            <p className="font-heading text-lg text-queso drop-shadow mt-0.5">{formatPrice(item.price)}</p>
           </div>
         </div>
 
         <div className="p-4 sm:p-5 space-y-4 sm:space-y-5">
           {/* Description */}
-          {item.description && (
-            <p className="text-carbon/60 text-sm leading-relaxed">{item.description}</p>
-          )}
+          {item.description && <p className="text-carbon/60 text-sm leading-relaxed">{item.description}</p>}
 
           {/* Variant selector (Fresas Biscolatta, Cono Fresas, etc.) */}
           {hasVariants && (
             <div>
-              <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">
-                Tamaño
-              </h4>
+              <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">Tamaño</h4>
               <div className="grid grid-cols-2 gap-2">
                 {item.variants!.map((v, i) => (
                   <button
@@ -182,9 +173,7 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
                     }`}
                   >
                     <span className="font-heading text-sm text-carbon">{v.label}</span>
-                    <p className="font-heading text-sm text-tomato mt-0.5">
-                      {formatPrice(v.price)}
-                    </p>
+                    <p className="font-heading text-sm text-tomato mt-0.5">{formatPrice(v.price)}</p>
                   </button>
                 ))}
               </div>
@@ -194,16 +183,12 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
           {/* Combo toggle */}
           {canCombo && (
             <div>
-              <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">
-                ¿Armamos combo?
-              </h4>
+              <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">¿Armamos combo?</h4>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setIsCombo(false)}
                   className={`rounded-xl p-3 text-left border-2 transition-all ${
-                    !isCombo
-                      ? 'border-tomato bg-tomato/5 shadow-sm'
-                      : 'border-carbon/10 hover:border-carbon/20'
+                    !isCombo ? 'border-tomato bg-tomato/5 shadow-sm' : 'border-carbon/10 hover:border-carbon/20'
                   }`}
                 >
                   <span className="font-heading text-sm text-carbon">Individual</span>
@@ -214,9 +199,7 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
                 <button
                   onClick={() => setIsCombo(true)}
                   className={`rounded-xl p-3 text-left border-2 transition-all ${
-                    isCombo
-                      ? 'border-tomato bg-tomato/5 shadow-sm'
-                      : 'border-carbon/10 hover:border-carbon/20'
+                    isCombo ? 'border-tomato bg-tomato/5 shadow-sm' : 'border-carbon/10 hover:border-carbon/20'
                   }`}
                 >
                   <span className="font-heading text-sm text-carbon">Combo</span>
@@ -263,54 +246,50 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
           {/* Individual add-ons — only when combo is OFF */}
           {!isCombo && (
             <div>
-              <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">
-                ¿Algo más?
-              </h4>
+              <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">¿Algo más?</h4>
               <div className="space-y-2">
-                <label className="flex items-center gap-3 p-3 rounded-xl border border-carbon/10 hover:bg-white cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={addonPapas}
-                    onChange={(e) => setAddonPapas(e.target.checked)}
-                    className="w-5 h-5 rounded accent-tomato flex-shrink-0"
-                  />
-                  <span className="text-sm text-carbon flex-1">🍟 Papas Fritas</span>
-                  <span className="text-sm font-heading text-carbon/50">
-                    {formatPrice(PAPAS_ADDON.price)}
-                  </span>
-                </label>
-                <div className="p-3 rounded-xl border border-carbon/10">
-                  <p className="text-sm text-carbon font-medium mb-2">🥤 Bebida</p>
-                  <div className="space-y-1">
-                    {BEBIDAS_ADDON.map((bebida) => (
-                      <label
-                        key={bebida.id}
-                        className="flex items-center gap-3 py-1.5 px-1 rounded-lg cursor-pointer hover:bg-white transition-colors"
-                      >
-                        <input
-                          type="radio"
-                          name="addon-bebida"
-                          checked={addonBebida === bebida.id}
-                          onChange={() =>
-                            setAddonBebida(addonBebida === bebida.id ? '' : bebida.id)
-                          }
-                          className="w-4 h-4 accent-tomato flex-shrink-0"
-                        />
-                        <span className="text-sm text-carbon flex-1">{bebida.name}</span>
-                        <span className="text-xs text-carbon/50">{formatPrice(bebida.price)}</span>
-                      </label>
-                    ))}
+                {canAddPapas && (
+                  <label className="flex items-center gap-3 p-3 rounded-xl border border-carbon/10 hover:bg-white cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={addonPapas}
+                      onChange={(e) => setAddonPapas(e.target.checked)}
+                      className="w-5 h-5 rounded accent-tomato flex-shrink-0"
+                    />
+                    <span className="text-sm text-carbon flex-1">🍟 Papas Fritas</span>
+                    <span className="text-sm font-heading text-carbon/50">{formatPrice(PAPAS_ADDON.price)}</span>
+                  </label>
+                )}
+                {canAddBebida && (
+                  <div className="p-3 rounded-xl border border-carbon/10">
+                    <p className="text-sm text-carbon font-medium mb-2">🥤 Bebida</p>
+                    <div className="space-y-1">
+                      {BEBIDAS_ADDON.map((bebida) => (
+                        <label
+                          key={bebida.id}
+                          className="flex items-center gap-3 py-1.5 px-1 rounded-lg cursor-pointer hover:bg-white transition-colors"
+                        >
+                          <input
+                            type="radio"
+                            name="addon-bebida"
+                            checked={addonBebida === bebida.id}
+                            onChange={() => setAddonBebida(addonBebida === bebida.id ? '' : bebida.id)}
+                            className="w-4 h-4 accent-tomato flex-shrink-0"
+                          />
+                          <span className="text-sm text-carbon flex-1">{bebida.name}</span>
+                          <span className="text-xs text-carbon/50">{formatPrice(bebida.price)}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
 
           {/* Quantity */}
           <div>
-            <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">
-              Cantidad
-            </h4>
+            <h4 className="font-heading text-xs uppercase text-carbon/40 tracking-widest mb-3">Cantidad</h4>
             <div className="flex items-center justify-center gap-5">
               <button
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -319,9 +298,7 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
               >
                 −
               </button>
-              <span className="font-heading text-3xl text-carbon w-12 text-center tabular-nums">
-                {quantity}
-              </span>
+              <span className="font-heading text-3xl text-carbon w-12 text-center tabular-nums">{quantity}</span>
               <button
                 onClick={() => setQuantity((q) => q + 1)}
                 className="w-11 h-11 rounded-full bg-carbon/10 text-carbon font-bold text-xl flex items-center justify-center hover:bg-carbon/20 transition-colors"

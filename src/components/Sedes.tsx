@@ -43,7 +43,7 @@ const trustItems = [
 
 const features = [
   { emoji: '📦', label: 'Domicilios Rápidos' },
-  { emoji: '🕐', label: '3:00 PM - 11:00 PM' },
+  { emoji: '🕐', label: '4:00 PM - 10:00 PM' },
   { emoji: '🚴', label: 'Domicilio según zona' },
 ];
 
@@ -97,7 +97,9 @@ const Sedes: React.FC = () => {
                   className={`sede-card bg-crema rounded-3xl p-5 sm:p-6 md:p-8 border-2 border-transparent ${color === 'tomato' ? 'hover:border-tomato/20' : 'hover:border-queso/20'} relative overflow-hidden`}
                 >
                   {/* Decorative corner accent */}
-                  <div className={`absolute top-0 right-0 w-24 h-24 ${color === 'tomato' ? 'bg-tomato/8' : 'bg-queso/8'} rounded-bl-[3rem]`} />
+                  <div
+                    className={`absolute top-0 right-0 w-24 h-24 ${color === 'tomato' ? 'bg-tomato/8' : 'bg-queso/8'} rounded-bl-[3rem]`}
+                  />
 
                   <div className="relative z-10">
                     <div className="flex items-center gap-4 mb-6">
@@ -122,7 +124,7 @@ const Sedes: React.FC = () => {
                       </a>
                       <div className="flex items-center gap-3 text-carbon/70 text-sm bg-white/60 rounded-xl px-4 py-2.5">
                         <span className="text-lg">🕐</span>
-                        <span>3:00 PM - 11:00 PM</span>
+                        <span>4:00 PM - 10:00 PM</span>
                       </div>
                       <span className="inline-block bg-albahaca/15 text-albahaca text-xs font-semibold px-4 py-1.5 rounded-full border border-albahaca/20">
                         Cobertura: {sede.coverage}
@@ -153,7 +155,9 @@ const Sedes: React.FC = () => {
 
             <div className="relative z-10">
               <h3 className="font-heading text-2xl sm:text-3xl text-crema mb-2 sm:mb-3">¿Listo para ordenar?</h3>
-              <p className="text-crema/60 mb-5 sm:mb-8 text-base sm:text-lg">Haz tu pedido ahora y lo recibes en minutos.</p>
+              <p className="text-crema/60 mb-5 sm:mb-8 text-base sm:text-lg">
+                Haz tu pedido ahora y lo recibes en minutos.
+              </p>
               <a
                 href={`https://wa.me/${whatsappNumber}?text=Hola,%20quiero%20hacer%20un%20pedido%20🍕`}
                 target="_blank"
@@ -214,7 +218,9 @@ const Sedes: React.FC = () => {
                 </div>
 
                 {/* Icon */}
-                <div className={`trust-icon w-20 h-20 mx-auto mb-5 ${item.iconBg} rounded-2xl flex items-center justify-center shadow-lg ${item.iconShadow}`}>
+                <div
+                  className={`trust-icon w-20 h-20 mx-auto mb-5 ${item.iconBg} rounded-2xl flex items-center justify-center shadow-lg ${item.iconShadow}`}
+                >
                   <span className="text-4xl">{item.icon}</span>
                 </div>
 
@@ -236,9 +242,7 @@ const Sedes: React.FC = () => {
 
       {/* ═══════════ BOTTOM CTA ═══════════ */}
       <section className="bg-crema py-8 sm:py-10 md:py-12 text-center px-4 sm:px-8">
-        <p className="text-carbon/60 text-base sm:text-lg mb-3 sm:mb-4">
-          ¿Ya sabes qué vas a pedir?
-        </p>
+        <p className="text-carbon/60 text-base sm:text-lg mb-3 sm:mb-4">¿Ya sabes qué vas a pedir?</p>
         <Link
           to="/menu"
           className="inline-block bg-tomato text-white font-heading text-lg uppercase tracking-wider px-8 py-3.5 rounded-2xl shadow-lg shadow-tomato/20 hover:bg-tomato-600 hover:shadow-xl hover:shadow-tomato/30 hover:-translate-y-1 transition-all duration-300"

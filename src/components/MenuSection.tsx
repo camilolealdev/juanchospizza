@@ -7,8 +7,6 @@ import ProductAddModal from './ProductAddModal';
 
 const ALL_ITEMS: MenuItem[] = [...MENU_ITEMS, ...POSTRES_ITEMS];
 
-const MENU_DISCLAIMER_KEY = 'jp_disclaimer_closed';
-
 const MenuSection: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCat = searchParams.get('category') ?? 'pizzas';
@@ -17,9 +15,6 @@ const MenuSection: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState(false);
   const [modalItem, setModalItem] = useState<MenuItem | null>(null);
-  const [disclaimerClosed, setDisclaimerClosed] = useState(() => {
-    return localStorage.getItem(MENU_DISCLAIMER_KEY) === '1';
-  });
 
   useEffect(() => {
     const cat = searchParams.get('category');
@@ -34,7 +29,7 @@ const MenuSection: React.FC = () => {
       setActiveCategory(cat);
       setSearchParams({ category: cat }, { replace: true });
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   const showToast = useCallback(() => {
@@ -52,9 +47,7 @@ const MenuSection: React.FC = () => {
     if (!searchTerm.trim()) return base;
     const term = searchTerm.toLowerCase();
     return base.filter(
-      (item) =>
-        item.name.toLowerCase().includes(term) ||
-        item.description.toLowerCase().includes(term)
+      (item) => item.name.toLowerCase().includes(term) || item.description.toLowerCase().includes(term)
     );
   }, [activeCategory, searchTerm]);
 
@@ -62,9 +55,7 @@ const MenuSection: React.FC = () => {
     if (!searchTerm.trim()) return null;
     const term = searchTerm.toLowerCase();
     return ALL_ITEMS.filter(
-      (item) =>
-        item.name.toLowerCase().includes(term) ||
-        item.description.toLowerCase().includes(term)
+      (item) => item.name.toLowerCase().includes(term) || item.description.toLowerCase().includes(term)
     );
   }, [searchTerm]);
 
@@ -88,7 +79,10 @@ const MenuSection: React.FC = () => {
   }, [isPostres, displayItems]);
 
   return (
-    <section id="menu" className="relative bg-gradient-to-b from-crema via-crema to-crema/95 py-12 sm:py-16 md:py-20 w-full max-w-full">
+    <section
+      id="menu"
+      className="relative bg-gradient-to-b from-crema via-crema to-crema/95 py-12 sm:py-16 md:py-20 w-full max-w-full"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Heading */}
         <div className="text-center mb-12">
@@ -145,34 +139,10 @@ const MenuSection: React.FC = () => {
           </div>
         )}
 
-        {/* Photo disclaimer banner */}
-        {!isSearching && !disclaimerClosed && (
-          <div className="mb-8 relative bg-gradient-to-r from-queso/10 via-queso/5 to-queso/10 border border-queso/20 rounded-2xl px-5 py-4 flex items-start gap-3">
-            <span className="text-2xl mt-0.5 shrink-0">📸</span>
-            <div className="flex-1">
-              <p className="text-sm text-carbon/70 leading-relaxed">
-                <span className="font-semibold text-carbon">Las fotos son de referencia.</span>{' '}
-                El producto real puede variar en presentación, color y porción. La imagen es para que conozcas nuestros platos.
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setDisclaimerClosed(true);
-                localStorage.setItem(MENU_DISCLAIMER_KEY, '1');
-              }}
-              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-carbon/10 text-carbon/40 hover:text-carbon transition-colors text-lg leading-none cursor-pointer"
-              aria-label="Cerrar aviso"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
         {/* Product grid */}
         {isSearching && displayItems.length > 0 && (
           <p className="text-sm text-carbon/50 mb-4">
-            {displayItems.length} resultado{displayItems.length !== 1 ? 's' : ''} para
-            &ldquo;{searchTerm}&rdquo;
+            {displayItems.length} resultado{displayItems.length !== 1 ? 's' : ''} para &ldquo;{searchTerm}&rdquo;
           </p>
         )}
 
@@ -196,15 +166,13 @@ const MenuSection: React.FC = () => {
                     <h3 className={`font-heading text-xl sm:text-2xl ${accent} tracking-wide`}>
                       {subcatMeta?.name ?? group.subcat}
                     </h3>
-                    <div className={`flex-1 h-px ${bg === 'bg-white' ? 'bg-carbon/10' : border.replace('border-', 'bg-')}`} />
+                    <div
+                      className={`flex-1 h-px ${bg === 'bg-white' ? 'bg-carbon/10' : border.replace('border-', 'bg-')}`}
+                    />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {group.items.map((item) => (
-                      <ProductCard
-                        key={item.id}
-                        item={item}
-                        onOpenModal={setModalItem}
-                      />
+                      <ProductCard key={item.id} item={item} onOpenModal={setModalItem} />
                     ))}
                   </div>
                 </div>
@@ -222,12 +190,8 @@ const MenuSection: React.FC = () => {
                 <span className="text-6xl mb-3 group-hover:scale-110 transition-transform duration-300 relative z-10">
                   🍕
                 </span>
-                <h3 className="font-heading text-2xl text-white mb-1 relative z-10">
-                  Crea tu propia pizza
-                </h3>
-                <p className="text-crema/80 text-sm relative z-10">
-                  Elige tamaño, sabores y ingredientes a tu gusto
-                </p>
+                <h3 className="font-heading text-2xl text-white mb-1 relative z-10">Crea tu propia pizza</h3>
+                <p className="text-crema/80 text-sm relative z-10">Elige tamaño, sabores y ingredientes a tu gusto</p>
                 <span className="mt-4 inline-block bg-white text-tomato font-heading text-sm uppercase rounded-xl px-5 py-2.5 group-hover:bg-crema transition-colors relative z-10">
                   Construir pizza →
                 </span>
@@ -235,11 +199,7 @@ const MenuSection: React.FC = () => {
             )}
 
             {displayItems.map((item) => (
-              <ProductCard
-                key={item.id}
-                item={item}
-                onOpenModal={setModalItem}
-              />
+              <ProductCard key={item.id} item={item} onOpenModal={setModalItem} />
             ))}
           </div>
         )}
@@ -267,18 +227,10 @@ const MenuSection: React.FC = () => {
   );
 };
 
-function ProductCard({
-  item,
-  onOpenModal,
-}: {
-  item: MenuItem;
-  onOpenModal: (item: MenuItem) => void;
-}) {
+function ProductCard({ item, onOpenModal }: { item: MenuItem; onOpenModal: (item: MenuItem) => void }) {
   const hasPopular = item.tags?.includes('popular');
   const hasVariants = item.variants && item.variants.length > 0;
-  const lowestPrice = hasVariants
-    ? Math.min(...item.variants!.map((v) => v.price))
-    : item.price;
+  const lowestPrice = hasVariants ? Math.min(...item.variants!.map((v) => v.price)) : item.price;
 
   return (
     <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col">
@@ -308,26 +260,18 @@ function ProductCard({
       {/* Content */}
       <div className="p-5 flex flex-col flex-1">
         <div className="flex-1">
-          <h3 className="font-heading text-xl text-carbon leading-tight mb-1.5">
-            {item.name}
-          </h3>
+          <h3 className="font-heading text-xl text-carbon leading-tight mb-1.5">{item.name}</h3>
           {item.description && (
-            <p className="text-xs sm:text-sm text-carbon/50 line-clamp-2 leading-relaxed">
-              {item.description}
-            </p>
+            <p className="text-xs sm:text-sm text-carbon/50 line-clamp-2 leading-relaxed">{item.description}</p>
           )}
         </div>
 
         <div className="flex items-end justify-between mt-4 pt-3 border-t border-carbon/5">
           <div>
-            {hasVariants && (
-              <p className="text-[11px] text-carbon/40 font-medium uppercase tracking-wider">Desde</p>
-            )}
+            {hasVariants && <p className="text-[11px] text-carbon/40 font-medium uppercase tracking-wider">Desde</p>}
             <p className="font-heading text-xl text-tomato">{formatPrice(lowestPrice)}</p>
             {item.priceCombo && (
-              <p className="text-xs text-albahaca font-medium">
-                Combo: {formatPrice(item.priceCombo)}
-              </p>
+              <p className="text-xs text-albahaca font-medium">Combo: {formatPrice(item.priceCombo)}</p>
             )}
           </div>
           <button
