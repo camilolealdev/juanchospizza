@@ -43,8 +43,8 @@ const trustItems = [
 
 const features = [
   { emoji: '📦', label: 'Domicilios Rápidos' },
-  { emoji: '🕐', label: '4:00 PM - 10:00 PM' },
-  { emoji: '🚴', label: 'Envío Gratis' },
+  { emoji: '🕐', label: '3:00 PM - 11:00 PM' },
+  { emoji: '🚴', label: 'Domicilio según zona' },
 ];
 
 const Sedes: React.FC = () => {
@@ -53,7 +53,7 @@ const Sedes: React.FC = () => {
   return (
     <>
       {/* ═══════════ HERO BANNER ═══════════ */}
-      <section className="relative bg-gradient-to-b from-carbon via-carbon to-crema py-10 sm:py-14 md:py-16 px-4 md:px-20 overflow-hidden">
+      <section className="relative bg-gradient-to-b from-carbon via-carbon to-crema py-10 sm:py-14 md:py-16 px-4 sm:px-8 md:px-20 overflow-hidden w-full max-w-full">
         {/* Decorative background circles */}
         <div className="absolute top-10 left-10 w-40 h-40 bg-tomato/10 rounded-full blur-3xl" />
         <div className="absolute bottom-10 right-10 w-56 h-56 bg-queso/8 rounded-full blur-3xl" />
@@ -86,7 +86,7 @@ const Sedes: React.FC = () => {
       </section>
 
       {/* ═══════════ SEDE CARDS ═══════════ */}
-      <section id="domicilios" className="bg-white py-10 sm:py-14 md:py-16 px-4 md:px-20">
+      <section id="domicilios" className="bg-white py-10 sm:py-14 md:py-16 px-4 sm:px-8 md:px-20">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             {sedes.map(({ key, emoji, color }) => {
@@ -97,9 +97,7 @@ const Sedes: React.FC = () => {
                   className={`sede-card bg-crema rounded-3xl p-5 sm:p-6 md:p-8 border-2 border-transparent ${color === 'tomato' ? 'hover:border-tomato/20' : 'hover:border-queso/20'} relative overflow-hidden`}
                 >
                   {/* Decorative corner accent */}
-                  <div
-                    className={`absolute top-0 right-0 w-24 h-24 ${color === 'tomato' ? 'bg-tomato/8' : 'bg-queso/8'} rounded-bl-[3rem]`}
-                  />
+                  <div className={`absolute top-0 right-0 w-24 h-24 ${color === 'tomato' ? 'bg-tomato/8' : 'bg-queso/8'} rounded-bl-[3rem]`} />
 
                   <div className="relative z-10">
                     <div className="flex items-center gap-4 mb-6">
@@ -124,7 +122,7 @@ const Sedes: React.FC = () => {
                       </a>
                       <div className="flex items-center gap-3 text-carbon/70 text-sm bg-white/60 rounded-xl px-4 py-2.5">
                         <span className="text-lg">🕐</span>
-                        <span>4:00 PM - 10:00 PM</span>
+                        <span>3:00 PM - 11:00 PM</span>
                       </div>
                       <span className="inline-block bg-albahaca/15 text-albahaca text-xs font-semibold px-4 py-1.5 rounded-full border border-albahaca/20">
                         Cobertura: {sede.coverage}
@@ -155,9 +153,7 @@ const Sedes: React.FC = () => {
 
             <div className="relative z-10">
               <h3 className="font-heading text-2xl sm:text-3xl text-crema mb-2 sm:mb-3">¿Listo para ordenar?</h3>
-              <p className="text-crema/60 mb-5 sm:mb-8 text-base sm:text-lg">
-                Haz tu pedido ahora y lo recibes en minutos.
-              </p>
+              <p className="text-crema/60 mb-5 sm:mb-8 text-base sm:text-lg">Haz tu pedido ahora y lo recibes en minutos.</p>
               <a
                 href={`https://wa.me/${whatsappNumber}?text=Hola,%20quiero%20hacer%20un%20pedido%20🍕`}
                 target="_blank"
@@ -185,7 +181,7 @@ const Sedes: React.FC = () => {
                     <iframe
                       src={`https://www.google.com/maps?q=${sede.mapsQuery}&output=embed`}
                       width="100%"
-                      height="300"
+                      className="w-full aspect-video"
                       style={{ border: 0 }}
                       allowFullScreen
                       loading="lazy"
@@ -201,7 +197,7 @@ const Sedes: React.FC = () => {
       </section>
 
       {/* ═══════════ TRUST ROW ═══════════ */}
-      <section className="bg-gradient-to-b from-crema to-white py-10 sm:py-14 md:py-16 px-4 md:px-20">
+      <section className="bg-gradient-to-b from-crema to-white py-10 sm:py-14 md:py-16 px-4 sm:px-8 md:px-20">
         <div className="max-w-6xl mx-auto">
           <h3 className="font-heading text-2xl sm:text-3xl md:text-4xl text-carbon text-center mb-6 sm:mb-10">
             ¿Por qué pedir con nosotros?
@@ -218,9 +214,7 @@ const Sedes: React.FC = () => {
                 </div>
 
                 {/* Icon */}
-                <div
-                  className={`trust-icon w-20 h-20 mx-auto mb-5 ${item.iconBg} rounded-2xl flex items-center justify-center shadow-lg ${item.iconShadow}`}
-                >
+                <div className={`trust-icon w-20 h-20 mx-auto mb-5 ${item.iconBg} rounded-2xl flex items-center justify-center shadow-lg ${item.iconShadow}`}>
                   <span className="text-4xl">{item.icon}</span>
                 </div>
 
@@ -241,8 +235,10 @@ const Sedes: React.FC = () => {
       </section>
 
       {/* ═══════════ BOTTOM CTA ═══════════ */}
-      <section className="bg-crema py-8 sm:py-10 md:py-12 text-center px-4">
-        <p className="text-carbon/60 text-base sm:text-lg mb-3 sm:mb-4">¿Ya sabes qué vas a pedir?</p>
+      <section className="bg-crema py-8 sm:py-10 md:py-12 text-center px-4 sm:px-8">
+        <p className="text-carbon/60 text-base sm:text-lg mb-3 sm:mb-4">
+          ¿Ya sabes qué vas a pedir?
+        </p>
         <Link
           to="/menu"
           className="inline-block bg-tomato text-white font-heading text-lg uppercase tracking-wider px-8 py-3.5 rounded-2xl shadow-lg shadow-tomato/20 hover:bg-tomato-600 hover:shadow-xl hover:shadow-tomato/30 hover:-translate-y-1 transition-all duration-300"

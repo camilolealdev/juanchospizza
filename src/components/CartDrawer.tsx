@@ -86,8 +86,12 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1 min-w-0">
                       <h4 className="font-heading text-lg text-carbon">{item.name}</h4>
-                      {item.details && <p className="text-carbon/50 text-xs truncate">{item.details}</p>}
-                      {item.notes && <p className="text-carbon/40 text-xs italic mt-0.5 truncate">📝 {item.notes}</p>}
+                      {item.details && (
+                        <p className="text-carbon/50 text-xs sm:text-sm truncate">{item.details}</p>
+                      )}
+                      {item.notes && (
+                        <p className="text-carbon/40 text-xs italic mt-0.5 truncate">📝 {item.notes}</p>
+                      )}
                     </div>
                     <button
                       onClick={() => removeItem(item.id)}
@@ -95,11 +99,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       aria-label="Eliminar artículo"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
                   </div>
@@ -120,7 +120,9 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                         +
                       </button>
                     </div>
-                    <span className="font-heading text-lg text-carbon">{formatPrice(item.price * item.quantity)}</span>
+                    <span className="font-heading text-lg text-carbon">
+                      {formatPrice(item.price * item.quantity)}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -152,7 +154,10 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
               Los pagos y la confirmación final se hacen por WhatsApp. Precios en COP, incluyen IVA.
             </p>
             <div className="text-center">
-              <button onClick={clearCart} className="text-tomato text-sm hover:underline">
+              <button
+                onClick={clearCart}
+                className="text-tomato text-sm hover:underline"
+              >
                 Vaciar carrito
               </button>
             </div>

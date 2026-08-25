@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
 const CAROUSEL_IMAGES = [
-  { src: '/images/experiencia-adelante.webp', alt: 'Así nos ves por fuera' },
-  { src: '/images/experiencia-atras.webp', alt: 'Así nos encuentras' },
-  { src: '/images/local.webp', alt: 'Así se siente por dentro' },
+  { src: '/images/experiencia-adelante.webp', alt: "Así nos ves por fuera" },
+  { src: '/images/experiencia-atras.webp', alt: "Así nos encuentras" },
+  { src: '/images/local.webp', alt: "Así se siente por dentro" },
+  { src: '/images/local-nemo.webp', alt: "Nuestro local en Nemocón" },
 ];
 
 const highlights = [
@@ -61,7 +62,7 @@ export default function SobreNosotros() {
   }, [isPaused, next]);
 
   return (
-    <section className="bg-crema overflow-hidden">
+    <section className="bg-crema overflow-hidden w-full max-w-full">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-14 sm:py-20 md:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
           {/* Image side — 3D stacked carousel */}
@@ -76,12 +77,9 @@ export default function SobreNosotros() {
             }}
           >
             {/* 3D stacked carousel cards */}
-            <div
-              className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden"
-              style={{ transformStyle: 'preserve-3d' }}
-            >
+            <div className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden" style={{ transformStyle: 'preserve-3d' }}>
               {CAROUSEL_IMAGES.map((img, i) => {
-                const offset = (i - active + CAROUSEL_IMAGES.length) % CAROUSEL_IMAGES.length;
+                const offset = ((i - active + CAROUSEL_IMAGES.length) % CAROUSEL_IMAGES.length);
                 const isActive = offset === 0;
                 const isPrev = offset === CAROUSEL_IMAGES.length - 1;
 
@@ -121,16 +119,18 @@ export default function SobreNosotros() {
                       zIndex: isActive ? 20 : isPrev ? 10 : 5,
                     }}
                   >
-                    <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
+                    <img
+                      src={img.src}
+                      alt={img.alt}
+                      className="w-full h-full object-cover"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-carbon/60 via-carbon/10 to-transparent" />
 
                     {/* Label */}
                     {isActive && (
                       <div className="absolute bottom-0 left-0 right-0 p-5">
                         <div className="bg-white/95 backdrop-blur-sm rounded-xl px-4 py-3 shadow-xl inline-block">
-                          <p className="font-heading text-xs tracking-[0.2em] uppercase text-tomato mb-0.5">
-                            Nuestro Espacio
-                          </p>
+                          <p className="font-heading text-xs tracking-[0.2em] uppercase text-tomato mb-0.5">Nuestro Espacio</p>
                           <p className="text-carbon/70 text-xs leading-relaxed">{img.alt}</p>
                         </div>
                       </div>
@@ -178,8 +178,8 @@ export default function SobreNosotros() {
               <span className="text-tomato">una experiencia</span>
             </h2>
             <p className="text-carbon/60 text-base sm:text-lg leading-relaxed mb-6 sm:mb-10 max-w-lg">
-              En Juancho&apos;s Pizza nació del amor por la pizza artesanal y las comidas rápidas con sabor casero. Cada
-              ingrediente es seleccionado con cuidado, cada receta lleva nuestra firma.
+              En Juancho&apos;s Pizza nació del amor por la pizza y las comidas rápidas con sabor casero.
+              Cada ingrediente es seleccionado con cuidado, cada receta lleva nuestra firma.
             </p>
 
             {/* Highlights */}
@@ -209,15 +209,7 @@ export default function SobreNosotros() {
                 className="inline-flex items-center gap-2.5 px-8 py-3.5 bg-tomato text-white font-heading text-base tracking-wider uppercase rounded-xl hover:bg-tomato-600 transition-all duration-300 hover:shadow-lg hover:shadow-tomato/20 hover:scale-105"
               >
                 Ver Menú
-                <svg
-                  className="w-4 h-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </Link>

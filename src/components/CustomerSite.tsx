@@ -17,7 +17,7 @@ const CustomerSite: React.FC = () => {
   const [cartOpen, setCartOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-crema font-body text-carbon">
+    <div className="min-h-screen bg-crema font-body text-carbon overflow-x-hidden max-w-full">
       <ScrollToTop />
       <Header onCartClick={() => setCartOpen(true)} />
       <main>

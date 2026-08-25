@@ -23,7 +23,7 @@ export default defineConfig(() => {
         manifest: {
           name: "Guido Pizza — Juancho's Pizza",
           short_name: 'Guido Pizza',
-          description: 'Pide tu pizza artesanal en Nemocón y Zipaquirá',
+          description: 'Pide tu pizza en Nemocón y Zipaquirá',
           theme_color: '#ea580c',
           background_color: '#0c0a09',
           display: 'standalone',

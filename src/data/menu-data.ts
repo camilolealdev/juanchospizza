@@ -23,6 +23,8 @@ export interface MenuItem {
   priceCombo?: number;
   tags?: string[];
   image?: string;
+  subcat?: string;
+  variants?: { label: string; price: number }[];
 }
 
 export interface Category {
@@ -66,6 +68,7 @@ export const CATEGORIES: Category[] = [
   { id: 'perros-calientes', name: 'Perros Calientes', icon: '🌭' },
   { id: 'especiales', name: 'Especiales', icon: '⭐' },
   { id: 'bebidas', name: 'Bebidas', icon: '🥤' },
+  { id: 'postres', name: 'Postres', icon: '🍦' },
 ];
 
 export const MENU_ITEMS: MenuItem[] = [
@@ -418,13 +421,6 @@ export const MENU_ITEMS: MenuItem[] = [
     description: '',
     price: 7000,
   },
-  {
-    id: 'adicionales',
-    category: 'especiales',
-    name: 'Adicionales',
-    description: 'Ingrediente extra',
-    price: 3500,
-  },
 
   // ─── BEBIDAS ───
   {
@@ -440,13 +436,6 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Jugo Natural en Leche',
     description: 'Jugo natural de frutas en leche',
     price: 7000,
-  },
-  {
-    id: 'agua-pequena',
-    category: 'bebidas',
-    name: 'Botella de Agua Pequeña',
-    description: '',
-    price: 2000,
   },
   {
     id: 'agua-grande',
@@ -481,7 +470,7 @@ export const MENU_ITEMS: MenuItem[] = [
     category: 'bebidas',
     name: 'Hit de Litro',
     description: '',
-    price: 5500,
+    price: 6000,
   },
   {
     id: 'gaseosa-250-vidrio',
@@ -498,25 +487,18 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 2800,
   },
   {
-    id: 'gaseosa-350',
-    category: 'bebidas',
-    name: 'Gaseosa 350ml',
-    description: '',
-    price: 3800,
-  },
-  {
     id: 'gaseosa-500',
     category: 'bebidas',
     name: 'Gaseosa 500ml',
     description: '',
-    price: 4000,
+    price: 4800,
   },
 ];
 
 export const DESTACADOS = [
   {
     id: 'dest-pizza-especial',
-    name: "Pizza Especial Juancho's",
+    name: 'Pizza Especial Juancho\'s',
     description: 'Nuestra joya de la corona. Sabor que conquista al primer bocado y te hace volver por más.',
     price: 24900,
     image: '/images/featured.webp',
@@ -554,27 +536,27 @@ export const DESTACADOS = [
 export const SEDES = {
   nemocon: {
     name: 'Nemocón',
-    address: 'Cra 6 No. 5-40, Vía Principal, Nemocón, Cundinamarca',
-    phone: '311 707 4843',
-    phoneLink: 'https://wa.me/573117074843',
-    telLink: 'tel:+573117074843',
+    address: 'Cra 5 #5-68, Nemocón, Cundinamarca',
+    phone: '310 861 3690',
+    phoneLink: 'https://wa.me/573108613690',
+    telLink: 'tel:+573108613690',
     coverage: 'Nemocón y veredas',
-    mapsQuery: 'Cra+6+No.+5-40+Nemoc%C3%B3n+Cundinamarca+Colombia',
+    mapsQuery: 'Cra+5+%235-68+Nemoc%C3%B3n+Cundinamarca+Colombia',
   },
   zipaquira: {
     name: 'Zipaquirá',
     address: 'Diagonal 4 #29-10, Barrio Las Villas, Zipaquirá, Cundinamarca',
-    phone: '314 473 7097',
-    phoneLink: 'https://wa.me/573144737097',
-    telLink: 'tel:+573144737097',
+    phone: '322 769 9056',
+    phoneLink: 'https://wa.me/573227699056',
+    telLink: 'tel:+573227699056',
     coverage: 'Zipaquirá urbano',
     mapsQuery: 'Diagonal+4+%2329-10+Zipaquir%C3%A1+Cundinamarca+Colombia',
   },
 };
 
 export const WHATSAPP_NUMBERS = {
-  nemocon: '573117074843',
-  zipaquira: '573144737097',
+  nemocon: '573108613690',
+  zipaquira: '573227699056',
 };
 
 export function formatPrice(price: number): string {
@@ -593,16 +575,17 @@ const CATEGORY_IMAGES: Record<string, string[]> = {
   spaguettis: ['spaghetti-1.webp', 'spaghetti-2.webp'],
   especiales: ['steak-1.webp', 'steak-2.webp'],
   bebidas: ['drink-1.webp', 'drink-2.webp', 'drink-3.webp'],
+  postres: ['pizza-1.webp'],
 };
 
 const ITEM_IMAGE: Record<string, string> = {
   'pizza-porcion': 'pizza-1.webp',
-  mazorcada: 'mazorcada-destacada.webp',
+  'mazorcada': 'mazorcada-destacada.webp',
   'pechuga-gratinada': 'pechuga-gratinada.webp',
   'pechuga-rancho': 'pechuga-rancho.webp',
-  churrasco: 'churrasco.webp',
+  'churrasco': 'churrasco.webp',
   'costillitas-bbq-esp': 'costillas-bbq.webp',
-  francesa: 'papa-francesa.webp',
+  'francesa': 'papa-francesa.webp',
   'criolla-porcion': 'papa-criolla.webp',
   'spag-mixto': 'spag-mixto.webp',
   'spag-pollo': 'spag-pollo.webp',
@@ -647,12 +630,30 @@ const ITEM_IMAGE: Record<string, string> = {
   'gaseosa-500': 'gaseosa-500.webp',
   'agua-bretana': 'agua-bretana.webp',
   'agua-grande': 'agua-grande.webp',
-  'agua-pequena': 'agua-pequena.webp',
   'coca-1500': 'coca-1500.webp',
   'postobon-1500': 'postobon-1500.webp',
   'gaseosa-250-plastico': 'gaseosa-250-plastico.webp',
   'hit-litro': 'hit-litro.webp',
   'gaseosa-250-vidrio': 'gaseosa-250-vidrio.webp',
+  // Postres — heladería real
+  'hel-sencillo': 'hel-sencillo.webp',
+  'hel-doble': 'hel-doble.webp',
+  'hel-triple': 'hel-triple.webp',
+  'waf-sencillo': 'waf-sencillo.webp',
+  'waf-achocolatado': 'waf-achocolatado.webp',
+  'esp-banana-split': 'esp-banana-split.webp',
+  'ens-junior': 'ens-junior.webp',
+  'ens-sencilla': 'ens-sencilla.webp',
+  'ens-mixta': 'ens-mixta.webp',
+  'ens-mega': 'ens-mega.webp',
+  'malt-clasica': 'malt-clasica.webp',
+  'can-tradicional': 'can-tradicional.webp',
+  'can-chococanasta': 'can-chococanasta.webp',
+  'fre-sencillas': 'fre-sencillas.webp',
+  'fre-biscolatta': 'fre-biscolatta.webp',
+  'oblea-tradicional': 'oblea-tradicional.webp',
+  'oblea-especial': 'oblea-especial.webp',
+  'mer-juancho': 'mer-juancho.webp',
 };
 
 export function getProductImage(category: string, itemId: string): string {
@@ -668,9 +669,16 @@ export function getProductImage(category: string, itemId: string): string {
 export const PAPAS_ADDON = { id: 'papas-fritas', name: 'Papas Fritas', price: 7000 };
 
 export const BEBIDAS_ADDON = [
-  { id: 'gaseosa-500', name: 'Gaseosa 500ml', price: 4000 },
-  { id: 'hit-litro', name: 'Hit de Litro', price: 5500 },
+  { id: 'gaseosa-500', name: 'Gaseosa 500ml', price: 4800 },
+  { id: 'hit-litro', name: 'Hit de Litro', price: 6000 },
   { id: 'agua-grande', name: 'Agua Grande', price: 3000 },
+];
+
+export const COMBO_GASEOSAS = [
+  { id: 'combo-gaseosa-500', name: 'Gaseosa 500ml', price: 0 },
+  { id: 'combo-gaseosa-250', name: 'Gaseosa 250ml', price: 0 },
+  { id: 'combo-hit-litro', name: 'Hit de Litro', price: 1500 },
+  { id: 'combo-agua', name: 'Agua Grande', price: 0 },
 ];
 
 // ─── WHATSAPP MESSAGE BUILDER ────────────────────────────────────────────────
@@ -680,7 +688,12 @@ export function buildWhatsAppMessage(
   sede: 'nemocon' | 'zipaquira'
 ): string {
   const sedeName = sede === 'nemocon' ? 'Nemocón' : 'Zipaquirá';
-  const lines: string[] = ['Hola, quiero hacer un pedido 🍕', '', `Sede: ${sedeName}`, ''];
+  const lines: string[] = [
+    'Hola, quiero hacer un pedido 🍕',
+    '',
+    `Sede: ${sedeName}`,
+    '',
+  ];
 
   items.forEach((item, i) => {
     const total = item.price * item.quantity;
