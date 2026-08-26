@@ -35,9 +35,12 @@ router.post('/api/seed', authMiddleware, requireRole('ADMIN'), async (req, res) 
           p.descripcion,
           p.basePrice,
           p.type,
-          // Imagen local por producto (SVG procedural generado en tools/generate-product-images.cjs).
-          // Ruta local siempre: evita dependencia de hotlinks externos (Unsplash) que se rompen.
-          `/assets/images/products/${p.id}.svg`,
+          // Foto real del producto si el seed la trae (public/images/menu/,
+          // las mismas que usa el sitio público) -- auditoría CRM 2026-08-27:
+          // antes esto ignoraba `p.image` y forzaba el placeholder SVG
+          // procedural para TODO. Cae al placeholder solo si el producto no
+          // trae imagen real (ej. "Adicional de ingrediente", sin foto propia).
+          p.image || `/assets/images/products/${p.id}.svg`,
           p.tiempo || 20,
           p.popularidad || 0,
           !!p.vegetariano,

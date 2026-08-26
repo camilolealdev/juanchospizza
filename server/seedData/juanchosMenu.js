@@ -6,6 +6,12 @@
 // Usado por POST /api/seed (server/routes/misc.js). Todos los ids son
 // deterministas para que re-sembrar sea un upsert idempotente, no una
 // duplicación.
+//
+// `image`: rutas reales de src/data/menu-data.ts y src/data/postres-data.ts
+// (public/images/menu/*.webp) -- server/routes/misc.js las usa cuando vienen
+// seteadas, y solo cae al placeholder SVG procedural si un producto no trae
+// una (auditoría CRM 2026-08-27: antes el seed ignoraba `image` por completo
+// y forzaba el placeholder para TODO, aunque las fotos reales ya existían).
 
 const COMBINING_DIACRITICS = new RegExp(
   '[' + String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f) + ']',
@@ -29,6 +35,7 @@ export const CATEGORIES = [
   { id: 'especiales', name: 'Especiales', icon: 'star', color: 'text-purple-500' },
   { id: 'adicionales', name: 'Adicionales', icon: 'plus', color: 'text-stone-500' },
   { id: 'bebidas', name: 'Bebidas', icon: 'wine-glass', color: 'text-cyan-500' },
+  { id: 'postres', name: 'Postres', icon: 'ice-cream', color: 'text-pink-500' },
 ];
 // { id, categoryId, subcategory, nombre, descripcion, basePrice, type, image,
 //   vegetariano, comboPrice? } -- comboPrice se traduce a una menu_variant
@@ -43,6 +50,7 @@ export const PRODUCTS = [
     descripcion: 'Piña, Jamón',
     basePrice: 30000,
     type: 'tradicional',
+    image: '/images/menu/pizza-hawaiana.webp',
   },
   {
     id: 'pz-pollo-champinones',
@@ -51,6 +59,7 @@ export const PRODUCTS = [
     descripcion: 'Jamón, Champiñones, Pollo desmechado',
     basePrice: 30000,
     type: 'tradicional',
+    image: '/images/menu/pizza-pollo-champinones.webp',
   },
   {
     id: 'pz-carnes',
@@ -59,6 +68,7 @@ export const PRODUCTS = [
     descripcion: 'Jamón, Salami, Cabano',
     basePrice: 30000,
     type: 'tradicional',
+    image: '/images/menu/pizza-carnes.webp',
   },
   {
     id: 'pz-costillitas-bbq',
@@ -67,6 +77,7 @@ export const PRODUCTS = [
     descripcion: 'Jamón, Costillas BBQ, Maíz tierno',
     basePrice: 30000,
     type: 'tradicional',
+    image: '/images/menu/pizza-costillitas-bbq.webp',
   },
   {
     id: 'pz-criolla',
@@ -75,6 +86,7 @@ export const PRODUCTS = [
     descripcion: 'Carne desmechada, Maíz tierno',
     basePrice: 30000,
     type: 'tradicional',
+    image: '/images/menu/pizza-criolla.webp',
   },
   {
     id: 'pz-mexicana',
@@ -83,6 +95,7 @@ export const PRODUCTS = [
     descripcion: 'Carne molida, Maíz tierno, Tomate, Cilantro, Tostacos',
     basePrice: 30000,
     type: 'tradicional',
+    image: '/images/menu/pizza-mexicana.webp',
   },
   {
     id: 'pz-ranchera',
@@ -91,6 +104,7 @@ export const PRODUCTS = [
     descripcion: 'Champiñones, Cebolla, Maíz tierno, Chorizo',
     basePrice: 30000,
     type: 'tradicional',
+    image: '/images/menu/pizza-ranchera.webp',
   },
   {
     id: 'pz-de-la-casa',
@@ -99,6 +113,7 @@ export const PRODUCTS = [
     descripcion: 'Champiñones, Cebolla, Carne desmechada',
     basePrice: 30000,
     type: 'tradicional',
+    image: '/images/menu/pizza-de-la-casa.webp',
   },
   {
     id: 'pz-espanola',
@@ -107,6 +122,7 @@ export const PRODUCTS = [
     descripcion: 'Espinaca, Tocineta, Maíz tierno, Champiñón',
     basePrice: 30000,
     type: 'tradicional',
+    image: '/images/menu/pizza-espanola.webp',
   },
   {
     id: 'pz-napolitana',
@@ -115,6 +131,7 @@ export const PRODUCTS = [
     descripcion: 'Tomate, Orégano',
     basePrice: 30000,
     type: 'tradicional',
+    image: '/images/menu/pizza-napolitana.webp',
   },
   {
     id: 'pz-vegetariana',
@@ -124,6 +141,7 @@ export const PRODUCTS = [
     basePrice: 30000,
     type: 'tradicional',
     vegetariano: true,
+    image: '/images/menu/pizza-vegetariana.webp',
   },
   {
     id: 'pz-tropical',
@@ -133,6 +151,7 @@ export const PRODUCTS = [
     basePrice: 30000,
     type: 'tradicional',
     vegetariano: true,
+    image: '/images/menu/pizza-tropical.webp',
   },
   {
     id: 'pz-queso-bocadillo',
@@ -142,6 +161,7 @@ export const PRODUCTS = [
     basePrice: 30000,
     type: 'tradicional',
     vegetariano: true,
+    image: '/images/menu/pizza-queso-bocadillo.webp',
   },
   {
     id: 'pz-porcion',
@@ -151,6 +171,7 @@ export const PRODUCTS = [
     descripcion: 'Porción individual de pizza',
     basePrice: 9200,
     type: 'tradicional',
+    image: '/images/menu/pizza-1.webp',
   },
 
   // ── Hamburguesas (3 tiers) ───────────────────────────────────────
@@ -163,6 +184,7 @@ export const PRODUCTS = [
     basePrice: 17500,
     comboPrice: 25500,
     type: 'tradicional',
+    image: '/images/menu/hamb-sencilla.webp',
   },
   {
     id: 'ham-plancha-especial',
@@ -173,6 +195,7 @@ export const PRODUCTS = [
     basePrice: 18000,
     comboPrice: 26500,
     type: 'tradicional',
+    image: '/images/menu/hamb-especial.webp',
   },
   {
     id: 'ham-plancha-sencilla-doble',
@@ -183,6 +206,7 @@ export const PRODUCTS = [
     basePrice: 21500,
     comboPrice: 28000,
     type: 'tradicional',
+    image: '/images/menu/hamb-sencilla-doble.webp',
   },
   {
     id: 'ham-plancha-especial-doble',
@@ -193,6 +217,7 @@ export const PRODUCTS = [
     basePrice: 22000,
     comboPrice: 29000,
     type: 'tradicional',
+    image: '/images/menu/hamb-especial-doble.webp',
   },
   {
     id: 'ham-apanada-sencilla',
@@ -203,6 +228,7 @@ export const PRODUCTS = [
     basePrice: 20000,
     comboPrice: 27000,
     type: 'tradicional',
+    image: '/images/menu/hamb-apan-sencilla.webp',
   },
   {
     id: 'ham-apanada-especial',
@@ -213,6 +239,7 @@ export const PRODUCTS = [
     basePrice: 21000,
     comboPrice: 28000,
     type: 'tradicional',
+    image: '/images/menu/hamb-apan-especial.webp',
   },
   {
     id: 'ham-apanada-2carnes',
@@ -223,6 +250,7 @@ export const PRODUCTS = [
     basePrice: 22000,
     comboPrice: 28500,
     type: 'tradicional',
+    image: '/images/menu/hamb-apan-2carnes.webp',
   },
   {
     id: 'ham-apanada-tocineta',
@@ -233,6 +261,7 @@ export const PRODUCTS = [
     basePrice: 22000,
     comboPrice: 29000,
     type: 'tradicional',
+    image: '/images/menu/hamb-apan-tocineta.webp',
   },
   {
     id: 'ham-apanada-mixta',
@@ -243,6 +272,7 @@ export const PRODUCTS = [
     basePrice: 23500,
     comboPrice: 30000,
     type: 'tradicional',
+    image: '/images/menu/hamb-apan-mixta.webp',
   },
   {
     id: 'ham-casa-sencilla',
@@ -253,6 +283,7 @@ export const PRODUCTS = [
     basePrice: 17000,
     comboPrice: 25000,
     type: 'tradicional',
+    image: '/images/menu/hamb-casa-sencilla.webp',
   },
   {
     id: 'ham-casa-especial',
@@ -263,6 +294,7 @@ export const PRODUCTS = [
     basePrice: 18000,
     comboPrice: 26000,
     type: 'tradicional',
+    image: '/images/menu/hamb-casa-especial.webp',
   },
 
   // ── Pastas (mismo precio en lasagna o spaghetti) ────────────────
@@ -275,6 +307,7 @@ export const PRODUCTS = [
     basePrice: 19000,
     type: 'tradicional',
     vegetariano: true,
+    image: '/images/menu/lasana-champinones.webp',
   },
   {
     id: 'pasta-mixta',
@@ -284,6 +317,7 @@ export const PRODUCTS = [
       'Salsa boloñesa, pasta, champiñón, pollo, jamón, queso, pan tajado. Disponible en lasagna o spaghetti, mismo precio.',
     basePrice: 21000,
     type: 'tradicional',
+    image: '/images/menu/lasana-mixta.webp',
   },
   {
     id: 'pasta-pollo',
@@ -292,6 +326,7 @@ export const PRODUCTS = [
     descripcion: 'Salsa boloñesa, pasta, pollo, queso, pan tajado. Disponible en lasagna o spaghetti, mismo precio.',
     basePrice: 23000,
     type: 'tradicional',
+    image: '/images/menu/lasana-pollo.webp',
   },
   {
     id: 'pasta-jamon',
@@ -300,6 +335,7 @@ export const PRODUCTS = [
     descripcion: 'Salsa boloñesa, pasta, jamón, queso, pan tajado. Disponible en lasagna o spaghetti, mismo precio.',
     basePrice: 23500,
     type: 'tradicional',
+    image: '/images/menu/lasana-jamon.webp',
   },
 
   // ── Salchipapas & perros calientes ───────────────────────────────
@@ -311,6 +347,7 @@ export const PRODUCTS = [
     descripcion: 'Papa francesa, chorizo, salchicha, queso, salami',
     basePrice: 16000,
     type: 'tradicional',
+    image: '/images/menu/salchi-sencilla.webp',
   },
   {
     id: 'salchi-americana',
@@ -320,6 +357,7 @@ export const PRODUCTS = [
     descripcion: 'Papa francesa, chorizo, salchicha americana, queso, costillas de cerdo',
     basePrice: 17000,
     type: 'tradicional',
+    image: '/images/menu/salchi-americana.webp',
   },
   {
     id: 'salchi-super-especial',
@@ -329,6 +367,7 @@ export const PRODUCTS = [
     descripcion: 'Papa francesa, chorizo, salchicha americana, champiñón, pollo, queso, costillas de cerdo',
     basePrice: 20000,
     type: 'tradicional',
+    image: '/images/menu/salchi-super.webp',
   },
   {
     id: 'perro-sencillo',
@@ -339,6 +378,7 @@ export const PRODUCTS = [
     basePrice: 15500,
     comboPrice: 22000,
     type: 'tradicional',
+    image: '/images/menu/perro-sencillo.webp',
   },
   {
     id: 'perro-americano',
@@ -349,6 +389,7 @@ export const PRODUCTS = [
     basePrice: 16500,
     comboPrice: 24000,
     type: 'tradicional',
+    image: '/images/menu/perro-americano.webp',
   },
   {
     id: 'perro-super-especial',
@@ -359,6 +400,7 @@ export const PRODUCTS = [
     basePrice: 18000,
     comboPrice: 25000,
     type: 'tradicional',
+    image: '/images/menu/perro-super.webp',
   },
 
   // ── Especiales ────────────────────────────────────────────────────
@@ -369,6 +411,7 @@ export const PRODUCTS = [
     descripcion: 'Champiñones, pollo, carne desmechada, maíz, chorizo, queso + francesa',
     basePrice: 27000,
     type: 'tradicional',
+    image: '/images/menu/mazorcada-destacada.webp',
   },
   {
     id: 'esp-pechuga-gratinada',
@@ -377,6 +420,7 @@ export const PRODUCTS = [
     descripcion: 'Queso, francesas, ensalada, arepa',
     basePrice: 28000,
     type: 'tradicional',
+    image: '/images/menu/pechuga-gratinada.webp',
   },
   {
     id: 'esp-pechuga-rancho',
@@ -385,6 +429,7 @@ export const PRODUCTS = [
     descripcion: 'Champiñones, pollo, carne desmechada, maíz, chorizo, queso + francesa',
     basePrice: 31000,
     type: 'tradicional',
+    image: '/images/menu/pechuga-rancho.webp',
   },
   {
     id: 'esp-churrasco',
@@ -393,6 +438,7 @@ export const PRODUCTS = [
     descripcion: 'Carne 350 gramos, francesa, ensalada, arepa',
     basePrice: 29000,
     type: 'tradicional',
+    image: '/images/menu/churrasco.webp',
   },
   {
     id: 'esp-costillitas-bbq',
@@ -401,6 +447,7 @@ export const PRODUCTS = [
     descripcion: 'Costilla 350 gramos, francesa, ensalada, arepa',
     basePrice: 29000,
     type: 'tradicional',
+    image: '/images/menu/costillas-bbq.webp',
   },
 
   // ── Adicionales (sección propia del menú -- ingrediente extra en
@@ -423,6 +470,7 @@ export const PRODUCTS = [
     basePrice: 7000,
     type: 'entrada',
     vegetariano: true,
+    image: '/images/menu/papa-francesa.webp',
   },
   {
     id: 'add-criolla',
@@ -432,9 +480,16 @@ export const PRODUCTS = [
     basePrice: 7000,
     type: 'entrada',
     vegetariano: true,
+    image: '/images/menu/papa-criolla.webp',
   },
 
   // ── Bebidas ──────────────────────────────────────────────────────
+  // Sincronizado contra src/data/menu-data.ts (fuente real del sitio,
+  // auditoría 2026-08-27): "Agua pequeña" $2000 y "Gaseosa 350ml" $3800
+  // no existen en el menú público -- sacados. "Hit de Litro" $6000 faltaba
+  // por completo -- agregado. Gaseosa 500ml estaba en $4000, el precio real
+  // vigente es $4800 (confirmado en el commit de re-aplicación de precios
+  // del sitio, 2026-08-26).
   {
     id: 'beb-jugo-agua',
     categoryId: 'bebidas',
@@ -444,6 +499,7 @@ export const PRODUCTS = [
     basePrice: 6000,
     type: 'bebida',
     vegetariano: true,
+    image: '/images/menu/jugo-agua.webp',
   },
   {
     id: 'beb-jugo-leche',
@@ -454,16 +510,7 @@ export const PRODUCTS = [
     basePrice: 7000,
     type: 'bebida',
     vegetariano: true,
-  },
-  {
-    id: 'beb-agua-pequena',
-    categoryId: 'bebidas',
-    subcategory: 'Botella de agua',
-    nombre: 'Agua pequeña',
-    descripcion: 'Botella de agua pequeña',
-    basePrice: 2000,
-    type: 'bebida',
-    vegetariano: true,
+    image: '/images/menu/jugo-leche.webp',
   },
   {
     id: 'beb-agua-grande',
@@ -474,6 +521,7 @@ export const PRODUCTS = [
     basePrice: 3000,
     type: 'bebida',
     vegetariano: true,
+    image: '/images/menu/agua-grande.webp',
   },
   {
     id: 'beb-agua-bretana',
@@ -484,6 +532,7 @@ export const PRODUCTS = [
     basePrice: 3500,
     type: 'bebida',
     vegetariano: true,
+    image: '/images/menu/agua-bretana.webp',
   },
   {
     id: 'beb-cocacola-15l',
@@ -494,6 +543,7 @@ export const PRODUCTS = [
     basePrice: 8500,
     type: 'bebida',
     vegetariano: true,
+    image: '/images/menu/coca-1500.webp',
   },
   {
     id: 'beb-postobon-15l',
@@ -504,16 +554,18 @@ export const PRODUCTS = [
     basePrice: 7500,
     type: 'bebida',
     vegetariano: true,
+    image: '/images/menu/postobon-1500.webp',
   },
   {
-    id: 'beb-gaseosa-350',
+    id: 'beb-hit-litro',
     categoryId: 'bebidas',
     subcategory: 'Gaseosas',
-    nombre: 'Gaseosa 350 ml',
-    descripcion: 'Gaseosa personal 350 ml',
-    basePrice: 3800,
+    nombre: 'Hit de Litro',
+    descripcion: 'Hit de litro',
+    basePrice: 6000,
     type: 'bebida',
     vegetariano: true,
+    image: '/images/menu/hit-litro.webp',
   },
   {
     id: 'beb-gaseosa-500',
@@ -521,9 +573,10 @@ export const PRODUCTS = [
     subcategory: 'Gaseosas',
     nombre: 'Gaseosa 500 ml',
     descripcion: 'Gaseosa personal 500 ml',
-    basePrice: 4000,
+    basePrice: 4800,
     type: 'bebida',
     vegetariano: true,
+    image: '/images/menu/gaseosa-500.webp',
   },
   {
     id: 'beb-gaseosa-250-vidrio',
@@ -534,6 +587,7 @@ export const PRODUCTS = [
     basePrice: 2800,
     type: 'bebida',
     vegetariano: true,
+    image: '/images/menu/gaseosa-250-vidrio.webp',
   },
   {
     id: 'beb-gaseosa-250-plastica',
@@ -544,6 +598,209 @@ export const PRODUCTS = [
     basePrice: 2800,
     type: 'bebida',
     vegetariano: true,
+    image: '/images/menu/gaseosa-250-plastico.webp',
+  },
+
+  // ── Postres (heladería asociada -- src/data/postres-data.ts) ─────
+  // Horario propio: 11am-8pm. Mismos teléfonos de Juancho's Pizza.
+  {
+    id: 'pos-hel-sencillo',
+    categoryId: 'postres',
+    subcategory: 'Helados',
+    nombre: 'Helado Sencillo',
+    descripcion: 'Cono, 1 helado, salsa, 1 topping',
+    basePrice: 3000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/hel-sencillo.webp',
+  },
+  {
+    id: 'pos-hel-doble',
+    categoryId: 'postres',
+    subcategory: 'Helados',
+    nombre: 'Helado Doble',
+    descripcion: 'Cono, 2 helados, salsa, 1 topping',
+    basePrice: 5000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/hel-doble.webp',
+  },
+  {
+    id: 'pos-hel-triple',
+    categoryId: 'postres',
+    subcategory: 'Helados',
+    nombre: 'Helado Triple',
+    descripcion: 'Cono, 3 helados, salsa, 1 topping premium',
+    basePrice: 7500,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/hel-triple.webp',
+  },
+  {
+    id: 'pos-waf-sencillo',
+    categoryId: 'postres',
+    subcategory: 'Waffles',
+    nombre: 'Waffle Sencillo',
+    descripcion: '2 frutas a elección, queso, crema, 1 helado',
+    basePrice: 12500,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/waf-sencillo.webp',
+  },
+  {
+    id: 'pos-waf-achocolatado',
+    categoryId: 'postres',
+    subcategory: 'Waffles',
+    nombre: 'Waffle Achocolatado',
+    descripcion: '2 frutas a elección, base de nutella, crema, queso, chantilly, 1 helado, decoración',
+    basePrice: 15500,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/waf-achocolatado.webp',
+  },
+  {
+    id: 'pos-esp-banana-split',
+    categoryId: 'postres',
+    subcategory: 'Especiales',
+    nombre: 'Banana Split',
+    descripcion: '2 helados, banano, 2 frutas a elección',
+    basePrice: 14000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/esp-banana-split.webp',
+  },
+  {
+    id: 'pos-ens-junior',
+    categoryId: 'postres',
+    subcategory: 'Ensaladas de Fruta',
+    nombre: 'Ensalada Junior',
+    descripcion: 'Picado de fruta, crema, queso, 1 mini bola de helado',
+    basePrice: 10000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/ens-junior.webp',
+  },
+  {
+    id: 'pos-ens-sencilla',
+    categoryId: 'postres',
+    subcategory: 'Ensaladas de Fruta',
+    nombre: 'Ensalada Sencilla',
+    descripcion: 'Picado de fruta, crema, queso, 1 bola de helado',
+    basePrice: 12000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/ens-sencilla.webp',
+  },
+  {
+    id: 'pos-ens-mixta',
+    categoryId: 'postres',
+    subcategory: 'Ensaladas de Fruta',
+    nombre: 'Ensalada Mixta',
+    descripcion: 'Picado de fruta, crema, queso, 2 bolas de helado',
+    basePrice: 16000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/ens-mixta.webp',
+  },
+  {
+    id: 'pos-ens-mega',
+    categoryId: 'postres',
+    subcategory: 'Ensaladas de Fruta',
+    nombre: 'Ensalada Mega',
+    descripcion: 'Picado de fruta, queso, crema, 3 bolas de helado + 1 topping',
+    basePrice: 23000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/ens-mega.webp',
+  },
+  {
+    id: 'pos-malt-clasica',
+    categoryId: 'postres',
+    subcategory: 'Malteadas',
+    nombre: 'Malteada',
+    descripcion: 'Helado a elección, decoración',
+    basePrice: 14000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/malt-clasica.webp',
+  },
+  {
+    id: 'pos-can-tradicional',
+    categoryId: 'postres',
+    subcategory: 'Canastas',
+    nombre: 'Canasta Tradicional',
+    descripcion: 'Tres bolas de helado, crema, queso y decoración',
+    basePrice: 9000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/can-tradicional.webp',
+  },
+  {
+    id: 'pos-can-chococanasta',
+    categoryId: 'postres',
+    subcategory: 'Canastas',
+    nombre: 'Chococanasta',
+    descripcion: '2 bolas de helado, crema, queso, salsa de chocolate, maní, chocolate rayado',
+    basePrice: 10500,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/can-chococanasta.webp',
+  },
+  {
+    id: 'pos-fre-sencillas',
+    categoryId: 'postres',
+    subcategory: 'Fresas con Crema',
+    nombre: 'Fresas Sencillas',
+    descripcion: 'Fresas, crema de la casa, nutella + 1 topping',
+    basePrice: 8000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/fre-sencillas.webp',
+  },
+  {
+    id: 'pos-fre-biscolatta',
+    categoryId: 'postres',
+    subcategory: 'Fresas con Crema',
+    nombre: 'Fresas Biscolatta',
+    descripcion: 'Fresas, crema de la casa, cereal/biscolata, queso',
+    basePrice: 10000,
+    comboPrice: 12000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/fre-biscolatta.webp',
+  },
+  {
+    id: 'pos-mer-juancho',
+    categoryId: 'postres',
+    subcategory: 'Obleas y Merengues',
+    nombre: 'Merengón Juancho',
+    descripcion: 'Merengón, fruta a elección, queso, salsa de caramelo y decoración',
+    basePrice: 15000,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/mer-juancho.webp',
+  },
+  {
+    id: 'pos-oblea-tradicional',
+    categoryId: 'postres',
+    subcategory: 'Obleas y Merengues',
+    nombre: 'Oblea Tradicional',
+    descripcion: 'Arequipe, queso',
+    basePrice: 3500,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/oblea-tradicional.webp',
+  },
+  {
+    id: 'pos-oblea-especial',
+    categoryId: 'postres',
+    subcategory: 'Obleas y Merengues',
+    nombre: 'Oblea Especial',
+    descripcion: 'Arequipe, queso, salsa a elección + 1 topping (fruta a elección)',
+    basePrice: 5500,
+    type: 'postre',
+    vegetariano: true,
+    image: '/images/menu/oblea-especial.webp',
   },
 ];
 
