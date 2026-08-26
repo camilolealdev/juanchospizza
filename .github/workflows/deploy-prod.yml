@@ -3,8 +3,10 @@
 #  Pipeline seguro para desplegar Docker Compose en VPS via SSH.
 #
 #  TRIGGERS:
-#    - workflow_dispatch (manual, con selector de rama)
-#    - push a master (auto-deploy: cada push a master despliega)
+#    - workflow_dispatch (manual, con selector de rama -- util para probar main)
+#    - push a master (unica rama de auto-deploy; main quedo fuera del trigger
+#      automatico el 2026-08-26 para evitar que un push a main redesplegara
+#      master por accidente -- ver historial de este archivo)
 #
 #  REQUISITOS (GitHub Secrets):
 #    PROD_HOST       — IP del VPS
@@ -32,9 +34,12 @@ on:
           - master
           - main
 
-  # Auto-deploy: cada push a master lanza quality → build → deploy
+  # Auto-deploy: cada push a master lanza quality → build → deploy.
+  # main quedo fuera a propósito -- es la única rama que representa lo que
+  # corre en el VPS; main se usa para trabajo en curso y se mergea a master
+  # cuando está listo para producción.
   push:
-    branches: [master, main]
+    branches: [master]
 
 concurrency:
   group: deploy-production-${{ github.ref }}
@@ -111,9 +116,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [quality, docker-check]
-    # Corre con ambos triggers: workflow_dispatch manual y push a master.
-    # En push, github.event.inputs.branch es vacío y BRANCH cae al default
-    # 'master' dentro del script SSH (ver paso 0).
+    # Corre con ambos triggers: workflow_dispatch manual y push a master/main.
+    # En push, github.event.inputs.branch es vacío — BRANCH usa github.ref_name
+    # (la rama que realmente disparó el push) dentro del script SSH (ver paso 0).
     environment: production
 
     steps:
@@ -150,7 +155,12 @@ jobs:
             # YAML del workflow. Los defaults se resuelven acá en shell.
             PROJECT_DIR="${{ secrets.PROD_PATH }}"
             PROJECT_DIR="${PROJECT_DIR:-/opt/guido-pizza}"
-            BRANCH="${{ github.event.inputs.branch }}"
+            # BUG (hasta este fix): en push automático github.event.inputs.branch
+            # está vacío y caía siempre al default "master", así que un push a
+            # main deployaba igual el master viejo -- el pull de main nunca
+            # pasaba aunque el job quedara verde. github.ref_name es la rama que
+            # realmente disparó el push (o el input manual si fue dispatch).
+            BRANCH="${{ github.event.inputs.branch || github.ref_name }}"
             BRANCH="${BRANCH:-master}"
 
             # ── 1. Ir al proyecto y traer últimos cambios ──────
@@ -202,14 +212,20 @@ jobs:
             echo "⏳ Esperando health check (30s)..."
             sleep 30
 
-            # Intentar health check directo al app, fallback vía nginx.
-            HEALTH=$(curl -fsS -o /dev/null -w "%{http_code}" http://localhost:3001/api/health 2>/dev/null || true)
-            if [ "$HEALTH" != "200" ]; then
-              HEALTH=$(curl -kfsS -o /dev/null -w "%{http_code}" https://localhost/api/health 2>/dev/null || true)
-            fi
+            # Ni app ni nginx publican puertos al host en este VPS -- el
+            # tráfico real de producción llega vía un Traefik compartido
+            # (otro stack, ver `traefik.*` labels en docker-compose.yml) que
+            # enruta juanchospizza.com directo a app:3001 por la red edge.
+            # localhost:3001 / localhost (nginx propio) daban connection
+            # refused o 404 porque no es por ahí que pasa el tráfico real --
+            # el check tiene que ir contra el dominio público, el camino que
+            # de verdad usan los usuarios.
+            PROD_URL="${{ secrets.PROD_URL }}"
+            PROD_URL="${PROD_URL:-https://juanchospizza.com}"
+            HEALTH=$(curl -fsS -o /dev/null -w "%{http_code}" "$PROD_URL/api/health" 2>/dev/null || true)
 
             if [ "$HEALTH" != "200" ]; then
-              echo "❌ Health check falló (HTTP ${HEALTH:-000}) — rollback manual requerido"
+              echo "❌ Health check falló (HTTP ${HEALTH:-000} en $PROD_URL/api/health) — rollback manual requerido"
               docker compose ps
               docker compose logs --tail=50 app nginx
               exit 1
