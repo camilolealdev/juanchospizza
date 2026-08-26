@@ -89,6 +89,14 @@ app.use(
         // 'strict-dynamic' + nonce sería más seguro, pero requiere cambios en
         // la arquitectura SSR que están fuera del scope actual.
         scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://connect.facebook.net', "'unsafe-inline'"],
+        // Explícito a propósito (Helmet ya lo trae en sus defaults, pero
+        // dejarlo implícito es lo que causó el bug de CSP audit 2026-08-27:
+        // scriptSrc 'unsafe-inline' NO cubre atributos on*, esa es una
+        // directiva aparte y más específica. index.html usaba onload=
+        // inline para el swap de fuentes/Font Awesome -- se movió a un
+        // <script> normal (sí cubierto por scriptSrc) en vez de aflojar
+        // esto.
+        scriptSrcAttr: ["'none'"],
         styleSrc: [
           "'self'",
           'https://fonts.googleapis.com',
@@ -115,6 +123,14 @@ app.use(
           'https://production.wompi.co',
           'https://www.facebook.com',
           'https://connect.facebook.net',
+          // El service worker (vite-plugin-pwa/workbox) cachea la hoja de
+          // estilos de Google Fonts y los archivos de fuente vía fetch()
+          // propio -- eso corre bajo connect-src, no style-src/font-src
+          // (que solo gobiernan el <link> directo del documento). Sin esto
+          // el SW tira CSP violation y las fuentes personalizadas no
+          // terminan de aplicarse (CSP audit 2026-08-27).
+          'https://fonts.googleapis.com',
+          'https://fonts.gstatic.com',
         ],
         frameSrc: ["'self'", 'https://checkout.bold.co', 'https://www.mercadopago.com.co', 'https://www.google.com'],
         objectSrc: ["'none'"],
