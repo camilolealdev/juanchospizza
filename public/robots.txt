@@ -4,5 +4,6 @@ Disallow: /admin
 Disallow: /admin/
 Disallow: /api/
 Disallow: /confirmacion
+Disallow: /pantalla
 
 Sitemap: https://juanchospizza.com/sitemap.xml

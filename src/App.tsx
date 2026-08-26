@@ -16,6 +16,7 @@ const MenuPage = lazy(() => import('./pages/site/MenuPage'));
 const DomiciliosPage = lazy(() => import('./pages/site/DomiciliosPage'));
 const LegalPage = lazy(() => import('./pages/site/LegalPage'));
 const NotFoundPage = lazy(() => import('./pages/site/NotFoundPage'));
+const DigiturnoPublicPage = lazy(() => import('./pages/site/DigiturnoPublicPage'));
 
 // CRM modules
 const GastroProDashboard = lazy(() => import('./views/roles/GastroProDashboard'));
@@ -330,6 +331,10 @@ const App: React.FC = () => {
               }
             >
               <Routes>
+                {/* Fuera de CustomerSite a propósito: pantalla de TV/kiosko de
+                    sede, sin header/footer/carrito/chatbot -- solo lectura,
+                    sin login (ver DigiturnoPublicPage.tsx). */}
+                <Route path="pantalla/:sede" element={<DigiturnoPublicPage />} />
                 <Route element={<CustomerSite />}>
                   <Route index element={<HomePage />} />
                   <Route path="pizza" element={<PizzaPage />} />
