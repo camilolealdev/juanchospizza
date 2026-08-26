@@ -130,6 +130,15 @@ Sistema versionado en `server/migrate.js`. Estado actual: 11 migraciones aplicad
 | `postgres` | `postgres:17-alpine`           | Base de datos                     |
 | `redis`    | `redis:8-alpine`               | Cache + sesiones (AOF + LRU)      |
 
+> ⚠️ **Divergencia entre diseño y VPS real (detectada 2026-08-26):** `docker-compose.yml` publica `nginx` en `80:80`/`443:443` — esa es la arquitectura pensada para un VPS dedicado al proyecto. El VPS que realmente corre producción (`/opt/guido-pizza`) comparte el servidor con otros stacks (n8n, otro Postgres) detrás de un **Traefik** común, que descubre `app` vía labels Docker (`traefik.http.services.guidopizza.loadbalancer.server.port: "3001"`) y lo enruta directo — **nunca pasa por `nginx`**. Confirmado en vivo: ni `app` ni `nginx` publican puertos al host en ese servidor (`docker compose ps` sin bindings; `curl localhost:3001` desde el host da connection refused).
+>
+> **Consecuencias reales:**
+> - El rate-limiting y los security headers definidos en `nginx.conf` (tabla de abajo) **no protegen el tráfico de producción** — solo lo que hace Express (Helmet + rate limiter con Redis) está activo.
+> - Los certificados propios del proyecto en `certs/` (`fullchain.pem`/`privkey.pem`, gestionados a mano vía certbot, ver `DEPLOY.md`) no son los que ve el usuario final — Traefik termina TLS con su propio `certresolver: letsencrypt`.
+> - El contenedor `nginx` sigue arrancando y pasa `nginx -t`, simplemente no recibe tráfico externo en este VPS.
+>
+> Esto quedó así, no se decidió activamente — documentado para que la próxima persona no asuma que `nginx` es el borde real. Decisión pendiente: enrutar Traefik→nginx→app (recupera las protecciones de nginx) o remover nginx del compose para este VPS (simplifica, pero pierde rate-limit a nivel proxy y el manejo actual de websockets/logs de nginx).
+
 ### Hardening
 
 - **Multi-stage Dockerfile**: 4 etapas (base → deps → build → runtime)

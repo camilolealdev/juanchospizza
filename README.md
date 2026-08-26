@@ -23,7 +23,7 @@
 | **Backend**  | Express.js + Node.js ESM + Zod validación     | ✅ Producción |
 | **DB**       | PostgreSQL 17                                 | ✅ Docker     |
 | **Cache**    | Redis 8 (AOF + LRU eviction)                  | ✅ Docker     |
-| **Proxy**    | Nginx 1.31 (SSL, rate-limit, WebSocket)       | ✅ Docker     |
+| **Proxy**    | Nginx 1.31 (SSL, rate-limit, WebSocket)       | ⚠️ Ver nota   |
 | **Auth**     | JWT (HMAC-SHA256) + PBKDF2 + HttpOnly cookies | ✅ Producción |
 | **IA**       | Google Gemini (menú inteligente opcional)     | ⚠️ Opcional   |
 | **Pagos**    | Bold (Colombia)                               | ✅ Listo      |
@@ -49,6 +49,8 @@ El proyecto usa un **patrón híbrido**: landing page estática (`index.html`) p
 │  Express API (32 rutas) — PostgreSQL — Redis             │
 └─────────────────────────────────────────────────────────┘
 ```
+
+> ⚠️ **Nota sobre el VPS de producción actual:** este diagrama es la arquitectura *diseñada* (`docker-compose.yml` publica `nginx` en 80/443). En el VPS real, un **Traefik compartido** (otro stack en el mismo servidor, gestiona TLS de varios proyectos) enruta `juanchospizza.com` directo a `app:3001` — **sin pasar por este nginx**. Ni `app` ni `nginx` publican puertos al host ahí. Efecto práctico: el rate-limit y los headers de seguridad de nginx no se aplican al tráfico real hoy; solo lo que hace Express (Helmet, rate limiter con Redis) está activo. Detalle en [ARCHITECTURE.md § Infraestructura Docker](./ARCHITECTURE.md#infraestructura-docker).
 
 > Ver **[ARCHITECTURE.md](./ARCHITECTURE.md)** para el detalle completo de decisiones técnicas.
 
@@ -136,14 +138,16 @@ Los SVGs fueron diseñados con temática de pizza artesanal: masa dorada, pepper
 
 ## 🔐 Roles y Acceso CRM
 
-| Rol               | PIN (⚠️ rotar en prod) | Acceso                     |
-| ----------------- | ---------------------- | -------------------------- |
-| **Administrador** | `1234`                 | Total — todos los módulos  |
-| **Cocina**        | `5678`                 | Pedidos, comandas, estados |
-| **Repartidor**    | `0000`                 | Entregas                   |
-| **Marketing**     | `9999`                 | Campañas, clientes         |
+| Rol               | Acceso                     |
+| ----------------- | -------------------------- |
+| **Administrador** | Total — todos los módulos  |
+| **Cocina**        | Pedidos, comandas, estados |
+| **Repartidor**    | Entregas                   |
+| **Marketing**     | Campañas, clientes         |
 
-> 🔴 **IMPORTANTE**: Rotar los PINs por defecto ANTES de producción vía CRM > Empleados.
+> 🔴 **IMPORTANTE**: El seed de desarrollo crea PINs de 4 dígitos predecibles por rol.
+> No se publican acá a propósito — no queremos un PIN productivo real filtrado en un repo público.
+> Verificar/rotar vía CRM > Empleados.
 
 ---
 
@@ -167,11 +171,12 @@ npm run docker:run   # Docker Compose up
 | ----------------- | ----------------------------------------- | -------------------------------------------------- |
 | **CI**            | `.github/workflows/ci.yml`                | Push/PR a master                                   |
 | **Deploy**        | `.github/workflows/deploy.yml`            | Manual (PM2 legado)                                |
-| **Deploy Docker** | `.github/workflows/deploy-prod.yml`       | Manual con branch selector                         |
+| **Deploy Docker** | `.github/workflows/deploy-prod.yml`       | Push a `master` (auto) + manual con branch selector |
 | **Backup**        | `.github/workflows/backup.yml` + cron VPS | GH no alcanza Postgres interno; cron VPS requerido |
 
 > El workflow **`deploy-prod.yml`** usa `appleboy/ssh-action` para hacer deploy con Docker Compose via SSH:
-> `quality → docker-check → deploy (git pull + compose up -d --build + healthcheck) → smoke test`
+> `quality → docker-check → deploy (git pull + compose up -d --build + healthcheck contra PROD_URL) → smoke test`.
+> `main` quedó fuera del auto-deploy (2026-08-26) — sigue disponible como opción manual. El health check pega contra el dominio público real, no `localhost` (ver nota de Traefik arriba).
 
 ---
 
