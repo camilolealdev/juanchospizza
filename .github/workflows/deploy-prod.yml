@@ -3,8 +3,10 @@
 #  Pipeline seguro para desplegar Docker Compose en VPS via SSH.
 #
 #  TRIGGERS:
-#    - workflow_dispatch (manual, con selector de rama)
-#    - push a master (auto-deploy: cada push a master despliega)
+#    - workflow_dispatch (manual, con selector de rama -- util para probar main)
+#    - push a master (unica rama de auto-deploy; main quedo fuera del trigger
+#      automatico el 2026-08-26 para evitar que un push a main redesplegara
+#      master por accidente -- ver historial de este archivo)
 #
 #  REQUISITOS (GitHub Secrets):
 #    PROD_HOST       — IP del VPS
@@ -32,9 +34,12 @@ on:
           - master
           - main
 
-  # Auto-deploy: cada push a master lanza quality → build → deploy
+  # Auto-deploy: cada push a master lanza quality → build → deploy.
+  # main quedo fuera a propósito -- es la única rama que representa lo que
+  # corre en el VPS; main se usa para trabajo en curso y se mergea a master
+  # cuando está listo para producción.
   push:
-    branches: [master, main]
+    branches: [master]
 
 concurrency:
   group: deploy-production-${{ github.ref }}
