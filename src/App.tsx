@@ -15,6 +15,7 @@ const PizzaPage = lazy(() => import('./pages/site/PizzaPage'));
 const MenuPage = lazy(() => import('./pages/site/MenuPage'));
 const DomiciliosPage = lazy(() => import('./pages/site/DomiciliosPage'));
 const LegalPage = lazy(() => import('./pages/site/LegalPage'));
+const NotFoundPage = lazy(() => import('./pages/site/NotFoundPage'));
 
 // CRM modules
 const GastroProDashboard = lazy(() => import('./views/roles/GastroProDashboard'));
@@ -337,7 +338,7 @@ const App: React.FC = () => {
                   <Route path="politica-de-privacidad" element={<LegalPage />} />
                   <Route path="terminos-y-condiciones" element={<LegalPage />} />
                   <Route path="eliminacion-de-datos" element={<LegalPage />} />
-                  <Route path="*" element={<HomePage />} />
+                  <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>
             </Suspense>
