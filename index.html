@@ -25,8 +25,14 @@
     <meta name="keywords" content="Juancho's Pizza Nemocón, Juancho's Pizza Zipaquirá, Pizzería en Nemocón, Pizzería en Zipaquirá, Domicilios en Nemocón, Domicilios en Zipaquirá, pizza Cundinamarca">
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="canonical" href="https://juanchospizza.com/">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#241E1B">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Juancho's Pizza">
+    <!-- Preload del poster del hero (video de fondo) -- es el candidato a LCP
+         de la página; sin esto compite por prioridad de red con fuentes/JS. -->
+    <link rel="preload" as="image" href="/pizza-logo-poster.webp" fetchpriority="high">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
@@ -44,16 +50,26 @@
     <!-- Open Graph / Social Sharing -->
     <meta property="og:title" content="Juancho's Pizza y Comidas Rápidas - Nemocón &amp; Zipaquirá">
     <meta property="og:description" content="Las mejores pizzas, lasañas y spaguettis de Nemocón y Zipaquirá directamente a tu puerta.">
-    <meta property="og:image" content="/images/logo.webp">
+    <meta property="og:image" content="https://juanchospizza.com/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta property="og:url" content="https://juanchospizza.com">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="es_CO">
+    <meta property="og:site_name" content="Juancho's Pizza">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Juancho's Pizza - Nemocón &amp; Zipaquirá">
     <meta name="twitter:description" content="Las mejores pizzas de Nemocón y Zipaquirá directamente a tu puerta.">
-    <meta name="twitter:image" content="/images/logo.webp">
+    <meta name="twitter:image" content="https://juanchospizza.com/og-image.jpg">
 
     <!-- JSON-LD Structured Data -->
+    <!-- Telefonos y horarios sincronizados con src/data/menu-data.ts (SEDES) --
+         esa es la fuente real que ve el usuario (botones de WhatsApp). Antes
+         de este fix los telefonos acá no coincidían con los de la UI (SEO
+         audit 2026-08-26): +57-311-707-4843/+57-314-473-7097 (viejos, sin
+         uso real) vs 310 861 3690/322 769 9056 (los que la gente realmente
+         puede marcar). Si SEDES cambia, actualizar acá también a mano --
+         no hay build step que sincronice esto todavía. -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -61,7 +77,9 @@
       "name": "Juancho's Pizza y Comidas Rápidas",
       "description": "Pizzas, lasañas y spaguettis con sedes en Nemocón y Zipaquirá, Cundinamarca.",
       "url": "https://juanchospizza.com",
-      "telephone": "+57-311-707-4843",
+      "image": "https://juanchospizza.com/images/logo.webp",
+      "telephone": "+573108613690",
+      "priceRange": "$$",
       "servesCuisine": "Pizza, Comida Rápida, Italiana",
       "areaServed": ["Nemocón", "Zipaquirá", "Cundinamarca"],
       "hasMenu": "https://juanchospizza.com",
@@ -81,7 +99,14 @@
             "addressRegion": "Cundinamarca",
             "addressCountry": "CO"
           },
-          "telephone": "+57-311-707-4843"
+          "telephone": "+573108613690",
+          "priceRange": "$$",
+          "openingHoursSpecification": {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            "opens": "15:00",
+            "closes": "23:00"
+          }
         },
         {
           "@type": "FoodEstablishment",
@@ -93,7 +118,14 @@
             "addressRegion": "Cundinamarca",
             "addressCountry": "CO"
           },
-          "telephone": "+57-314-473-7097"
+          "telephone": "+573227699056",
+          "priceRange": "$$",
+          "openingHoursSpecification": {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            "opens": "15:00",
+            "closes": "23:00"
+          }
         }
       ]
     }
