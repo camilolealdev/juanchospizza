@@ -204,8 +204,15 @@ app.get('/api/metrics', metricsHandler);
 // ya esté seteado cuando el limiter decide qué balde usar -- un bot
 // autenticado (n8n/cron) usa serviceRateLimit (por nombre de servicio, techo
 // alto) en vez de generalRateLimit (por IP, pensado para navegadores).
-app.use(serviceKeyMiddleware);
-app.use((req, res, next) =>
+//
+// Ambos montados en '/api' (bug encontrado 2026-08-27): antes estaban sin
+// prefijo, así que el limiter general (100 req/60s por IP) corría también
+// para express.static (imágenes, JS, CSS, fuentes) más abajo -- una sola
+// carga de /pizza o /menu, con una docena de fotos + varios chunks de JS,
+// agotaba el cupo y tiraba 429 en assets reales para visitantes normales
+// (confirmado en vivo: logo del header y fotos de pizza rotas en prod).
+app.use('/api', serviceKeyMiddleware);
+app.use('/api', (req, res, next) =>
   req.auth?.type === 'service' ? serviceRateLimit(req, res, next) : generalRateLimit(req, res, next)
 );
 
