@@ -32,6 +32,10 @@ export const updateInventoryItemSchema = z.object({
   activo: boolOpt(),
 });
 
+export const createInventoryCategorySchema = z.object({
+  nombre: str(50),
+});
+
 export const inventoryMovementSchema = z.object({
   itemId: str(50, 'Falta itemId'),
   tipo: z.enum(['entrada', 'salida'], { error: 'Tipo de movimiento inválido' }),

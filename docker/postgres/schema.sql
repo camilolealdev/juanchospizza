@@ -193,6 +193,15 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   activo BOOLEAN DEFAULT TRUE
 );
 
+-- Categorías propias de inventario (insumos de bodega), separadas de
+-- `categories` (esa es de productos del menú). Ver initDB() en server/db.js
+-- para el detalle y el seed de categorías por defecto.
+CREATE TABLE IF NOT EXISTS inventory_categories (
+  id TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL UNIQUE,
+  activo BOOLEAN DEFAULT TRUE
+);
+
 CREATE TABLE IF NOT EXISTS inventory_movements (
   id TEXT PRIMARY KEY,
   "itemId" TEXT,

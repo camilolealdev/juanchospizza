@@ -877,6 +877,18 @@ export const api = {
     return apiFetch('/api/inventory');
   },
 
+  async getInventoryCategories(): Promise<{ id: string; nombre: string }[]> {
+    return apiFetch('/api/inventory/categories');
+  },
+
+  async createInventoryCategory(nombre: string): Promise<{ id: string; nombre: string }> {
+    return apiFetch('/api/inventory/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre }),
+    });
+  },
+
   async createInventoryItem(item: InventoryItemPayload) {
     return apiFetch('/api/inventory', {
       method: 'POST',

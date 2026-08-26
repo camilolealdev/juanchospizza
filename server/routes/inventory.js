@@ -2,7 +2,12 @@ import express from 'express';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole, requireSameLocation } from '../auth.js';
 import { validate } from '../middleware/validate.js';
-import { createInventoryItemSchema, updateInventoryItemSchema, inventoryMovementSchema } from '../schemas/inventory.js';
+import {
+  createInventoryItemSchema,
+  updateInventoryItemSchema,
+  inventoryMovementSchema,
+  createInventoryCategorySchema,
+} from '../schemas/inventory.js';
 
 const router = express.Router();
 
@@ -99,6 +104,45 @@ router.post(
       res.status(201).json({ id, nombre });
     } catch (_e) {
       res.status(500).json({ error: 'Error creating inventory item' });
+    }
+  }
+);
+
+// --- INVENTORY CATEGORIES ---
+// Categorías propias de insumos de bodega (Carnes, Lácteos, etc.), separadas
+// de /api/categories (esas son de productos del menú). Sin sede -- son
+// globales al negocio, no por sede como los ítems mismos.
+router.get('/api/inventory/categories', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (_req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, nombre FROM inventory_categories WHERE activo IS DISTINCT FROM false ORDER BY nombre'
+    );
+    res.json(result.rows);
+  } catch (_e) {
+    res.status(500).json({ error: 'Error fetching inventory categories' });
+  }
+});
+
+router.post(
+  '/api/inventory/categories',
+  authMiddleware,
+  requireRole('ADMIN', 'OPERATOR'),
+  validate(createInventoryCategorySchema),
+  async (req, res) => {
+    try {
+      const nombre = req.body.nombre.trim();
+      const id = `invcat_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      // ON CONFLICT (nombre): si el staff ya escribió "Carnes" antes, no
+      // duplica -- devuelve la fila existente en vez de un 500 por UNIQUE.
+      const result = await pool.query(
+        `INSERT INTO inventory_categories (id, nombre) VALUES ($1, $2)
+         ON CONFLICT (nombre) DO UPDATE SET nombre = EXCLUDED.nombre
+         RETURNING id, nombre`,
+        [id, nombre]
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (_e) {
+      res.status(500).json({ error: 'Error creating inventory category' });
     }
   }
 );
