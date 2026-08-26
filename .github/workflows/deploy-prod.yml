@@ -111,9 +111,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [quality, docker-check]
-    # Corre con ambos triggers: workflow_dispatch manual y push a master.
-    # En push, github.event.inputs.branch es vacío y BRANCH cae al default
-    # 'master' dentro del script SSH (ver paso 0).
+    # Corre con ambos triggers: workflow_dispatch manual y push a master/main.
+    # En push, github.event.inputs.branch es vacío — BRANCH usa github.ref_name
+    # (la rama que realmente disparó el push) dentro del script SSH (ver paso 0).
     environment: production
 
     steps:
@@ -150,7 +150,12 @@ jobs:
             # YAML del workflow. Los defaults se resuelven acá en shell.
             PROJECT_DIR="${{ secrets.PROD_PATH }}"
             PROJECT_DIR="${PROJECT_DIR:-/opt/guido-pizza}"
-            BRANCH="${{ github.event.inputs.branch }}"
+            # BUG (hasta este fix): en push automático github.event.inputs.branch
+            # está vacío y caía siempre al default "master", así que un push a
+            # main deployaba igual el master viejo -- el pull de main nunca
+            # pasaba aunque el job quedara verde. github.ref_name es la rama que
+            # realmente disparó el push (o el input manual si fue dispatch).
+            BRANCH="${{ github.event.inputs.branch || github.ref_name }}"
             BRANCH="${BRANCH:-master}"
 
             # ── 1. Ir al proyecto y traer últimos cambios ──────
