@@ -166,6 +166,10 @@ export async function initDB() {
     // Fundación multi-sede: 'nemocon' | 'zipaquira'. Default a 'nemocon' para
     // no romper pedidos/filas existentes que nunca conocieron el concepto de sede.
     await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS "locationId" TEXT DEFAULT 'nemocon'`);
+    // Modulo Pedidos para REPARTIDOR (feature 2026-08-27): quien reclamo la
+    // entrega. Se setea al hacer self-claim (READY -> ASSIGNED) via
+    // PATCH /api/orders/:id/status -- ver server/routes/orders.js.
+    await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS "repartidorId" TEXT');
 
     // UNIQUE constraints for data integrity
     await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_number ON orders("orderNumber")');

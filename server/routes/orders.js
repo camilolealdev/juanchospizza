@@ -20,7 +20,7 @@ router.get(
   requireSameLocation((req) => req.query.locationId),
   async (req, res) => {
     try {
-      const { status, paidOnly, locationId, page, pageSize } = req.query;
+      const { status, paidOnly, locationId, page, pageSize, mine } = req.query;
       const conditions = [];
       const params = [];
 
@@ -32,6 +32,14 @@ router.get(
       if (locationId) {
         params.push(locationId);
         conditions.push(`"locationId" = $${params.length}`);
+      }
+
+      // ?mine=true (módulo Pedidos, repartidor): sus propias entregas
+      // reclamadas. Resuelto server-side contra req.auth.sub -- el frontend
+      // no necesita conocer/pasar su propio employee id.
+      if (mine === 'true' && req.auth?.role === 'REPARTIDOR') {
+        params.push(req.auth.sub);
+        conditions.push(`"repartidorId" = $${params.length}`);
       }
 
       // Cocina/Operador/Repartidor deben usar esto para no ver pedidos con
@@ -379,8 +387,36 @@ router.patch(
   async (req, res) => {
     try {
       const { status } = req.body;
+      const isRepartidor = req.auth?.role === 'REPARTIDOR';
 
-      await pool.query('UPDATE orders SET status = $1 WHERE id = $2', [status, req.params.id]);
+      // Módulo Pedidos (2026-08-27): auto-reclamo de entregas. READY ->
+      // ASSIGNED por un REPARTIDOR es un "tomar pedido" -- se resuelve
+      // atómico contra la DB (WHERE status='READY' AND "repartidorId" IS
+      // NULL) para que dos repartidores no puedan reclamar el mismo pedido
+      // en una carrera; el que pierde la carrera recibe 409, no un 200 con
+      // un pedido que en realidad ya es de otro.
+      if (isRepartidor && status === 'ASSIGNED') {
+        const claim = await pool.query(
+          `UPDATE orders SET status = 'ASSIGNED', "repartidorId" = $1
+           WHERE id = $2 AND status = 'READY' AND "repartidorId" IS NULL
+           RETURNING *`,
+          [req.auth.sub, req.params.id]
+        );
+        if (!claim.rows.length) {
+          return res.status(409).json({ error: 'Este pedido ya fue tomado por otro repartidor' });
+        }
+      } else if (isRepartidor && (status === 'DELIVERING' || status === 'COMPLETED')) {
+        // Solo quien reclamó la entrega puede avanzarla -- evita que un
+        // repartidor marque como entregado un pedido de otro.
+        const owned = await pool.query('SELECT "repartidorId" FROM orders WHERE id = $1', [req.params.id]);
+        if (!owned.rows.length) return res.status(404).json({ error: 'Order not found' });
+        if (owned.rows[0].repartidorId !== req.auth.sub) {
+          return res.status(403).json({ error: 'Este pedido no está asignado a vos' });
+        }
+        await pool.query('UPDATE orders SET status = $1 WHERE id = $2', [status, req.params.id]);
+      } else {
+        await pool.query('UPDATE orders SET status = $1 WHERE id = $2', [status, req.params.id]);
+      }
 
       const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
 

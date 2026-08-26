@@ -539,12 +539,18 @@ export const api = {
   // Paginación real: pasar { page, pageSize } devuelve
   // { data, total, page, pageSize, totalPages } (ver server/routes/orders.js).
   // Sin ellos → array completo (back-compat con dashboard/reportes).
-  async getOrders(status?: string, options?: { paidOnly?: boolean; page?: number; pageSize?: number }) {
+  async getOrders(
+    status?: string,
+    options?: { paidOnly?: boolean; page?: number; pageSize?: number; mine?: boolean }
+  ) {
     const query = new URLSearchParams();
     if (status) query.set('status', status);
     if (options?.paidOnly) query.set('paidOnly', 'true');
     if (options?.page !== undefined) query.set('page', String(options.page));
     if (options?.pageSize !== undefined) query.set('pageSize', String(options.pageSize));
+    // mine=true (módulo Pedidos, repartidor): el backend resuelve "mío"
+    // contra el JWT (req.auth.sub) -- acá solo se pide el filtro.
+    if (options?.mine) query.set('mine', 'true');
     const qs = query.toString();
     return apiFetch(`/api/orders${qs ? `?${qs}` : ''}`);
   },

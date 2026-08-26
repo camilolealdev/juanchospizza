@@ -38,6 +38,7 @@ const ComandasView = lazy(() => import('./views/roles/ComandasView'));
 const ComprasView = lazy(() => import('./views/roles/ComprasView'));
 const InvoicesView = lazy(() => import('./views/roles/InvoicesView'));
 const DigiturnoView = lazy(() => import('./views/roles/DigiturnoView'));
+const PedidosView = lazy(() => import('./views/roles/PedidosView'));
 const DerechosView = lazy(() => import('./views/roles/DerechosView'));
 
 interface AuthContextType {
@@ -84,6 +85,7 @@ const GASTRO_MODULES: GastroModule[] = [
   'turnos',
   'mesas',
   'caja',
+  'pedidos',
   'comandas',
   'compras',
   'facturacion',
@@ -100,8 +102,13 @@ const moduleFromPath = (): GastroModule | null => {
 
 const ROLE_MODULE_ACCESS: Partial<Record<UserRole, GastroModule[]>> = {
   [UserRole.ADMIN]: GASTRO_MODULES,
-  [UserRole.OPERATOR]: ['dashboard', 'menu', 'inventario', 'turnos', 'mesas', 'comandas', 'digiturno'],
-  [UserRole.REPARTIDOR]: ['dashboard'],
+  // 'caja' y 'pedidos' agregados 2026-08-27: antes cocina no podía cobrar en
+  // mostrador (solo ADMIN tenía Caja) ni tenía ninguna vista de pedidos con
+  // estado (Comandas es mesas/dine-in, un concepto distinto).
+  [UserRole.OPERATOR]: ['dashboard', 'menu', 'inventario', 'turnos', 'mesas', 'caja', 'pedidos', 'comandas', 'digiturno'],
+  // Repartidor no tenía NINGÚN módulo propio -- 'pedidos' es su vista de
+  // auto-reclamo de entregas (ver PedidosView.tsx).
+  [UserRole.REPARTIDOR]: ['dashboard', 'pedidos'],
   [UserRole.MARKETING]: ['dashboard', 'reviews', 'campanas', 'derechos'],
 };
 
@@ -271,6 +278,8 @@ const App: React.FC = () => {
         return <InvoicesView locationId={selectedLocation} />;
       case 'digiturno':
         return <DigiturnoView locationId={selectedLocation} />;
+      case 'pedidos':
+        return <PedidosView role={role} locationId={selectedLocation} />;
       case 'derechos':
         return <DerechosView />;
       default:

@@ -90,7 +90,10 @@ CREATE TABLE IF NOT EXISTS orders (
   "paymentStatus" TEXT DEFAULT 'pending',
   "paymentProviderRef" TEXT,
   -- Fundación multi-sede: 'nemocon' | 'zipaquira'.
-  "locationId" TEXT DEFAULT 'nemocon'
+  "locationId" TEXT DEFAULT 'nemocon',
+  -- Módulo Pedidos para REPARTIDOR: quién reclamó la entrega (self-claim
+  -- READY -> ASSIGNED). Ver server/routes/orders.js.
+  "repartidorId" TEXT
 );
 
 CREATE TABLE IF NOT EXISTS campaigns (

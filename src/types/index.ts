@@ -176,6 +176,7 @@ export type GastroModule =
   | 'turnos'
   | 'mesas'
   | 'caja'
+  | 'pedidos'
   | 'comandas'
   | 'compras'
   | 'facturacion'
