@@ -274,7 +274,7 @@ const App: React.FC = () => {
       case 'derechos':
         return <DerechosView />;
       default:
-        return <GastroProDashboard locationId={selectedLocation} />;
+        return <GastroProDashboard locationId={selectedLocation} role={role} />;
     }
   };
 
