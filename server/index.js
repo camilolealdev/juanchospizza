@@ -132,7 +132,24 @@ app.use(
           'https://fonts.googleapis.com',
           'https://fonts.gstatic.com',
         ],
-        frameSrc: ["'self'", 'https://checkout.bold.co', 'https://www.mercadopago.com.co', 'https://www.google.com'],
+        // facebook.com agregado 2026-08-27: fbevents.js (Meta Pixel) usa
+        // iframes ocultos hacia facebook.com para sincronizar tracking
+        // (matching, dedup) cuando el script corre sin que un ad-blocker lo
+        // frene antes -- connect-src ya confiaba en facebook.com para el
+        // pixel, pero frame-src nunca lo tuvo, así que quedaba bloqueado en
+        // silencio hasta que alguien probaba sin bloqueador de ads.
+        frameSrc: [
+          "'self'",
+          'https://checkout.bold.co',
+          'https://www.mercadopago.com.co',
+          'https://www.google.com',
+          'https://www.facebook.com',
+        ],
+        // Sin esto Helmet aplica su default ("'self'" solamente) en
+        // silencio -- mismo patrón que ya mordió con scriptSrcAttr. El
+        // Pixel también hace un form-action de respaldo hacia facebook.com
+        // cuando sus otros métodos de entrega (fetch/beacon/imagen) fallan.
+        formAction: ["'self'", 'https://www.facebook.com'],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },
