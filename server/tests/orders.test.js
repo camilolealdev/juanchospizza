@@ -128,6 +128,11 @@ beforeEach(() => {
   // tests porque solo se reseteban los de pool).
   vi.clearAllMocks();
   mockQuery.mockReset();
+  // mockAuth es un objeto compartido -- algunos tests de aislamiento por
+  // sede lo mutan a OPERATOR/otra sede; resetear a ADMIN evita que eso se
+  // filtre a los tests siguientes.
+  mockAuth.role = 'ADMIN';
+  mockAuth.locationId = null;
   // Default: SELECT vacío (rutas GET de notificación/lectura y ramas no
   // testeadas devuelven "no encontrado" sin crashear).
   mockQuery.mockResolvedValue({ rows: [] });
@@ -535,20 +540,23 @@ describe('PATCH /api/orders/:id/status', () => {
 
   it('actualiza el status y devuelve la orden', async () => {
     const app = createApp();
-    mockQuery.mockResolvedValueOnce({ rowCount: 1 }).mockResolvedValueOnce({ rows: [mockOrder()] });
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] }) // existencia + sede
+      .mockResolvedValueOnce({ rowCount: 1 }) // UPDATE
+      .mockResolvedValueOnce({ rows: [mockOrder()] }); // SELECT
 
     const res = await supertest(app).patch('/api/orders/ord_1/status').send({ status: 'CONFIRMED' });
 
     expect(res.status).toBe(200);
-    expect(mockQuery.mock.calls[0][0]).toContain('UPDATE orders SET status = $1 WHERE id = $2');
-    expect(mockQuery.mock.calls[0][1]).toEqual(['CONFIRMED', 'ord_1']);
+    expect(mockQuery.mock.calls[1][0]).toContain('UPDATE orders SET status = $1 WHERE id = $2');
+    expect(mockQuery.mock.calls[1][1]).toEqual(['CONFIRMED', 'ord_1']);
     // CONFIRMED no mapea a push ni email de notificación
     expect(sendPushToPhone).not.toHaveBeenCalled();
   });
 
   it('404 si la orden no existe', async () => {
     const app = createApp();
-    mockQuery.mockResolvedValueOnce({ rowCount: 1 }).mockResolvedValueOnce({ rows: [] });
+    mockQuery.mockResolvedValueOnce({ rows: [] });
 
     const res = await supertest(app).patch('/api/orders/ord_zzz/status').send({ status: 'READY' });
 
@@ -556,10 +564,24 @@ describe('PATCH /api/orders/:id/status', () => {
     expect(res.body).toEqual({ error: 'Order not found' });
   });
 
+  it('404 si el pedido es de otra sede (aislamiento por sede)', async () => {
+    const app = createApp();
+    mockAuth.role = 'OPERATOR';
+    mockAuth.locationId = 'zipaquira';
+    mockQuery.mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] });
+
+    const res = await supertest(app).patch('/api/orders/ord_1/status').send({ status: 'READY' });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Order not found' });
+    expect(mockQuery).toHaveBeenCalledTimes(1); // no llega a hacer el UPDATE
+  });
+
   it('COMPLETED con clientId actualiza los agregados de gasto del cliente', async () => {
     const app = createApp();
     const order = mockOrder({ clientId: 'cli_1', total: 45000 });
     mockQuery
+      .mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] }) // existencia + sede
       .mockResolvedValueOnce({ rowCount: 1 }) // UPDATE orders
       .mockResolvedValueOnce({ rows: [order] }) // SELECT order
       .mockResolvedValueOnce({
@@ -572,7 +594,7 @@ describe('PATCH /api/orders/:id/status', () => {
     const res = await supertest(app).patch('/api/orders/ord_1/status').send({ status: 'COMPLETED' });
 
     expect(res.status).toBe(200);
-    await vi.waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(5));
+    await vi.waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(6));
 
     const updateClients = mockQuery.mock.calls.find(([sql]) => String(sql).includes('UPDATE clients SET'));
     expect(updateClients).toBeDefined();
@@ -588,7 +610,10 @@ describe('PATCH /api/orders/:id/status', () => {
   it('COMPLETED sin clientId no toca agregados del cliente', async () => {
     const app = createApp();
     const order = mockOrder({ clientId: null });
-    mockQuery.mockResolvedValueOnce({ rowCount: 1 }).mockResolvedValueOnce({ rows: [order] });
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [order] });
 
     const res = await supertest(app).patch('/api/orders/ord_1/status').send({ status: 'COMPLETED' });
 
@@ -602,6 +627,7 @@ describe('PATCH /api/orders/:id/status', () => {
     const app = createApp();
     const order = mockOrder({ clientId: 'cli_1' });
     mockQuery
+      .mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] })
       .mockResolvedValueOnce({ rowCount: 1 })
       .mockResolvedValueOnce({ rows: [order] })
       .mockResolvedValueOnce({ rows: [{ email: 'cliente@test.com' }] }); // notify SELECT email
@@ -609,7 +635,7 @@ describe('PATCH /api/orders/:id/status', () => {
     const res = await supertest(app).patch('/api/orders/ord_1/status').send({ status: 'READY' });
 
     expect(res.status).toBe(200);
-    await vi.waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(3));
+    await vi.waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(4));
 
     expect(sendPushToPhone).toHaveBeenCalledWith(
       expect.anything(),
@@ -648,7 +674,9 @@ describe('PUT /api/orders/:id', () => {
 
   it('ignora el total enviado por el cliente (anti-tampering: no escribe total)', async () => {
     const app = createApp();
-    mockQuery.mockResolvedValueOnce({ rows: [mockOrder()] });
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] })
+      .mockResolvedValueOnce({ rows: [mockOrder()] });
 
     // updateOrderSchema ya no declara `total` (zod strip) — el handler no
     // puede persistirlo. El pedido original con total 100000 queda intacto.
@@ -663,7 +691,9 @@ describe('PUT /api/orders/:id', () => {
     const app = createApp();
     // mockClientQuery ya responde el catálogo (products/pizza_sizes) en
     // beforeEach; el SELECT final de la ruta devuelve la orden actualizada.
-    mockQuery.mockResolvedValueOnce({ rows: [mockOrder({ total: 90000 })] });
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] })
+      .mockResolvedValueOnce({ rows: [mockOrder({ total: 90000 })] });
 
     const res = await supertest(app)
       .put('/api/orders/ord_1')
@@ -688,6 +718,7 @@ describe('PUT /api/orders/:id', () => {
 
   it('400 + ROLLBACK cuando un item editado no existe en el catálogo', async () => {
     const app = createApp();
+    mockQuery.mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] });
     mockClientQuery.mockImplementation((sql) => {
       const s = String(sql);
       if (s.includes('FROM products')) return Promise.resolve({ rows: [] });
@@ -707,35 +738,52 @@ describe('PUT /api/orders/:id', () => {
 
   it('actualiza solo las columnas enviadas (no sobrescribe con NULL)', async () => {
     const app = createApp();
-    mockQuery.mockResolvedValueOnce({ rowCount: 1 }).mockResolvedValueOnce({ rows: [mockOrder()] });
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [mockOrder()] });
 
     const res = await supertest(app).put('/api/orders/ord_1').send({ address: 'Calle nueva 9' });
 
     expect(res.status).toBe(200);
-    expect(mockQuery.mock.calls[0][0]).toBe('UPDATE orders SET address = $1 WHERE id = $2');
-    expect(mockQuery.mock.calls[0][1]).toEqual(['Calle nueva 9', 'ord_1']);
-    // Solo 1 UPDATE + 1 SELECT: nada de address/items/total extra
-    expect(mockQuery).toHaveBeenCalledTimes(2);
+    expect(mockQuery.mock.calls[1][0]).toBe('UPDATE orders SET address = $1 WHERE id = $2');
+    expect(mockQuery.mock.calls[1][1]).toEqual(['Calle nueva 9', 'ord_1']);
+    // 1 existencia + 1 UPDATE + 1 SELECT: nada de address/items/total extra
+    expect(mockQuery).toHaveBeenCalledTimes(3);
   });
 
   it('con body vacío no emite UPDATE (solo devuelve la orden actual)', async () => {
     const app = createApp();
-    mockQuery.mockResolvedValueOnce({ rows: [mockOrder()] });
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] })
+      .mockResolvedValueOnce({ rows: [mockOrder()] });
 
     const res = await supertest(app).put('/api/orders/ord_1').send({});
 
     expect(res.status).toBe(200);
-    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockQuery).toHaveBeenCalledTimes(2);
     expect(mockQuery.mock.calls.some(([sql]) => String(sql).includes('UPDATE orders'))).toBe(false);
   });
 
   it('404 si la orden no existe', async () => {
     const app = createApp();
-    mockQuery.mockResolvedValueOnce({ rowCount: 1 }).mockResolvedValueOnce({ rows: [] });
+    mockQuery.mockResolvedValueOnce({ rows: [] });
 
     const res = await supertest(app).put('/api/orders/ord_zzz').send({ address: 'X' });
 
     expect(res.status).toBe(404);
+  });
+
+  it('404 si el pedido es de otra sede (aislamiento por sede)', async () => {
+    const app = createApp();
+    mockAuth.role = 'OPERATOR';
+    mockAuth.locationId = 'zipaquira';
+    mockQuery.mockResolvedValueOnce({ rows: [{ locationId: 'nemocon' }] });
+
+    const res = await supertest(app).put('/api/orders/ord_1').send({ address: 'X' });
+
+    expect(res.status).toBe(404);
+    expect(mockQuery).toHaveBeenCalledTimes(1); // no llega a hacer el UPDATE
   });
 
   it('responde 500 si la query falla', async () => {

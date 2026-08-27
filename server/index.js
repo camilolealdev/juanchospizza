@@ -251,11 +251,33 @@ app.use(
   })
 );
 
-// Fallback to frontend for non-API routes
+// Fallback to frontend for non-API routes. Rutas públicas reales (deben
+// coincidir con las <Route> de src/App.tsx + el check de /confirmacion) --
+// cualquier otra cosa es una URL inventada o un backlink roto y debe
+// devolver 404 real (auditoría SEO 2026-08-26: antes esto siempre devolvía
+// 200 con el shell de la SPA, así que Search Console iba a marcar cualquier
+// URL basura como "soft 404" en vez de un 404 de verdad).
+const KNOWN_PUBLIC_PATHS = new Set([
+  '/',
+  '/pizza',
+  '/menu',
+  '/domicilios',
+  '/politica-de-privacidad',
+  '/terminos-y-condiciones',
+  '/eliminacion-de-datos',
+]);
+
 app.get('*', (req, res) => {
-  if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
-  }
+  if (req.path.startsWith('/api')) return;
+
+  const normalizedPath = req.path.length > 1 ? req.path.replace(/\/+$/, '') : req.path;
+  const isKnownPath = KNOWN_PUBLIC_PATHS.has(normalizedPath) || normalizedPath.startsWith('/confirmacion');
+
+  // El body siempre es el shell de la SPA (React Router renderiza la página
+  // 404 en el cliente y agrega noindex vía useDocumentMeta) -- lo único que
+  // cambia es el status code, que es lo que Google usa para clasificar la
+  // respuesta.
+  res.status(isKnownPath ? 200 : 404).sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // ── Error handlers ─────────────────────────────────────────────

@@ -380,6 +380,18 @@ router.patch(
     try {
       const { status } = req.body;
 
+      // Aislamiento por sede: mismo criterio que GET /api/orders/:id -- sin
+      // esto un OPERATOR/REPARTIDOR podía cambiar el estado de un pedido de
+      // otra sede con solo conocer/adivinar el ID (el GET ya estaba scoped,
+      // este PATCH no). 404 en vez de 403, no confirma existencia a otra sede.
+      const existing = await pool.query('SELECT "locationId" FROM orders WHERE id = $1', [req.params.id]);
+      if (!existing.rows.length) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      if (req.auth.role !== 'ADMIN' && existing.rows[0].locationId !== req.auth.locationId) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
       await pool.query('UPDATE orders SET status = $1 WHERE id = $2', [status, req.params.id]);
 
       const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
@@ -461,6 +473,17 @@ router.put(
       // server-side desde el catálogo real en la transacción de abajo --
       // nunca se persiste un monto enviado por el cliente.
       const { address, items, estimatedTime, paymentMethod } = req.body;
+
+      // Aislamiento por sede: mismo criterio que GET /api/orders/:id y el
+      // PATCH /:id/status -- sin esto un OPERATOR de otra sede podía editar
+      // dirección/items/total de un pedido ajeno con solo conocer el ID.
+      const existing = await pool.query('SELECT "locationId" FROM orders WHERE id = $1', [req.params.id]);
+      if (!existing.rows.length) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      if (req.auth.role !== 'ADMIN' && existing.rows[0].locationId !== req.auth.locationId) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
 
       const updates = [];
       const params = [];

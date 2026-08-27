@@ -24,11 +24,20 @@ let wsInstance: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let isConnecting = false;
 
+// Últimos parámetros usados para conectar -- se necesitan para reconectar
+// desde los listeners de bfcache/visibilidad de abajo, que no tienen forma
+// de saber con qué role/locationId se había abierto el socket.
+let lastRole: string | undefined;
+let lastLocationId: string | undefined;
+
 const RECONNECT_INTERVAL = 3000;
 const MAX_RECONNECT_INTERVAL = 30000;
 let currentReconnectInterval = RECONNECT_INTERVAL;
 
 const connect = (role?: string, locationId?: string) => {
+  lastRole = role;
+  lastLocationId = locationId;
+
   if (wsInstance?.readyState === WebSocket.OPEN || wsInstance?.readyState === WebSocket.CONNECTING) {
     return;
   }
@@ -105,6 +114,42 @@ const disconnect = () => {
   isConnecting = false;
   currentReconnectInterval = RECONNECT_INTERVAL;
 };
+
+// Fuerza una reconexión inmediata (resetea el backoff) si hay algo
+// escuchando y el socket no está ya abierto/conectando. Se usa desde los
+// listeners de bfcache/visibilidad de abajo -- sin esto, volver a una
+// pestaña/página con el socket muerto podía tardar hasta MAX_RECONNECT_INTERVAL
+// (30s) en reconectar porque heredaba el backoff ya escalado del intento
+// anterior, algo inaceptable para un tablero de pedidos en vivo.
+const forceReconnectIfNeeded = () => {
+  if (globalListeners.size === 0) return;
+  if (wsInstance?.readyState === WebSocket.OPEN || wsInstance?.readyState === WebSocket.CONNECTING) return;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  currentReconnectInterval = RECONNECT_INTERVAL;
+  connect(lastRole, lastLocationId);
+};
+
+if (typeof window !== 'undefined') {
+  // bfcache: al congelar la página para el back-forward cache, Chrome/Edge
+  // cierran cualquier WebSocket abierto (ver DevTools: "Page entered
+  // Back-Forward Cache"). El cierre sí dispara onclose->scheduleReconnect,
+  // pero recién al restaurar la página -- con el backoff heredado. pageshow
+  // con persisted=true es la señal de "se restauró desde bfcache".
+  window.addEventListener('pageshow', (event: PageTransitionEvent) => {
+    if (event.persisted) forceReconnectIfNeeded();
+  });
+
+  // Complementario a pageshow: cubre los casos donde el socket muere sin un
+  // evento de navegación de por medio (SO suspende la pestaña en segundo
+  // plano, laptop en suspensión, cambio de red) -- al volver a primer plano,
+  // reintenta ya mismo en vez de esperar el próximo tick del backoff.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') forceReconnectIfNeeded();
+  });
+}
 
 /**
  * useWebSocket — React hook for subscribing to real-time events from the backend.
