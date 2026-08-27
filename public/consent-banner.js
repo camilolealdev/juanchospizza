@@ -164,6 +164,11 @@
   }
 
   function init() {
+    // /pantalla es la pantalla pública de digiturno (TV/kiosko de sede, sin
+    // interacción de usuario) -- nadie va a cerrar este banner ahí, se
+    // quedaría pegado abajo para siempre tapando la mitad de la última fila
+    // (auditoría UX 2026-08-27, confirmado con screenshot real).
+    if (location.pathname.indexOf('/pantalla') === 0) return;
     if (hasAnyDecision()) return;
     injectBanner();
   }
