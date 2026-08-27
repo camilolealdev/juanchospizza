@@ -36,7 +36,7 @@ const Hero: React.FC = () => {
         </h1>
 
         <p className="text-crema text-base sm:text-lg md:text-xl mb-8 sm:mb-10 leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)] max-w-2xl mx-auto font-body font-medium">
-          Pizzas artesanales, hamburguesas jugosas, salchipapas, perros calientes y más.{' '}
+          Pizzas, hamburguesas jugosas, salchipapas, perros calientes y más.{' '}
           <span className="text-queso font-bold">Pedido rápido</span> a Nemocón y Zipaquirá.
         </p>
 

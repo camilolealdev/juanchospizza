@@ -5,6 +5,8 @@ import { POSTRES_ITEMS, SUBCATEGORIES, type PostreItem } from '../data/postres-d
 
 import ProductAddModal from './ProductAddModal';
 
+const MENU_DISCLAIMER_KEY = 'jp_disclaimer_closed';
+
 const ALL_ITEMS: MenuItem[] = [...MENU_ITEMS, ...POSTRES_ITEMS];
 
 const MenuSection: React.FC = () => {
@@ -15,6 +17,9 @@ const MenuSection: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState(false);
   const [modalItem, setModalItem] = useState<MenuItem | null>(null);
+  const [disclaimerClosed, setDisclaimerClosed] = useState(() => {
+    return localStorage.getItem(MENU_DISCLAIMER_KEY) === '1';
+  });
 
   useEffect(() => {
     const cat = searchParams.get('category');
@@ -136,6 +141,29 @@ const MenuSection: React.FC = () => {
                 {cat.name}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Photo disclaimer banner */}
+        {!isSearching && !disclaimerClosed && (
+          <div className="mb-8 relative bg-gradient-to-r from-queso/10 via-queso/5 to-queso/10 border border-queso/20 rounded-2xl px-5 py-4 flex items-start gap-3">
+            <span className="text-2xl mt-0.5 shrink-0">📸</span>
+            <div className="flex-1">
+              <p className="text-sm text-carbon/70 leading-relaxed">
+                <span className="font-semibold text-carbon">Las fotos son de referencia.</span> El producto real puede
+                variar en presentación, color y porción. La imagen es para que conozcas nuestros platos.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setDisclaimerClosed(true);
+                localStorage.setItem(MENU_DISCLAIMER_KEY, '1');
+              }}
+              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-carbon/10 text-carbon/40 hover:text-carbon transition-colors text-lg leading-none cursor-pointer"
+              aria-label="Cerrar aviso"
+            >
+              ✕
+            </button>
           </div>
         )}
 

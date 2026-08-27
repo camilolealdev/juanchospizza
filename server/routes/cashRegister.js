@@ -10,7 +10,9 @@ const router = express.Router();
 // ===================== CASH REGISTER =====================
 
 // GET /api/cash-register — listar registros de caja
-router.get('/api/cash-register', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+// OPERATOR agregado 2026-08-27: cocina también opera caja (decisión de
+// negocio), antes solo ADMIN podía -- ver ROLE_MODULE_ACCESS en App.tsx.
+router.get('/api/cash-register', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const { locationId, status } = req.query;
     let query = 'SELECT * FROM cash_register';
@@ -40,7 +42,7 @@ router.get('/api/cash-register', authMiddleware, requireRole('ADMIN'), async (re
 router.post(
   '/api/cash-register/open',
   authMiddleware,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'OPERATOR'),
   validate(
     z.object({
       locationId: z.enum(['nemocon', 'zipaquira']),
@@ -85,7 +87,7 @@ router.post(
 router.post(
   '/api/cash-register/:id/close',
   authMiddleware,
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'OPERATOR'),
   validate(
     z.object({
       finalAmount: z.coerce.number().min(0, 'El monto final no puede ser negativo'),
@@ -147,7 +149,7 @@ router.post(
 // ===================== TIPS =====================
 
 // GET /api/tips — listar propinas
-router.get('/api/tips', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+router.get('/api/tips', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const { locationId, desde, hasta } = req.query;
     let query = 'SELECT * FROM tips';
@@ -222,7 +224,7 @@ router.post(
 );
 
 // GET /api/tips/summary — resumen de propinas
-router.get('/api/tips/summary', authMiddleware, requireRole('ADMIN'), async (req, res) => {
+router.get('/api/tips/summary', authMiddleware, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const { locationId, desde, hasta } = req.query;
     let query = 'SELECT COALESCE(SUM(amount),0) as total, COUNT(*) as count FROM tips';

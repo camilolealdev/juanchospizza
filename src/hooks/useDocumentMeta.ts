@@ -15,13 +15,11 @@ const CANONICAL_ORIGIN = 'https://juanchospizza.com';
 // anterior. La canónica se deriva de window.location.pathname (no de un
 // parámetro) para no tener que tocar cada call site cuando se agreguen rutas.
 //
-// noindex: para páginas que no deberían aparecer en resultados de búsqueda
-// (ej. la 404 -- devuelve status 200 en el HTML porque es una SPA sin SSR,
-// así que la única señal que Google tiene para no indexarla es esta meta
-// tag, no el status code de la respuesta inicial).
-export function useDocumentMeta(title: string, description?: string, options?: { noindex?: boolean }) {
-  const noindex = options?.noindex ?? false;
-
+// noIndex (SEO audit 2026-08-27): index.html trae <meta name="robots"
+// content="index, follow"> global -- sin esto, la 404 (y cualquier otra
+// página que no deba indexarse) heredaría ese "index, follow" y Google la
+// indexaría como si fuera contenido real.
+export function useDocumentMeta(title: string, description?: string, noIndex = false) {
   useEffect(() => {
     const fullTitle = `${title} | Juancho's Pizza`;
     document.title = fullTitle;
@@ -40,8 +38,8 @@ export function useDocumentMeta(title: string, description?: string, options?: {
 
     const robotsTag = document.querySelector('meta[name="robots"]');
     const prevRobots = robotsTag?.getAttribute('content') ?? null;
-    if (robotsTag && noindex) {
-      robotsTag.setAttribute('content', 'noindex, nofollow');
+    if (robotsTag && noIndex) {
+      robotsTag.setAttribute('content', 'noindex, follow');
     }
 
     return () => {
@@ -52,9 +50,9 @@ export function useDocumentMeta(title: string, description?: string, options?: {
       if (canonicalTag) {
         canonicalTag.setAttribute('href', prevCanonical ?? `${CANONICAL_ORIGIN}/`);
       }
-      if (robotsTag) {
+      if (robotsTag && noIndex) {
         robotsTag.setAttribute('content', prevRobots ?? 'index, follow');
       }
     };
-  }, [title, description, noindex]);
+  }, [title, description, noIndex]);
 }

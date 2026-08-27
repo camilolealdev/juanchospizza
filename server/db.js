@@ -166,6 +166,10 @@ export async function initDB() {
     // Fundación multi-sede: 'nemocon' | 'zipaquira'. Default a 'nemocon' para
     // no romper pedidos/filas existentes que nunca conocieron el concepto de sede.
     await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS "locationId" TEXT DEFAULT 'nemocon'`);
+    // Modulo Pedidos para REPARTIDOR (feature 2026-08-27): quien reclamo la
+    // entrega. Se setea al hacer self-claim (READY -> ASSIGNED) via
+    // PATCH /api/orders/:id/status -- ver server/routes/orders.js.
+    await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS "repartidorId" TEXT');
 
     // UNIQUE constraints for data integrity
     await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_number ON orders("orderNumber")');
@@ -192,6 +196,33 @@ export async function initDB() {
     await pool.query(`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS "locationId" TEXT DEFAULT 'nemocon'`);
     await pool.query('CREATE INDEX IF NOT EXISTS idx_inventory_nombre ON inventory_items(nombre)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_inventory_locationId ON inventory_items("locationId")');
+
+    // Categorías propias de inventario (insumos de bodega: Carnes, Lácteos,
+    // etc.) -- antes inventory_items.categoria era texto libre sin ninguna
+    // lista detrás, cada quien escribía lo que quisiera y quedaban categorías
+    // inconsistentes. Deliberadamente separada de `categories` (esa es para
+    // productos del menú -- pizzas/hamburguesas/etc., un concepto distinto:
+    // "categoría de plato" no es lo mismo que "categoría de insumo de bodega").
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS inventory_categories (
+        id TEXT PRIMARY KEY,
+        nombre TEXT NOT NULL UNIQUE,
+        activo BOOLEAN DEFAULT TRUE
+      )
+    `);
+    await pool.query(`
+      INSERT INTO inventory_categories (id, nombre) VALUES
+        ('invcat-carnes', 'Carnes'),
+        ('invcat-lacteos-huevos', 'Lácteos y Huevos'),
+        ('invcat-verduras-frutas', 'Verduras y Frutas'),
+        ('invcat-panaderia', 'Panadería'),
+        ('invcat-bebidas', 'Bebidas'),
+        ('invcat-salsas-condimentos', 'Salsas y Condimentos'),
+        ('invcat-empaques', 'Empaques y Desechables'),
+        ('invcat-aseo', 'Aseo e Insumos'),
+        ('invcat-otros', 'Otros')
+      ON CONFLICT (id) DO NOTHING
+    `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inventory_movements (

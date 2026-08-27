@@ -139,7 +139,7 @@ export const getChatbotResponse = async (history: { role: 'user' | 'model'; part
   if (!aiModel) {
     const fallbackResponses = [
       '¡Hola! Soy el asistente de Guido Pizza. ¿Qué te gustaría pedir hoy?',
-      'Tenemos las mejores pizzas artesanales de Bogotá. ¿Te gustaría ver nuestro menú?',
+      'Tenemos las mejores pizzas de Bogotá. ¿Te gustaría ver nuestro menú?',
       'Nuestra masa fermenta 48 horas. ¿Qué pizza te gustaría ordenar?',
     ];
     return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];

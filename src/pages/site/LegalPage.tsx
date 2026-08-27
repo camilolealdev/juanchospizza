@@ -1,5 +1,4 @@
-import { useLocation, Link } from 'react-router-dom';
-import { useDocumentMeta } from '../../hooks/useDocumentMeta';
+import { useParams, Link } from 'react-router-dom';
 
 const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string; content: React.ReactNode }> = {
   'politica-de-privacidad': {
@@ -18,19 +17,19 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
           </p>
           <ul className="list-disc list-inside text-carbon/70 space-y-1 ml-4">
             <li>
-              <strong>Sede Nemocón:</strong> Cra 6 No. 5-40, Vía Principal, Nemocón, Cundinamarca.
+              <strong>Sede Nemocón:</strong> Cra 5 #5-68, Nemocón, Cundinamarca.
             </li>
             <li>
               <strong>Sede Zipaquirá:</strong> Diagonal 4 #29-10, Barrio Las Villas, Zipaquirá, Cundinamarca.
             </li>
             <li>
               <strong>Teléfonos:</strong>{' '}
-              <a href="tel:+573117074843" className="text-tomato hover:underline">
-                311 707 4843
+              <a href="tel:+573108613690" className="text-tomato hover:underline">
+                310 861 3690
               </a>{' '}
               ·{' '}
-              <a href="tel:+573144737097" className="text-tomato hover:underline">
-                314 473 7097
+              <a href="tel:+573227699056" className="text-tomato hover:underline">
+                322 769 9056
               </a>
             </li>
             <li>
@@ -140,12 +139,12 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
             <li>
               <strong>WhatsApp:</strong>{' '}
               <a
-                href="https://wa.me/573117074843"
+                href="https://wa.me/573108613690"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-tomato hover:underline"
               >
-                311 707 4843
+                310 861 3690
               </a>
             </li>
             <li>
@@ -176,12 +175,12 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
                 </a>
               </li>
               <li>
-                <a href="tel:+573117074843" className="text-tomato hover:underline">
-                  311 707 4843
+                <a href="tel:+573108613690" className="text-tomato hover:underline">
+                  310 861 3690
                 </a>{' '}
                 ·{' '}
-                <a href="tel:+573144737097" className="text-tomato hover:underline">
-                  314 473 7097
+                <a href="tel:+573227699056" className="text-tomato hover:underline">
+                  322 769 9056
                 </a>
               </li>
               <li>Autoridad de control: Superintendencia de Industria y Comercio</li>
@@ -224,15 +223,15 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
           </p>
           <ul className="list-disc list-inside text-carbon/70 space-y-1 ml-4">
             <li>
-              <strong>Nemocón:</strong> Cra 6 No. 5-40, Vía Principal.
+              <strong>Nemocón:</strong> Cra 5 #5-68.
             </li>
             <li>
               <strong>Zipaquirá:</strong> Diagonal 4 #29-10, Barrio Las Villas.
             </li>
             <li>
               <strong>Contacto:</strong>{' '}
-              <a href="tel:+573117074843" className="text-tomato hover:underline">
-                311 707 4843
+              <a href="tel:+573108613690" className="text-tomato hover:underline">
+                310 861 3690
               </a>{' '}
               ·{' '}
               <a href="mailto:contacto@juanchospizza.com" className="text-tomato hover:underline">
@@ -297,12 +296,12 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
           <p className="text-carbon/70 leading-relaxed">
             Si algo no está perfecto — producto incorrecto, incompleto o en mal estado — escríbenos por WhatsApp al{' '}
             <a
-              href="https://wa.me/573117074843"
+              href="https://wa.me/573108613690"
               target="_blank"
               rel="noopener noreferrer"
               className="text-tomato hover:underline"
             >
-              311 707 4843
+              310 861 3690
             </a>{' '}
             y lo resolvemos.
           </p>
@@ -322,12 +321,12 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
           <div className="bg-crema rounded-xl p-6">
             <ul className="list-disc list-inside text-carbon/70 space-y-1 ml-4">
               <li>
-                <a href="tel:+573117074843" className="text-tomato hover:underline">
-                  311 707 4843
+                <a href="tel:+573108613690" className="text-tomato hover:underline">
+                  310 861 3690
                 </a>{' '}
                 ·{' '}
-                <a href="tel:+573144737097" className="text-tomato hover:underline">
-                  314 473 7097
+                <a href="tel:+573227699056" className="text-tomato hover:underline">
+                  322 769 9056
                 </a>
               </li>
               <li>
@@ -337,7 +336,7 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
               </li>
               <li>
                 <a
-                  href="https://wa.me/573117074843"
+                  href="https://wa.me/573108613690"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-tomato hover:underline"
@@ -387,12 +386,12 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
             <li>
               <strong>Por WhatsApp:</strong> envíanos un mensaje al{' '}
               <a
-                href="https://wa.me/573117074843?text=Hola%2C%20quiero%20solicitar%20la%20eliminaci%C3%B3n%20de%20mis%20datos%20personales"
+                href="https://wa.me/573108613690?text=Hola%2C%20quiero%20solicitar%20la%20eliminaci%C3%B3n%20de%20mis%20datos%20personales"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-tomato hover:underline"
               >
-                311 707 4843
+                310 861 3690
               </a>
             </li>
             <li>
@@ -417,7 +416,7 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
           <h2 className="font-heading text-2xl text-carbon mb-3">4. Contacto</h2>
           <div className="bg-crema rounded-xl p-6 flex flex-wrap gap-4">
             <a
-              href="https://wa.me/573117074843?text=Hola%2C%20quiero%20solicitar%20la%20eliminaci%C3%B3n%20de%20mis%20datos%20personales"
+              href="https://wa.me/573108613690?text=Hola%2C%20quiero%20solicitar%20la%20eliminaci%C3%B3n%20de%20mis%20datos%20personales"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-green-600 text-white text-sm font-heading uppercase px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
@@ -438,16 +437,8 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
 };
 
 export default function LegalPage() {
-  // ponytail: las 3 rutas (App.tsx) son paths fijos sin :slug -- useParams()
-  // siempre daba undefined acá, por eso las 3 páginas legales mostraban
-  // "no encontrada" en producción. El slug real es el último segmento de la URL.
-  const location = useLocation();
-  const slug = location.pathname.replace(/^\/+|\/+$/g, '');
-  const page = LEGAL_PAGES[slug];
-
-  // Hooks no pueden ser condicionales -- se llama siempre, con fallback si
-  // el slug no matchea (no debería pasar tras el fix de arriba).
-  useDocumentMeta(page?.title ?? 'Página no encontrada', page?.kicker);
+  const { slug } = useParams<{ slug: string }>();
+  const page = LEGAL_PAGES[slug || ''];
 
   if (!page) {
     return (
