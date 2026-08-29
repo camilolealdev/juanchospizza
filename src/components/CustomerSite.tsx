@@ -3,7 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import CartDrawer from './CartDrawer';
 import Footer from './Footer';
-import WhatsAppButton from './WhatsAppButton';
+import CartButton from './CartButton';
 
 const ScrollToTop: React.FC = () => {
   const { pathname } = useLocation();
@@ -24,7 +24,7 @@ const CustomerSite: React.FC = () => {
         <Outlet />
       </main>
       <Footer />
-      <WhatsAppButton />
+      <CartButton onOpenCart={() => setCartOpen(true)} />
       <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   );

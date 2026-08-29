@@ -683,9 +683,16 @@ export const COMBO_GASEOSAS = [
 
 // ─── WHATSAPP MESSAGE BUILDER ────────────────────────────────────────────────
 
+export interface WhatsAppOrderInfo {
+  nombre?: string;
+  direccion?: string;
+  telefono?: string;
+}
+
 export function buildWhatsAppMessage(
   items: Array<{ name: string; quantity: number; price: number; details?: string; notes?: string }>,
-  sede: 'nemocon' | 'zipaquira'
+  sede: 'nemocon' | 'zipaquira',
+  orderInfo?: WhatsAppOrderInfo
 ): string {
   const sedeName = sede === 'nemocon' ? 'Nemocón' : 'Zipaquirá';
   const lines: string[] = ['Hola, quiero hacer un pedido 🍕', '', `Sede: ${sedeName}`, ''];
@@ -701,8 +708,11 @@ export function buildWhatsAppMessage(
   lines.push('');
   lines.push(`Total estimado: ${formatPrice(grandTotal)}`);
   lines.push('');
-  lines.push('Nombre:');
-  lines.push('Dirección:');
+  lines.push(`Nombre: ${orderInfo?.nombre ? orderInfo.nombre.trim() : ''}`);
+  lines.push(`Dirección: ${orderInfo?.direccion ? orderInfo.direccion.trim() : ''}`);
+  if (orderInfo?.telefono && orderInfo.telefono.trim()) {
+    lines.push(`Teléfono: ${orderInfo.telefono.trim()}`);
+  }
 
   return lines.join('\n');
 }
