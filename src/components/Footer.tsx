@@ -48,7 +48,7 @@ const socialLinks = [
   },
   {
     name: 'WhatsApp',
-    href: 'https://wa.me/573117074843',
+    href: '',
     baseColor: 'text-[#25D366]',
     hoverBg: 'hover:bg-[#25D366]',
     icon: (
@@ -94,7 +94,7 @@ export default function Footer() {
               {socialLinks.map((s) => (
                 <a
                   key={s.name}
-                  href={s.href}
+                  href={s.name === 'WhatsApp' ? `https://wa.me/${whatsappNumber}` : s.href}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={s.name}

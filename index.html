@@ -66,12 +66,10 @@
 
     <!-- JSON-LD Structured Data -->
     <!-- Telefonos y horarios sincronizados con src/data/menu-data.ts (SEDES) --
-         esa es la fuente real que ve el usuario (botones de WhatsApp). Antes
-         de este fix los telefonos acá no coincidían con los de la UI (SEO
-         audit 2026-08-26): +57-311-707-4843/+57-314-473-7097 (viejos, sin
-         uso real) vs 310 861 3690/322 769 9056 (los que la gente realmente
-         puede marcar). Si SEDES cambia, actualizar acá también a mano --
-         no hay build step que sincronice esto todavía. -->
+         esa es la fuente real que ve el usuario (botones de WhatsApp). Si
+         SEDES cambia, actualizar acá también a mano -- no hay build step que
+         sincronice esto todavía. (2026-08-28): numeros oficiales por sede --
+         Nemocón +57-311-707-4843 y Zipaquirá +57-314-473-7097. -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -80,7 +78,7 @@
       "description": "Pizzas, lasañas y spaguettis con sedes en Nemocón y Zipaquirá, Cundinamarca.",
       "url": "https://juanchospizza.com",
       "image": "https://juanchospizza.com/images/logo.webp",
-      "telephone": "+573108613690",
+      "telephone": "+573117074843",
       "priceRange": "$$",
       "servesCuisine": "Pizza, Comida Rápida, Italiana",
       "areaServed": ["Nemocón", "Zipaquirá", "Cundinamarca"],
@@ -101,7 +99,7 @@
             "addressRegion": "Cundinamarca",
             "addressCountry": "CO"
           },
-          "telephone": "+573108613690",
+          "telephone": "+573117074843",
           "priceRange": "$$",
           "openingHoursSpecification": {
             "@type": "OpeningHoursSpecification",
@@ -120,7 +118,7 @@
             "addressRegion": "Cundinamarca",
             "addressCountry": "CO"
           },
-          "telephone": "+573227699056",
+          "telephone": "+573144737097",
           "priceRange": "$$",
           "openingHoursSpecification": {
             "@type": "OpeningHoursSpecification",
