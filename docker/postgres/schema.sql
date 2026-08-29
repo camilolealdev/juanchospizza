@@ -90,7 +90,10 @@ CREATE TABLE IF NOT EXISTS orders (
   "paymentStatus" TEXT DEFAULT 'pending',
   "paymentProviderRef" TEXT,
   -- Fundación multi-sede: 'nemocon' | 'zipaquira'.
-  "locationId" TEXT DEFAULT 'nemocon'
+  "locationId" TEXT DEFAULT 'nemocon',
+  -- Módulo Pedidos para REPARTIDOR: quién reclamó la entrega (self-claim
+  -- READY -> ASSIGNED). Ver server/routes/orders.js.
+  "repartidorId" TEXT
 );
 
 CREATE TABLE IF NOT EXISTS campaigns (
@@ -190,6 +193,15 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   ubicacion TEXT,
   -- Fundación multi-sede: misma política que orders.
   "locationId" TEXT DEFAULT 'nemocon',
+  activo BOOLEAN DEFAULT TRUE
+);
+
+-- Categorías propias de inventario (insumos de bodega), separadas de
+-- `categories` (esa es de productos del menú). Ver initDB() en server/db.js
+-- para el detalle y el seed de categorías por defecto.
+CREATE TABLE IF NOT EXISTS inventory_categories (
+  id TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL UNIQUE,
   activo BOOLEAN DEFAULT TRUE
 );
 

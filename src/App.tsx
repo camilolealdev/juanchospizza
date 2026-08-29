@@ -15,6 +15,8 @@ const PizzaPage = lazy(() => import('./pages/site/PizzaPage'));
 const MenuPage = lazy(() => import('./pages/site/MenuPage'));
 const DomiciliosPage = lazy(() => import('./pages/site/DomiciliosPage'));
 const LegalPage = lazy(() => import('./pages/site/LegalPage'));
+const NotFoundPage = lazy(() => import('./pages/site/NotFoundPage'));
+const DigiturnoPublicPage = lazy(() => import('./pages/site/DigiturnoPublicPage'));
 
 // CRM modules
 const GastroProDashboard = lazy(() => import('./views/roles/GastroProDashboard'));
@@ -36,6 +38,7 @@ const ComandasView = lazy(() => import('./views/roles/ComandasView'));
 const ComprasView = lazy(() => import('./views/roles/ComprasView'));
 const InvoicesView = lazy(() => import('./views/roles/InvoicesView'));
 const DigiturnoView = lazy(() => import('./views/roles/DigiturnoView'));
+const PedidosView = lazy(() => import('./views/roles/PedidosView'));
 const DerechosView = lazy(() => import('./views/roles/DerechosView'));
 
 interface AuthContextType {
@@ -82,6 +85,7 @@ const GASTRO_MODULES: GastroModule[] = [
   'turnos',
   'mesas',
   'caja',
+  'pedidos',
   'comandas',
   'compras',
   'facturacion',
@@ -98,8 +102,23 @@ const moduleFromPath = (): GastroModule | null => {
 
 const ROLE_MODULE_ACCESS: Partial<Record<UserRole, GastroModule[]>> = {
   [UserRole.ADMIN]: GASTRO_MODULES,
-  [UserRole.OPERATOR]: ['dashboard', 'menu', 'inventario', 'turnos', 'mesas', 'comandas', 'digiturno'],
-  [UserRole.REPARTIDOR]: ['dashboard'],
+  // 'caja' y 'pedidos' agregados 2026-08-27: antes cocina no podía cobrar en
+  // mostrador (solo ADMIN tenía Caja) ni tenía ninguna vista de pedidos con
+  // estado (Comandas es mesas/dine-in, un concepto distinto).
+  [UserRole.OPERATOR]: [
+    'dashboard',
+    'menu',
+    'inventario',
+    'turnos',
+    'mesas',
+    'caja',
+    'pedidos',
+    'comandas',
+    'digiturno',
+  ],
+  // Repartidor no tenía NINGÚN módulo propio -- 'pedidos' es su vista de
+  // auto-reclamo de entregas (ver PedidosView.tsx).
+  [UserRole.REPARTIDOR]: ['dashboard', 'pedidos'],
   [UserRole.MARKETING]: ['dashboard', 'reviews', 'campanas', 'derechos'],
 };
 
@@ -269,10 +288,12 @@ const App: React.FC = () => {
         return <InvoicesView locationId={selectedLocation} />;
       case 'digiturno':
         return <DigiturnoView locationId={selectedLocation} />;
+      case 'pedidos':
+        return <PedidosView role={role} locationId={selectedLocation} />;
       case 'derechos':
         return <DerechosView />;
       default:
-        return <GastroProDashboard locationId={selectedLocation} />;
+        return <GastroProDashboard locationId={selectedLocation} role={role} />;
     }
   };
 
@@ -329,6 +350,10 @@ const App: React.FC = () => {
               }
             >
               <Routes>
+                {/* Fuera de CustomerSite a propósito: pantalla de TV/kiosko de
+                    sede, sin header/footer/carrito/chatbot -- solo lectura,
+                    sin login (ver DigiturnoPublicPage.tsx). */}
+                <Route path="pantalla/:sede" element={<DigiturnoPublicPage />} />
                 <Route element={<CustomerSite />}>
                   <Route index element={<HomePage />} />
                   <Route path="pizza" element={<PizzaPage />} />
@@ -337,7 +362,7 @@ const App: React.FC = () => {
                   <Route path="politica-de-privacidad" element={<LegalPage />} />
                   <Route path="terminos-y-condiciones" element={<LegalPage />} />
                   <Route path="eliminacion-de-datos" element={<LegalPage />} />
-                  <Route path="*" element={<HomePage />} />
+                  <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>
             </Suspense>

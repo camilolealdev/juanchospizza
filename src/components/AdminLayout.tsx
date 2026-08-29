@@ -37,7 +37,16 @@ const ALL_NAV: { module: GastroModule; label: string; icon: string; roles: UserR
   { module: 'empleados', label: 'Empleados', icon: 'id-badge', roles: [UserRole.ADMIN] },
   { module: 'turnos', label: 'Turnos', icon: 'clock', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
   { module: 'mesas', label: 'Mesas', icon: 'table', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
-  { module: 'caja', label: 'Caja', icon: 'cash-register', roles: [UserRole.ADMIN] },
+  // OPERATOR agregado 2026-08-27: cocina también cobra en mostrador, no
+  // solo ADMIN (decisión de negocio, ver PENDIENTES/flujo pedido->cocina->
+  // delivery).
+  { module: 'caja', label: 'Caja', icon: 'cash-register', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
+  {
+    module: 'pedidos',
+    label: 'Pedidos',
+    icon: 'receipt',
+    roles: [UserRole.ADMIN, UserRole.OPERATOR, UserRole.REPARTIDOR],
+  },
   { module: 'comandas', label: 'Comandas', icon: 'utensils', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
   { module: 'digiturno', label: 'Digiturno', icon: 'ticket', roles: [UserRole.ADMIN, UserRole.OPERATOR] },
   { module: 'derechos', label: 'Derechos ARCO', icon: 'shield-halved', roles: [UserRole.ADMIN, UserRole.MARKETING] },
@@ -61,6 +70,7 @@ const MODULE_TITLES: Record<GastroModule, string> = {
   turnos: 'Turnos',
   mesas: 'Mesas',
   caja: 'Caja',
+  pedidos: 'Pedidos',
   comandas: 'Comandas',
   digiturno: 'Digiturno',
   derechos: 'Derechos ARCO',

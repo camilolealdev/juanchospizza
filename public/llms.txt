@@ -1,0 +1,22 @@
+# Juancho's Pizza
+
+> Pizzería artesanal con dos sedes en Cundinamarca, Colombia: Nemocón y Zipaquirá. Pizzas, lasañas, spaguettis y postres, con domicilio y pedido en línea.
+
+Juancho's Pizza atiende Nemocón y Zipaquirá (Cundinamarca, Colombia) todos los días de 3:00 PM a 11:00 PM. El menú incluye pizzas armables (Crea tu Pizza), lasañas, spaguettis, mazorcada, obleas y postres. Pedidos por WhatsApp o pago en línea con Bold.
+
+## Sedes
+
+- Nemocón: Cra 5 #5-68, Nemocón, Cundinamarca. WhatsApp: +57 310 861 3690.
+- Zipaquirá: Diagonal 4 #29-10, Barrio Las Villas, Zipaquirá, Cundinamarca. WhatsApp: +57 322 769 9056.
+
+## Páginas
+
+- [Inicio](https://juanchospizza.com/): menú, armador de pizza, carrito y domicilios.
+- [Política de Privacidad](https://juanchospizza.com/politica-de-privacidad)
+- [Términos y Condiciones](https://juanchospizza.com/terminos-y-condiciones)
+- [Eliminación de Datos](https://juanchospizza.com/eliminacion-de-datos)
+
+## Notas
+
+- Los precios y la disponibilidad del menú cambian con frecuencia; usar la página en vivo como fuente de verdad, no cachear precios.
+- El sitio no expone una API pública de lectura del menú para terceros.

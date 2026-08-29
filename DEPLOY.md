@@ -108,6 +108,8 @@ curl -k https://localhost/api/health
 
 ### 4. Configurar SSL con Let's Encrypt
 
+> ⚠️ **Esta sección aplica a un VPS dedicado al proyecto**, donde `nginx` es el borde real (publica 80/443 al host, como está en `docker-compose.yml`). **En el VPS de producción actual esto NO es lo que pasa**: hay un Traefik compartido con otros stacks que enruta `juanchospizza.com` directo a `app:3001` con su propio certresolver de Let's Encrypt — nginx ahí ni recibe tráfico externo ni necesita estos certs para servir producción. Ver [ARCHITECTURE.md § Infraestructura Docker](./ARCHITECTURE.md#infraestructura-docker). Seguir esta sección solo si se despliega en un VPS nuevo sin Traefik existente.
+
 > ⚠️ `certbot --nginx` NO funciona acá — nginx corre dentro de Docker.  
 > Usar el flujo **standalone** o **webroot**:
 
@@ -181,29 +183,37 @@ El proyecto tiene el workflow **`deploy-prod.yml`** que automatiza el deploy:
 El workflow hace:
 
 ```
-workflow_dispatch (selector de rama)
+push a master (auto) | workflow_dispatch (selector de rama, manual)
   │
   ├─ 🔍 Quality: typecheck → build → tests → lint → audit
   │
   ├─ 🐳 Docker Build Check: build + verify image
   │
   ├─ 🚀 Deploy (SSH via appleboy/ssh-action):
-  │     1. git pull
+  │     1. git checkout/pull de la rama que disparó el push (o la elegida a mano)
   │     2. Verificar .env.production existe
-  │     3. docker compose down --remove-orphans
-  │     4. docker compose up -d --build
-  │     5. docker image prune
-  │     6. Health check (localhost:3001 → localhost fallback)
-  │     7. docker compose ps (estado final)
+  │     3. Backup de Postgres pre-deploy
+  │     4. docker compose down --remove-orphans
+  │     5. docker compose up -d --build
+  │     6. docker image prune
+  │     7. Health check contra $PROD_URL/api/health (dominio público real,
+  │        no localhost -- ver nota de Traefik en ARCHITECTURE.md)
+  │     8. docker compose ps (estado final)
   │
   └─ 🔥 Smoke Test: Playwright contra URL producción
 ```
 
+> `main` no dispara auto-deploy (removido 2026-08-26) — solo `master`. Correr contra `main` a propósito requiere `workflow_dispatch` manual.
+
 ### Cómo usar
+
+**Automático:** cualquier push a `master` dispara el pipeline solo. No hace falta hacer nada.
+
+**Manual** (para probar `main`, o forzar un redeploy sin cambios nuevos):
 
 1. Ir a GitHub → Actions → "🚀 Deploy Production (Docker Compose)"
 2. Click "Run workflow"
-3. Seleccionar rama (`master`)
+3. Seleccionar rama (`master` o `main`)
 4. Click "Run"
 
 ### Actualizaciones manuales (sin GitHub Actions)

@@ -498,7 +498,7 @@ export const MENU_ITEMS: MenuItem[] = [
 export const DESTACADOS = [
   {
     id: 'dest-pizza-especial',
-    name: 'Pizza Especial Juancho\'s',
+    name: "Pizza Especial Juancho's",
     description: 'Nuestra joya de la corona. Sabor que conquista al primer bocado y te hace volver por más.',
     price: 24900,
     image: '/images/featured.webp',
@@ -580,12 +580,12 @@ const CATEGORY_IMAGES: Record<string, string[]> = {
 
 const ITEM_IMAGE: Record<string, string> = {
   'pizza-porcion': 'pizza-1.webp',
-  'mazorcada': 'mazorcada-destacada.webp',
+  mazorcada: 'mazorcada-destacada.webp',
   'pechuga-gratinada': 'pechuga-gratinada.webp',
   'pechuga-rancho': 'pechuga-rancho.webp',
-  'churrasco': 'churrasco.webp',
+  churrasco: 'churrasco.webp',
   'costillitas-bbq-esp': 'costillas-bbq.webp',
-  'francesa': 'papa-francesa.webp',
+  francesa: 'papa-francesa.webp',
   'criolla-porcion': 'papa-criolla.webp',
   'spag-mixto': 'spag-mixto.webp',
   'spag-pollo': 'spag-pollo.webp',
@@ -688,12 +688,7 @@ export function buildWhatsAppMessage(
   sede: 'nemocon' | 'zipaquira'
 ): string {
   const sedeName = sede === 'nemocon' ? 'Nemocón' : 'Zipaquirá';
-  const lines: string[] = [
-    'Hola, quiero hacer un pedido 🍕',
-    '',
-    `Sede: ${sedeName}`,
-    '',
-  ];
+  const lines: string[] = ['Hola, quiero hacer un pedido 🍕', '', `Sede: ${sedeName}`, ''];
 
   items.forEach((item, i) => {
     const total = item.price * item.quantity;

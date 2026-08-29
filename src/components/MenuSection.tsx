@@ -150,8 +150,8 @@ const MenuSection: React.FC = () => {
             <span className="text-2xl mt-0.5 shrink-0">📸</span>
             <div className="flex-1">
               <p className="text-sm text-carbon/70 leading-relaxed">
-                <span className="font-semibold text-carbon">Las fotos son de referencia.</span>{' '}
-                El producto real puede variar en presentación, color y porción. La imagen es para que conozcas nuestros platos.
+                <span className="font-semibold text-carbon">Las fotos son de referencia.</span> El producto real puede
+                variar en presentación, color y porción. La imagen es para que conozcas nuestros platos.
               </p>
             </div>
             <button

@@ -70,8 +70,33 @@ export default defineConfig(() => {
               },
             },
             {
-              // Navegación y HTML (siempre fresco, fallback a caché offline)
+              // Google Fonts: hoja de estilos (cambia poco, se revalida en bg)
+              urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'google-fonts-stylesheets',
+              },
+            },
+            {
+              // Google Fonts: archivos de fuente (inmutables, cache-first 1 año)
+              urlPattern: ({ url }) => url.origin === 'https://fonts.gstatic.com',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'google-fonts-webfonts',
+                expiration: { maxEntries: 30, maxAgeSeconds: 365 * 24 * 60 * 60 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              // Navegación y HTML propios (siempre fresco, fallback a caché
+              // offline). Restringido a same-origin: antes este catch-all
+              // también interceptaba recursos de terceros (ej. la hoja de
+              // Google Fonts, que no matchea la regex de arriba porque
+              // "css2" no termina en ".css") y el SW respondía en un "world"
+              // distinto al del <link rel=preload>, generando el warning de
+              // Chrome "cross-world service worker resource mismatch".
               urlPattern: ({ url }) =>
+                url.origin === self.location.origin &&
                 !url.pathname.startsWith('/api/') &&
                 !/\.(?:js|css|svg|png|jpg|jpeg|gif|ico|woff2?)$/.test(url.pathname),
               handler: 'NetworkFirst',

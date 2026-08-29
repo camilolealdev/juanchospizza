@@ -30,6 +30,9 @@ const InventarioView: React.FC = () => {
   const [movTotal, setMovTotal] = useState(0);
   const [movTotalPages, setMovTotalPages] = useState(1);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [categories, setCategories] = useState<{ id: string; nombre: string }[]>([]);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => {
@@ -84,9 +87,10 @@ const InventarioView: React.FC = () => {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [inv, recs] = await Promise.all([api.getInventory(), api.getRecipes()]);
+      const [inv, recs, cats] = await Promise.all([api.getInventory(), api.getRecipes(), api.getInventoryCategories()]);
       setInventory(inv);
       setRecipes(recs);
+      setCategories(cats);
       await loadMovements(1);
     } catch (e) {
       showToast(`Error cargando inventario: ${e instanceof Error ? e.message : 'error desconocido'}`);
@@ -139,6 +143,24 @@ const InventarioView: React.FC = () => {
       fechaVencimiento: item.fechaVencimiento ? item.fechaVencimiento.slice(0, 10) : '',
     });
     setShowAddModal(true);
+  };
+
+  const handleAddCategory = async () => {
+    const nombre = newCategoryName.trim();
+    if (!nombre) return;
+    try {
+      const created = await api.createInventoryCategory(nombre);
+      setCategories((prev) =>
+        prev.some((c) => c.id === created.id)
+          ? prev
+          : [...prev, created].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      );
+      setAddForm((prev) => ({ ...prev, categoria: created.nombre }));
+      setNewCategoryName('');
+      setAddingCategory(false);
+    } catch (e) {
+      showToast(`Error creando categoría: ${e instanceof Error ? e.message : 'error desconocido'}`);
+    }
   };
 
   const handleAddSubmit = async () => {
@@ -557,32 +579,97 @@ const InventarioView: React.FC = () => {
             <div className="space-y-5">
               {[
                 { label: 'Nombre', key: 'nombre', type: 'text' },
-                { label: 'Categoría', key: 'categoria', type: 'text' },
                 { label: 'Stock Actual', key: 'stockActual', type: 'number', disabled: !!editingId },
                 { label: 'Stock Mínimo', key: 'stockMinimo', type: 'number' },
                 { label: 'Unidad', key: 'unidad', type: 'text' },
                 { label: 'Costo Unitario', key: 'costoUnitario', type: 'number' },
                 { label: 'Lote', key: 'lote', type: 'text' },
                 { label: 'Vencimiento', key: 'fechaVencimiento', type: 'date' },
-              ].map((field) => (
-                <div key={field.key}>
-                  <label className="text-[10px] uppercase tracking-[0.3em] font-black text-stone-500 mb-2 block">
-                    {field.label}
-                    {field.disabled && (
-                      <span className="normal-case tracking-normal text-stone-600">
-                        {' '}
-                        (usar &ldquo;Movimiento&rdquo; para cambiar stock)
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    type={field.type}
-                    disabled={field.disabled}
-                    value={(addForm as Record<string, string>)[field.key]}
-                    onChange={(e) => setAddForm((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                    className="w-full bg-stone-800 border border-stone-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  />
-                </div>
+              ].map((field, i) => (
+                <React.Fragment key={field.key}>
+                  {/* Categoría inyectada después de Nombre (i===0) -- desplegable
+                      contra inventory_categories en vez de texto libre (auditoría
+                      CRM 2026-08-27: antes cada quien tipeaba lo que quisiera y
+                      quedaban categorías inconsistentes sin ninguna lista real
+                      detrás). "+ Nueva" crea la categoría en la BD al vuelo. */}
+                  {i === 0 && (
+                    <div>
+                      <label className="text-[10px] uppercase tracking-[0.3em] font-black text-stone-500 mb-2 block">
+                        Categoría
+                      </label>
+                      {addingCategory ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            autoFocus
+                            placeholder="Nombre de la categoría"
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                            className="flex-1 bg-stone-800 border border-stone-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddCategory}
+                            className="px-4 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest"
+                          >
+                            OK
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAddingCategory(false);
+                              setNewCategoryName('');
+                            }}
+                            className="px-4 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 text-[10px] font-black uppercase tracking-widest"
+                          >
+                            X
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <select
+                            value={addForm.categoria}
+                            onChange={(e) => setAddForm((prev) => ({ ...prev, categoria: e.target.value }))}
+                            className="flex-1 bg-stone-800 border border-stone-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                          >
+                            <option value="">Sin categoría</option>
+                            {categories.map((c) => (
+                              <option key={c.id} value={c.nombre}>
+                                {c.nombre}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => setAddingCategory(true)}
+                            className="px-4 rounded-xl bg-stone-800 hover:bg-stone-700 text-orange-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+                          >
+                            + Nueva
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-[10px] uppercase tracking-[0.3em] font-black text-stone-500 mb-2 block">
+                      {field.label}
+                      {field.disabled && (
+                        <span className="normal-case tracking-normal text-stone-600">
+                          {' '}
+                          (usar &ldquo;Movimiento&rdquo; para cambiar stock)
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      type={field.type}
+                      disabled={field.disabled}
+                      value={(addForm as Record<string, string>)[field.key]}
+                      onChange={(e) => setAddForm((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                      className="w-full bg-stone-800 border border-stone-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                </React.Fragment>
               ))}
             </div>
             <div className="flex gap-4 mt-8">

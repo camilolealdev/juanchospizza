@@ -89,6 +89,14 @@ app.use(
         // 'strict-dynamic' + nonce sería más seguro, pero requiere cambios en
         // la arquitectura SSR que están fuera del scope actual.
         scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://connect.facebook.net', "'unsafe-inline'"],
+        // Explícito a propósito (Helmet ya lo trae en sus defaults, pero
+        // dejarlo implícito es lo que causó el bug de CSP audit 2026-08-27:
+        // scriptSrc 'unsafe-inline' NO cubre atributos on*, esa es una
+        // directiva aparte y más específica. index.html usaba onload=
+        // inline para el swap de fuentes/Font Awesome -- se movió a un
+        // <script> normal (sí cubierto por scriptSrc) en vez de aflojar
+        // esto.
+        scriptSrcAttr: ["'none'"],
         styleSrc: [
           "'self'",
           'https://fonts.googleapis.com',
@@ -115,8 +123,33 @@ app.use(
           'https://production.wompi.co',
           'https://www.facebook.com',
           'https://connect.facebook.net',
+          // El service worker (vite-plugin-pwa/workbox) cachea la hoja de
+          // estilos de Google Fonts y los archivos de fuente vía fetch()
+          // propio -- eso corre bajo connect-src, no style-src/font-src
+          // (que solo gobiernan el <link> directo del documento). Sin esto
+          // el SW tira CSP violation y las fuentes personalizadas no
+          // terminan de aplicarse (CSP audit 2026-08-27).
+          'https://fonts.googleapis.com',
+          'https://fonts.gstatic.com',
         ],
-        frameSrc: ["'self'", 'https://checkout.bold.co', 'https://www.mercadopago.com.co', 'https://www.google.com'],
+        // facebook.com agregado 2026-08-27: fbevents.js (Meta Pixel) usa
+        // iframes ocultos hacia facebook.com para sincronizar tracking
+        // (matching, dedup) cuando el script corre sin que un ad-blocker lo
+        // frene antes -- connect-src ya confiaba en facebook.com para el
+        // pixel, pero frame-src nunca lo tuvo, así que quedaba bloqueado en
+        // silencio hasta que alguien probaba sin bloqueador de ads.
+        frameSrc: [
+          "'self'",
+          'https://checkout.bold.co',
+          'https://www.mercadopago.com.co',
+          'https://www.google.com',
+          'https://www.facebook.com',
+        ],
+        // Sin esto Helmet aplica su default ("'self'" solamente) en
+        // silencio -- mismo patrón que ya mordió con scriptSrcAttr. El
+        // Pixel también hace un form-action de respaldo hacia facebook.com
+        // cuando sus otros métodos de entrega (fetch/beacon/imagen) fallan.
+        formAction: ["'self'", 'https://www.facebook.com'],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },
@@ -188,8 +221,15 @@ app.get('/api/metrics', metricsHandler);
 // ya esté seteado cuando el limiter decide qué balde usar -- un bot
 // autenticado (n8n/cron) usa serviceRateLimit (por nombre de servicio, techo
 // alto) en vez de generalRateLimit (por IP, pensado para navegadores).
-app.use(serviceKeyMiddleware);
-app.use((req, res, next) =>
+//
+// Ambos montados en '/api' (bug encontrado 2026-08-27): antes estaban sin
+// prefijo, así que el limiter general (100 req/60s por IP) corría también
+// para express.static (imágenes, JS, CSS, fuentes) más abajo -- una sola
+// carga de /pizza o /menu, con una docena de fotos + varios chunks de JS,
+// agotaba el cupo y tiraba 429 en assets reales para visitantes normales
+// (confirmado en vivo: logo del header y fotos de pizza rotas en prod).
+app.use('/api', serviceKeyMiddleware);
+app.use('/api', (req, res, next) =>
   req.auth?.type === 'service' ? serviceRateLimit(req, res, next) : generalRateLimit(req, res, next)
 );
 
@@ -251,11 +291,33 @@ app.use(
   })
 );
 
-// Fallback to frontend for non-API routes
+// Fallback to frontend for non-API routes. Rutas públicas reales (deben
+// coincidir con las <Route> de src/App.tsx + el check de /confirmacion) --
+// cualquier otra cosa es una URL inventada o un backlink roto y debe
+// devolver 404 real (auditoría SEO 2026-08-26: antes esto siempre devolvía
+// 200 con el shell de la SPA, así que Search Console iba a marcar cualquier
+// URL basura como "soft 404" en vez de un 404 de verdad).
+const KNOWN_PUBLIC_PATHS = new Set([
+  '/',
+  '/pizza',
+  '/menu',
+  '/domicilios',
+  '/politica-de-privacidad',
+  '/terminos-y-condiciones',
+  '/eliminacion-de-datos',
+]);
+
 app.get('*', (req, res) => {
-  if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
-  }
+  if (req.path.startsWith('/api')) return;
+
+  const normalizedPath = req.path.length > 1 ? req.path.replace(/\/+$/, '') : req.path;
+  const isKnownPath = KNOWN_PUBLIC_PATHS.has(normalizedPath) || normalizedPath.startsWith('/confirmacion');
+
+  // El body siempre es el shell de la SPA (React Router renderiza la página
+  // 404 en el cliente y agrega noindex vía useDocumentMeta) -- lo único que
+  // cambia es el status code, que es lo que Google usa para clasificar la
+  // respuesta.
+  res.status(isKnownPath ? 200 : 404).sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // ── Error handlers ─────────────────────────────────────────────

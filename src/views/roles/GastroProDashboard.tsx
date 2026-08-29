@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api, FinanceSummary } from '../../services/api';
-import { Client, LocationId, Order, OrderStatus } from '../../types';
+import { Client, LocationId, Order, OrderStatus, UserRole } from '../../types';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useLazyCharts } from '../../hooks/useLazyCharts';
 import ChartSkeleton from '../../components/ChartSkeleton';
@@ -40,9 +40,18 @@ interface GastroProDashboardProps {
   // Sede seleccionada en el dropdown de AdminLayout -- sin ella (o con
   // undefined) se ve el consolidado de ambas sedes, igual que antes.
   locationId?: LocationId;
+  // Bug encontrado 2026-08-27: este dashboard es la pantalla 'default' para
+  // CUALQUIER rol (incluye OPERATOR/REPARTIDOR/MARKETING, no solo ADMIN),
+  // pero pedía /api/clients y /api/finance/summary sin mirar el rol -- esas
+  // rutas son ADMIN-only (finance) o ADMIN+MARKETING (clients) en el
+  // backend. Con Promise.all, el 403 de cualquiera de las dos tiraba abajo
+  // TODA la carga (ni siquiera los pedidos, que sí tenían permiso, llegaban
+  // a pintarse) -- así se veía "el módulo no carga" para cocina/repartidor/
+  // marketing, con nada más que un toast de 3s que nadie alcanzaba a leer.
+  role: UserRole;
 }
 
-const GastroProDashboard: React.FC<GastroProDashboardProps> = ({ locationId }) => {
+const GastroProDashboard: React.FC<GastroProDashboardProps> = ({ locationId, role }) => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -52,24 +61,33 @@ const GastroProDashboard: React.FC<GastroProDashboardProps> = ({ locationId }) =
   // pinta primero y el chunk de ~363 KB llega cuando el gráfico aparece.
   const { charts, error: chartsError, containerRef } = useLazyCharts();
 
+  const canSeeFinance = role === UserRole.ADMIN;
+  const canSeeClients = role === UserRole.ADMIN || role === UserRole.MARKETING;
+
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [ord, cli, fin] = await Promise.all([
+      // allSettled, no all: cada fetch es independiente -- un 403 en
+      // clientes/finanzas (rol sin permiso) no debe tirar abajo los
+      // pedidos, que todos los roles con acceso al dashboard sí pueden ver.
+      const [ordRes, cliRes, finRes] = await Promise.allSettled([
         api.getOrders(undefined, { paidOnly: true }),
-        api.getClients(),
-        api.getFinanceSummary(),
+        canSeeClients ? api.getClients() : Promise.resolve([]),
+        canSeeFinance ? api.getFinanceSummary() : Promise.resolve(null),
       ]);
-      setOrders(ord.map(normalizeOrder));
-      setClients(cli);
-      setFinance(fin);
-    } catch (e) {
-      setToast(`Error cargando dashboard: ${e instanceof Error ? e.message : 'error desconocido'}`);
-      setTimeout(() => setToast(''), 3000);
+      if (ordRes.status === 'fulfilled') setOrders(ordRes.value.map(normalizeOrder));
+      if (cliRes.status === 'fulfilled') setClients(cliRes.value);
+      if (finRes.status === 'fulfilled') setFinance(finRes.value);
+
+      const failed = [ordRes, cliRes, finRes].some((r) => r.status === 'rejected');
+      if (failed) {
+        setToast('Algunos datos del dashboard no se pudieron cargar');
+        setTimeout(() => setToast(''), 3000);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canSeeClients, canSeeFinance]);
 
   useEffect(() => {
     loadAll();
