@@ -214,7 +214,7 @@ export default function Footer() {
                 <span className="w-2 h-2 rounded-full bg-queso/60 mt-1 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-crema/80">Domicilios</p>
-                  <p className="text-xs text-crema/45">5:00 PM - 9:30 PM</p>
+                  <p className="text-xs text-crema/45">3:00 PM - 11:00 PM</p>
                 </div>
               </li>
             </ul>
