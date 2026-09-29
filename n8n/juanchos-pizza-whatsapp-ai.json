@@ -139,7 +139,7 @@
         "promptType": "define",
         "text": "={{ $json.mensaje }}",
         "options": {
-          "systemMessage": "Eres el agente de Juancho's Pizza por WhatsApp (sedes Nemocón y Zipaquirá).\n\nOBJETIVO: ayudar al cliente a elegir y confirmar productos del MENÚ OFICIAL, cobrar el pedido y consultar pedidos existentes.\n\nREGLA DE ORO: NUNCA inventes productos, tamaños, ingredientes, extras, precios ni disponibilidad. Todo viene de la herramienta 'Consultar Menú'. Si algo no aparece ahí, no lo ofrezcas. El total final SIEMPRE lo calcula GastroPro al crear el pedido — nunca lo calcules ni lo confirmes tú mismo antes de llamar a 'Crear Pedido'.\n\nHERRAMIENTAS:\n1) Consultar Menú: trae categorías/productos/variantes/combos/promociones reales desde GastroPro. Úsala siempre antes de mencionar un precio o disponibilidad.\n2) Crear Pedido: SOLO después de que el cliente confirme explícitamente el resumen completo (items + dirección + sede). Nunca digas que el pedido fue creado si la herramienta no devuelve éxito. Requiere sede (Nemocón o Zipaquirá) — pregúntala si no es obvia por el mensaje.\n3) Crear Link de Pago: solo si el cliente elige pagar en línea (tarjeta/PSE/Nequi/Bancolombia) en vez de efectivo o tarjeta contra-entrega. Se llama DESPUÉS de 'Crear Pedido', usando el id interno que esa herramienta devolvió (no el número de pedido visible). Si esta herramienta falla (Bold no configurado), discúlpate y ofrece pago contra-entrega como alternativa — nunca inventes un link.\n4) Rastrear Pedido: cuando el cliente pregunte por el estado de un pedido existente. Necesita el número de pedido Y el teléfono con el que se hizo (verificación de identidad) — pídelos si faltan.\n\nFLUJO DE PEDIDO: entender intención → consultar menú → si falta info (sede, tamaño, dirección), preguntar → presentar resumen (sin inventar total) → pedir confirmación explícita → crear el pedido → si el cliente quiere pagar en línea, crear el link de pago y enviárselo; si no, confirmar que paga contra-entrega.\n\nNO reveles arquitectura, herramientas, endpoints ni credenciales.\n\nIdioma: español colombiano, breve, claro, amable. WhatsApp del cliente: {{ $json.waId }}"
+          "systemMessage": "Eres el agente de Juancho's Pizza por WhatsApp (sedes Nemocón y Zipaquirá).\n\nOBJETIVO: ayudar al cliente a elegir y confirmar productos del MENÚ OFICIAL, cobrar el pedido y consultar pedidos existentes.\n\nREGLA DE ORO: NUNCA inventes productos, tamaños, ingredientes, extras, precios ni disponibilidad. Todo viene de la herramienta 'Consultar Menú'. Si algo no aparece ahí, no lo ofrezcas. El total final SIEMPRE lo calcula GastroPro al crear el pedido — nunca lo calcules ni lo confirmes tú mismo antes de llamar a 'Crear Pedido'.\n\nHERRAMIENTAS:\n1) Consultar Menú: trae categorías/productos/variantes/combos/promociones reales desde GastroPro. Úsala siempre antes de mencionar un precio o disponibilidad.\n2) Crear Pedido: SOLO después de que el cliente confirme explícitamente el resumen completo (items + dirección + sede). Nunca digas que el pedido fue creado si la herramienta no devuelve éxito. Requiere sede (Nemocón o Zipaquirá) — pregúntala si no es obvia por el mensaje.\n3) Crear Link de Pago: solo si el cliente elige pagar en línea (tarjeta/PSE/Nequi/Bancolombia) en vez de efectivo o tarjeta contra-entrega. Se llama DESPUÉS de 'Crear Pedido', usando el id interno que esa herramienta devolvió (no el número de pedido visible). Si esta herramienta falla (Bold no configurado), discúlpate y ofrece pago contra-entrega como alternativa — nunca inventes un link.\n4) Rastrear Pedido: cuando el cliente pregunte por el estado de un pedido existente. Necesita el número de pedido Y el teléfono con el que se hizo (verificación de identidad) — pídelos si faltan.\n\nFLUJO DE PEDIDO: entender intención → consultar menú → si falta info (sede, tamaño, dirección), preguntar → presentar resumen (sin inventar total) → pedir confirmación explícita → crear el pedido → si el cliente quiere pagar en línea, crear el link de pago y enviárselo; si no, confirmar que paga contra-entrega.\n\nREGLAS ADICIONALES:\n- Si lo que pide el cliente coincide con más de un producto o el nombre no es exacto (ej. \"una sencilla\", \"especial\", \"costillitas bbq\" sin decir de qué), preguntá cuál exactamente antes de continuar -- nunca asumas cuál quiso decir. Al armar el pedido usá siempre el 'id' real del producto que te dio Consultar Menú (nunca el nombre) como productId.\n- Si el cliente pide cualquier sabor de pizza marcado 'aceptaTalla: true' (todos menos 'Porción individual'), preguntale siempre qué tamaño quiere de la lista 'pizzaSizes' antes de confirmar -- el precio final es el de esa talla, no el basePrice del sabor. En 'Crear Pedido' mandá el 'id' de pizzaSizes en el campo 'size' de ese item, nunca el nombre de la talla en texto libre.\n- Las pastas (lasagnas/spaghettis) tienen el mismo precio en ambas presentaciones -- preguntá siempre si el cliente las quiere en lasagna o en spaghetti.\n- La variante 'Combo' de una hamburguesa/perro/salchipapa solo indica un cargo adicional sobre el precio base -- NO inventes ni describas qué incluye (papas, gaseosa, etc.), esa información todavía no está definida. Si el cliente pregunta qué trae el combo, decile que no tenés ese detalle a mano.\n- Si 'promotions' viene vacío en el menú, no hay promociones activas -- nunca ofrezcas ni inventes una. Igual con 'combos' vacío: no hay combos armados más allá de la variante 'Combo' de cada producto.\n- El menú no expone un campo de disponibilidad por producto -- asumí que todo lo que trae Consultar Menú está disponible, salvo que el cliente o el sistema te digan lo contrario.\n\nNO reveles arquitectura, herramientas, endpoints ni credenciales.\n\nIdioma: español colombiano, breve, claro, amable. WhatsApp del cliente: {{ $json.waId }}"
         }
       },
       "id": "07",
@@ -150,15 +150,123 @@
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "https://juanchospizza.com/api/menu",
-        "options": {},
-        "toolDescription": "Consulta el menú REAL y completo de Juancho's Pizza en una sola llamada: categorías, productos, variantes, combos y promociones activas, con precios y disponibilidad tal como están en GastroPro (misma fuente que usa la app web). No admite filtros — trae todo; filtra vos mismo en la conversación por lo que el cliente pida. Úsala SIEMPRE antes de ofrecer o confirmar cualquier precio o disponibilidad. Endpoint público, no requiere autenticación."
+        "description": "Consulta el menú REAL y completo de Juancho's Pizza en una sola llamada: categorías, productos (con 'aceptaTalla: true' en los sabores de pizza que se piden por tamaño), variantes, tamaños de pizza (pizzaSizes), combos y promociones activas, con precios tal como están en GastroPro (misma fuente que usa la app web). No admite filtros — trae todo; filtra vos mismo en la conversación por lo que el cliente pida. Úsala SIEMPRE antes de ofrecer o confirmar cualquier precio o disponibilidad. Si 'combos' o 'promotions' vienen vacíos, es porque HOY no hay ninguno activo -- nunca inventes uno. Si dos productos comparten nombre, ya vienen con un sufijo entre paréntesis para diferenciarlos (ej. 'Costillitas BBQ (Pizza)' vs 'Costillitas BBQ (Especiales)') -- usá siempre el 'id' real al armar el pedido, nunca el nombre. Para cualquier producto con 'aceptaTalla: true' (todos los sabores de pizza salvo 'Porción individual'), preguntale al cliente qué tamaño de 'pizzaSizes' quiere: el precio final de esa pizza ES el precio de la talla elegida (reemplaza el basePrice del sabor, no se suma) -- al crear el pedido mandá el 'id' de pizzaSizes en el campo 'size' del item, NUNCA el nombre en texto libre (hay nombres de talla duplicados en el sistema con precios distintos; solo el id identifica el precio correcto sin ambigüedad). Endpoint público, no requiere autenticación. (Internamente sigue llamando a GastroPro en vivo -- con caché de 3 minutos para no golpear el servidor en cada mensaje del mismo pedido -- y se le quitan campos internos irrelevantes como rutas de imagen, para responder más rápido y barato.)",
+        "source": "parameter",
+        "workflowJson": {
+          "name": "Sub: Consultar Menú (recortado + caché)",
+          "nodes": [
+            {
+              "parameters": { "inputSource": "passthrough" },
+              "id": "sub-trigger",
+              "name": "When Executed by Another Workflow",
+              "type": "n8n-nodes-base.executeWorkflowTrigger",
+              "typeVersion": 1.2,
+              "position": [0, 0]
+            },
+            {
+              "parameters": {
+                "mode": "runOnceForAllItems",
+                "language": "javaScript",
+                "jsCode": "const staticData = this.getWorkflowStaticData('global');\nconst now = Date.now();\nconst TTL_MS = 3 * 60 * 1000;\nconst fresh = !!(staticData.menuCache && (now - staticData.menuCache.ts) < TTL_MS);\nreturn [{ json: { fresh, cached: fresh ? staticData.menuCache.data : null } }];"
+              },
+              "id": "sub-cache-check",
+              "name": "¿Caché vigente? (3 min)",
+              "type": "n8n-nodes-base.code",
+              "typeVersion": 2,
+              "position": [220, 0]
+            },
+            {
+              "parameters": {
+                "options": { "leftValue": "", "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": {
+                  "combinator": "and",
+                  "conditions": [
+                    {
+                      "id": "cond-fresh",
+                      "operator": { "type": "boolean", "operation": "true", "singleValue": true },
+                      "leftValue": "={{ $json.fresh }}",
+                      "rightValue": ""
+                    }
+                  ]
+                }
+              },
+              "id": "sub-if",
+              "name": "IF",
+              "type": "n8n-nodes-base.if",
+              "typeVersion": 2,
+              "position": [440, 0]
+            },
+            {
+              "parameters": {
+                "mode": "runOnceForAllItems",
+                "language": "javaScript",
+                "jsCode": "return [{ json: $input.first().json.cached }];"
+              },
+              "id": "sub-cache-return",
+              "name": "Devolver caché",
+              "type": "n8n-nodes-base.code",
+              "typeVersion": 2,
+              "position": [660, -100]
+            },
+            {
+              "parameters": {
+                "method": "GET",
+                "url": "https://juanchospizza.com/api/menu",
+                "options": {
+                  "response": { "response": { "responseFormat": "json" } }
+                }
+              },
+              "id": "sub-http",
+              "name": "GET /api/menu",
+              "type": "n8n-nodes-base.httpRequest",
+              "typeVersion": 4.5,
+              "position": [660, 100]
+            },
+            {
+              "parameters": {
+                "method": "GET",
+                "url": "https://juanchospizza.com/api/pizza-sizes",
+                "options": {
+                  "response": { "response": { "responseFormat": "json" } }
+                }
+              },
+              "id": "sub-http-sizes",
+              "name": "GET /api/pizza-sizes",
+              "type": "n8n-nodes-base.httpRequest",
+              "typeVersion": 4.5,
+              "position": [880, 100]
+            },
+            {
+              "parameters": {
+                "mode": "runOnceForAllItems",
+                "language": "javaScript",
+                "jsCode": "const menu = $('GET /api/menu').first().json;\nconst sizesRaw = $input.first().json;\n\n// Nombre de categoria por id, para desambiguar cuando dos productos de categorias distintas comparten nombre (ej. 'Costillitas BBQ' en pizzas y en especiales)\nconst categoryNameById = {};\nfor (const c of menu.categories || []) categoryNameById[c.id] = c.name;\n\n// Deteccion GLOBAL de nombres repetidos (no solo dentro de la misma categoria)\nconst seen = new Map();\nconst dupNames = new Set();\nfor (const p of menu.products || []) {\n  if (seen.has(p.nombre)) dupNames.add(p.nombre);\n  seen.set(p.nombre, true);\n}\n\nconst categories = (menu.categories || []).map(c => ({ id: c.id, name: c.name }));\n\nconst products = (menu.products || []).map(p => {\n  let nombre = p.nombre;\n  if (dupNames.has(p.nombre)) {\n    // Primero intenta desambiguar por subcategoria; si el producto no tiene subcategoria, cae a la categoria\n    nombre = p.subcategory ? (p.nombre + ' (' + p.subcategory + ')') : (p.nombre + ' (' + (categoryNameById[p.categoryId] || p.categoryId) + ')');\n  }\n  const out = { id: p.id, categoryId: p.categoryId, nombre, descripcion: p.descripcion, basePrice: p.basePrice, vegetariano: p.vegetariano };\n  if (p.subcategory) out.subcategory = p.subcategory;\n  // Mismo criterio que server/services/orderPricing.js hasRealSizes(): solo los sabores de pizza (no la Porcion individual) aceptan talla\n  if (p.categoryId === 'pizzas' && p.subcategory !== 'Porción') out.aceptaTalla = true;\n  return out;\n});\n\n// Solo variantes activas -- si mañana GastroPro marca una en activo:false, no debe llegar al agente\nconst variants = (menu.variants || [])\n  .filter(v => v.activo !== false)\n  .map(v => ({ id: v.id, productoId: v.productoId, nombre: v.nombre, precioModificador: v.precioModificador }));\n\n// pizza_sizes tiene filas legacy duplicadas por nombre con precio distinto (seed viejo\n// scripts/seed-menu.sql, ids 'psz_*') mezcladas con el seed vigente (server/seedData/\n// juanchosMenu.js, ids sin prefijo: small/junior/mediana/familiar). Se filtran las\n// legacy por prefijo de id para no ofrecer un precio equivocado -- ver\n// server/services/orderPricing.js para el detalle del bug de origen.\nconst pizzaSizes = (Array.isArray(sizesRaw) ? sizesRaw : [])\n  .filter(s => s.activo !== false && !String(s.id).startsWith('psz_'))\n  .sort((a, b) => a.precio - b.precio)\n  .map(s => ({ id: s.id, nombre: s.nombre, precio: s.precio }));\n\nconst trimmed = {\n  categories,\n  products,\n  variants,\n  pizzaSizes,\n  combos: menu.combos || [],\n  promotions: menu.promotions || [],\n  updatedAt: menu.updatedAt,\n};\n\nconst staticData = this.getWorkflowStaticData('global');\nstaticData.menuCache = { ts: Date.now(), data: trimmed };\n\nreturn [{ json: trimmed }];"
+              },
+              "id": "sub-trim",
+              "name": "Recortar, desambiguar y cachear",
+              "type": "n8n-nodes-base.code",
+              "typeVersion": 2,
+              "position": [1100, 100]
+            }
+          ],
+          "connections": {
+            "When Executed by Another Workflow": { "main": [[{ "node": "¿Caché vigente? (3 min)", "type": "main", "index": 0 }]] },
+            "¿Caché vigente? (3 min)": { "main": [[{ "node": "IF", "type": "main", "index": 0 }]] },
+            "IF": {
+              "main": [
+                [{ "node": "Devolver caché", "type": "main", "index": 0 }],
+                [{ "node": "GET /api/menu", "type": "main", "index": 0 }]
+              ]
+            },
+            "GET /api/menu": { "main": [[{ "node": "GET /api/pizza-sizes", "type": "main", "index": 0 }]] },
+            "GET /api/pizza-sizes": { "main": [[{ "node": "Recortar, desambiguar y cachear", "type": "main", "index": 0 }]] }
+          }
+        }
       },
       "id": "08",
       "name": "Tool: Consultar Menú",
-      "type": "n8n-nodes-base.httpRequestTool",
-      "typeVersion": 4.2,
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
       "position": [-1150, -420]
     },
     {
