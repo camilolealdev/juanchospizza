@@ -53,6 +53,7 @@ import qrMenuRoutes from './routes/qrMenu.js';
 import digiturnoRoutes from './routes/digiturno.js';
 import consentRoutes from './routes/consent.js';
 import notificationsRoutes from './routes/notifications.js';
+import geminiRoutes from './routes/gemini.js';
 
 dotenv.config();
 initPush();
@@ -270,6 +271,7 @@ app.use('/', qrMenuRoutes);
 app.use('/', digiturnoRoutes);
 app.use('/', consentRoutes);
 app.use('/', notificationsRoutes);
+app.use('/', geminiRoutes);
 
 // CSRF token endpoint (debe ir ANTES de servir archivos estáticos)
 app.get('/api/csrf-token', csrfTokenHandler);

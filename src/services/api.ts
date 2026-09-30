@@ -1447,6 +1447,48 @@ export const api = {
   getPrintInvoiceUrl(invoiceId: string) {
     return `${API_BASE}/api/print/invoice/${invoiceId}`;
   },
+
+  // ---- GEMINI (proxy server-side, ver server/routes/gemini.js) ----
+  // La clave de Gemini ya no viaja al navegador (auditoría MEDIA 4.3) --
+  // estos métodos solo mandan el prompt/contexto ya armado, el backend
+  // hace la llamada real con GEMINI_API_KEY.
+  async getGeminiRecommendation(
+    userInput: string,
+    products: Array<{ id: string; nombre: string; descripcion?: string }>
+  ): Promise<{ recommendedId: string; reasoning: string } | null> {
+    return apiFetch('/api/gemini/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userInput, products }),
+    });
+  },
+
+  async getGeminiChatResponse(
+    history: { role: 'user' | 'model'; parts: { text: string }[] }[],
+    context: { products?: unknown[]; ingredients?: unknown[]; pizzaSizes?: unknown[] }
+  ): Promise<{ text: string | null }> {
+    return apiFetch('/api/gemini/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ history, ...context }),
+    });
+  },
+
+  async getGeminiProductImage(productName: string, description?: string): Promise<{ image: string | null }> {
+    return apiFetch('/api/gemini/product-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productName, description }),
+    });
+  },
+
+  async getGeminiIngredientImage(name: string, description?: string): Promise<{ image: string | null }> {
+    return apiFetch('/api/gemini/ingredient-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description }),
+    });
+  },
 };
 
 export default api;

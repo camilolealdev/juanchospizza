@@ -1,13 +1,18 @@
-// Gemini AI Service - Optional module
-// Requires @google/generative-ai package and GEMINI_API_KEY environment variable
+// Gemini AI Service — llama al proxy server-side (server/routes/gemini.js),
+// nunca a la API de Gemini directo desde el navegador.
+//
+// ponytail: antes este archivo instanciaba GoogleGenerativeAI acá mismo con
+// import.meta.env.VITE_GEMINI_API_KEY. Cualquier variable VITE_* queda
+// embebida en el bundle público por diseño de Vite -- la clave era
+// extraíble desde las devtools por cualquier visitante y usable para
+// consumir la cuota de Gemini del negocio sin límite (auditoría MEDIA 4.3).
+// Ahora la clave (GEMINI_API_KEY, sin prefijo VITE_) vive solo en el
+// backend; este archivo solo arma los mismos prompts/contexto de antes y
+// se los manda a /api/gemini/*.
 
-import type { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { api } from './api';
 import type { PizzaMenuSize } from './api';
 import type { Product, Category, Ingredient } from '../types';
-
-let aiModel: GenerativeModel | null = null;
-let isInitialized = false;
 
 // ---- Real menu snapshot (DB-backed, NOT src/constants/index.tsx) ----
 // The chatbot/recommendation prompts used to be built entirely from the
@@ -84,128 +89,61 @@ const buildMenuContext = (menu: MenuSnapshot) => {
   return { products, ingredients, pizzaSizes };
 };
 
-const initAI = async () => {
-  if (isInitialized) return;
-  try {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn('Gemini API key not configured. Skipping AI init.');
-      return;
-    }
-    const client: GoogleGenerativeAI = new GoogleGenerativeAI(apiKey);
-    aiModel = client.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-    isInitialized = true;
-    // Gemini AI initialized
-  } catch (error) {
-    console.warn('Gemini AI not available. Install @google/generative-ai and set GEMINI_API_KEY.', error);
-  }
-};
-
 export const getSmartRecommendations = async (userInput: string) => {
-  await initAI();
   const menu = await getMenuSnapshot();
   const products = menu.products;
 
-  if (!aiModel) {
-    // Fallback: return random real product (or null if the menu fetch failed/is empty)
-    if (products.length === 0) return null;
-    const randomProduct = products[Math.floor(Math.random() * products.length)];
-    return {
-      recommendedId: randomProduct.id,
-      reasoning: `Te recomendamos ${randomProduct.nombre}: ${randomProduct.descripcion}`,
-    };
-  }
-
   try {
-    const response = await aiModel.generateContent([
-      {
-        text: `User is looking for: "${userInput}". Based on these pizzas: ${JSON.stringify(
-          products.map((p) => ({ id: p.id, name: p.nombre, desc: p.descripcion }))
-        )}. Recommend the best match and explain why. Responde en JSON con campos recommendedId y reasoning.`,
-      },
-    ]);
-
-    const parsed = response.response?.text();
-    return parsed ? JSON.parse(parsed) : null;
+    const result = await api.getGeminiRecommendation(
+      userInput,
+      products.map((p) => ({ id: p.id, nombre: p.nombre, descripcion: p.descripcion }))
+    );
+    if (result) return result;
   } catch (error) {
     console.error('AI Recommendation Error:', error);
-    return null;
   }
+
+  // Fallback: sin Gemini configurada en el backend, o si falló -- producto
+  // real al azar (o null si el menú también falló/está vacío).
+  if (products.length === 0) return null;
+  const randomProduct = products[Math.floor(Math.random() * products.length)];
+  return {
+    recommendedId: randomProduct.id,
+    reasoning: `Te recomendamos ${randomProduct.nombre}: ${randomProduct.descripcion}`,
+  };
 };
 
 export const getChatbotResponse = async (history: { role: 'user' | 'model'; parts: { text: string }[] }[]) => {
-  await initAI();
-  if (!aiModel) {
-    const fallbackResponses = [
-      '¡Hola! Soy el asistente de Guido Pizza. ¿Qué te gustaría pedir hoy?',
-      'Tenemos las mejores pizzas de Bogotá. ¿Te gustaría ver nuestro menú?',
-      'Nuestra masa fermenta 48 horas. ¿Qué pizza te gustaría ordenar?',
-    ];
-    return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-  }
-
   try {
     const menu = await getMenuSnapshot();
-    const { products, ingredients, pizzaSizes } = buildMenuContext(menu);
-
-    const systemInstruction = `Eres el "Concierge" de Guido Pizza en Bogotá. Tu objetivo es ayudar a los clientes a hacer pedidos.
-    REGLAS:
-    1. Solo productos del menú real, con su categoría y precio base en COP: ${JSON.stringify(products)}
-    2. Tamaños de pizza disponibles y su precio en COP: ${JSON.stringify(pizzaSizes)}
-    3. Solo ingredientes disponibles y su precio extra en COP: ${JSON.stringify(ingredients)}
-    4. Nunca inventes productos, ingredientes, tamaños ni precios que no estén en estas listas. Si una lista está vacía o no encuentras lo que pide el cliente, decilo con honestidad y sugerí que consulte el menú completo en la página o llame al restaurante.
-    5. Tono elegante y servicial.
-    6. Masa fermenta 48 horas.
-    7. Precios en COP.
-    8. Responde en Español.`;
-
-    const response = await aiModel.generateContent({
-      contents: history.map((h) => ({ role: h.role, parts: h.parts })),
-      safetySettings: [],
-      systemInstruction,
-    });
-
-    return response.response?.text() || 'Fue un placer atenderte. ¿Algo más?';
+    const context = buildMenuContext(menu);
+    const { text } = await api.getGeminiChatResponse(history, context);
+    if (text) return text;
   } catch (error) {
     console.error('Chatbot Error:', error);
-    return '¡Bienvenido a Guido Pizza! ¿En qué puedo ayudarte?';
   }
+
+  const fallbackResponses = [
+    '¡Hola! Soy el asistente de Guido Pizza. ¿Qué te gustaría pedir hoy?',
+    'Tenemos las mejores pizzas de Bogotá. ¿Te gustaría ver nuestro menú?',
+    'Nuestra masa fermenta 48 horas. ¿Qué pizza te gustaría ordenar?',
+  ];
+  return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
 };
 
 export const generateProductImage = async (productName: string, description: string) => {
-  await initAI();
-  if (!aiModel) return null;
-
   try {
-    const prompt = `Professional food photography of "${productName}". ${description}. Italian restaurant, dark moody background, warm lighting, 4k.`;
-    const response = await aiModel.generateContent([{ text: prompt }]);
-    const parts = response.response?.candidates?.[0]?.content?.parts || [];
-    for (const part of parts) {
-      if ('inlineData' in part && part.inlineData?.data) {
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
-    }
-    return null;
+    const { image } = await api.getGeminiProductImage(productName, description);
+    return image;
   } catch (error) {
     return null;
   }
 };
 
 export const generateIngredientImage = async (name: string, description: string) => {
-  await initAI();
-  if (!aiModel) return null;
-
   try {
-    const prompt = `Minimalist icon of pizza ingredient: "${name}". ${description}. Flat design, clean, white background.`;
-    const response = await aiModel.generateContent([{ text: prompt }]);
-    const parts = response.response?.candidates?.[0]?.content?.parts || [];
-    for (const part of parts) {
-      if ('inlineData' in part && part.inlineData?.data) {
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
-    }
-    return null;
+    const { image } = await api.getGeminiIngredientImage(name, description);
+    return image;
   } catch (error) {
     return null;
   }
