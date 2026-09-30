@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { pool } from '../db.js';
 import { authMiddleware, requireRole, hashPin, generateSalt } from '../auth.js';
 import { validate } from '../middleware/validate.js';
@@ -37,7 +38,10 @@ router.post(
   async (req, res) => {
     try {
       const { nombre, role, pin, locationId, username, password } = req.body;
-      const id = `emp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      // ponytail: emp_<timestamp>_<random corto> era adivinable (auditoria
+      // BAJA) -- crypto.randomUUID() da 122 bits de entropia real, mismo
+      // prefijo emp_ para no romper filtros/logs que ya esperan ese formato.
+      const id = `emp_${crypto.randomUUID()}`;
       const salt = generateSalt();
       const pinHash = hashPin(pin, salt);
       const passwordSalt = password ? generateSalt() : null;

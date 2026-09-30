@@ -255,9 +255,13 @@ export async function login(username, credentials) {
   }
 
   const payload = verifyToken(token);
+  // ponytail: expiresIn devolvia el epoch crudo de payload.exp, no una
+  // duracion (auditoria BAJA) -- un cliente que lo leyera como "segundos
+  // restantes" calculaba mal el fin de sesion. No lo consume el frontend
+  // actual, pero corregirlo no tiene costo.
   return {
     token,
-    expiresIn: payload.exp,
+    expiresIn: payload.exp - Math.floor(Date.now() / 1000),
     role: payload.role,
     username: payload.sub,
   };

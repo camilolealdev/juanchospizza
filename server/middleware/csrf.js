@@ -98,7 +98,16 @@ export function csrfProtection(req, res, next) {
     return res.status(403).json({ error: 'CSRF token requerido' });
   }
 
-  if (cookieToken !== headerToken) {
+  // ponytail: comparacion en tiempo constante (auditoria BAJA) -- timingSafeEqual
+  // exige buffers del mismo largo, por eso se chequea el largo antes de
+  // llamarla. El largo en si no es secreto (TOKEN_LENGTH es fijo y publico
+  // arriba en este archivo), asi que ese chequeo corto no reintroduce el
+  // riesgo de timing que se esta corrigiendo.
+  const cookieBuf = Buffer.from(cookieToken);
+  const headerBuf = Buffer.from(headerToken);
+  const tokensMatch =
+    cookieBuf.length === headerBuf.length && crypto.timingSafeEqual(cookieBuf, headerBuf);
+  if (!tokensMatch) {
     logger.warn({ ip: req.ip, method: req.method, path: req.path }, 'CSRF: token mismatch');
     return res.status(403).json({ error: 'CSRF token inválido' });
   }
