@@ -33,6 +33,7 @@ import { validate } from '../middleware/validate.js';
 import { postConsentSchema } from '../schemas/consent.js';
 import { derechoBaseSchema, derechoResponseSchema, canTransitionDerecho } from '../schemas/derechos.js';
 import { consentRateLimit, derechoRateLimit } from '../middleware/rateLimit.js';
+import { executeSuppression } from '../services/dataRetention.js';
 
 const router = express.Router();
 
@@ -256,7 +257,9 @@ router.patch(
   validate(derechoResponseSchema),
   async (req, res) => {
     try {
-      const existing = await pool.query('SELECT id, estado FROM derechos_solicitudes WHERE id = $1', [req.params.id]);
+      const existing = await pool.query('SELECT id, estado, tipo, "clientId" FROM derechos_solicitudes WHERE id = $1', [
+        req.params.id,
+      ]);
       if (!existing.rows.length) return res.status(404).json({ error: 'Solicitud no encontrada' });
 
       const { estado, respuesta } = req.body;
@@ -266,7 +269,7 @@ router.patch(
       // 'pendiente'/'en_proceso'. La respuesta quedó registrada con
       // respondedBy/respondedAt como evidencia ante la SIC; revertir
       // debilitaría la cadena de auditoría del plazo legal.
-      const estadoActual = existing.rows[0].estado;
+      const { estado: estadoActual, tipo, clientId } = existing.rows[0];
       if (!canTransitionDerecho(estadoActual, estado)) {
         return res.status(409).json({
           error:
@@ -275,10 +278,22 @@ router.patch(
         });
       }
 
+      // ponytail: al aprobar (estado='respondida') una solicitud de
+      // supresión con cliente identificado, ejecutar la supresión real
+      // acá mismo -- antes solo quedaba marcada 'borrado_solicitado' sin
+      // que nada borrara nada (auditoría MEDIA-01). El resumen (qué se
+      // suprimió, qué quedó retenido por obligación fiscal y por qué)
+      // se agrega a la respuesta como evidencia ante la SIC.
+      let respuestaFinal = respuesta;
+      if (estado === 'respondida' && tipo === 'supresion' && clientId) {
+        const resultado = await executeSuppression(clientId);
+        respuestaFinal = `${respuesta || ''}\n\n[Supresión ejecutada automáticamente] ${resultado.resumen}`.trim();
+      }
+
       const sets = ['estado = $2', '"respondedBy" = $3', '"respondedAt" = NOW()'];
       const params = [req.params.id, estado, req.auth?.sub || null];
-      if (respuesta !== undefined) {
-        params.push(respuesta);
+      if (respuestaFinal !== undefined) {
+        params.push(respuestaFinal);
         sets.push(`respuesta = $${params.length}`);
       }
 
