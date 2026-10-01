@@ -250,7 +250,9 @@
             }
           ],
           "connections": {
-            "When Executed by Another Workflow": { "main": [[{ "node": "¿Caché vigente? (3 min)", "type": "main", "index": 0 }]] },
+            "When Executed by Another Workflow": {
+              "main": [[{ "node": "¿Caché vigente? (3 min)", "type": "main", "index": 0 }]]
+            },
             "¿Caché vigente? (3 min)": { "main": [[{ "node": "IF", "type": "main", "index": 0 }]] },
             "IF": {
               "main": [
@@ -259,7 +261,9 @@
               ]
             },
             "GET /api/menu": { "main": [[{ "node": "GET /api/pizza-sizes", "type": "main", "index": 0 }]] },
-            "GET /api/pizza-sizes": { "main": [[{ "node": "Recortar, desambiguar y cachear", "type": "main", "index": 0 }]] }
+            "GET /api/pizza-sizes": {
+              "main": [[{ "node": "Recortar, desambiguar y cachear", "type": "main", "index": 0 }]]
+            }
           }
         }
       },
