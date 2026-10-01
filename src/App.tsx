@@ -359,9 +359,9 @@ const App: React.FC = () => {
                   <Route path="pizza" element={<PizzaPage />} />
                   <Route path="menu" element={<MenuPage />} />
                   <Route path="domicilios" element={<DomiciliosPage />} />
-                  <Route path="politica-de-privacidad" element={<LegalPage />} />
-                  <Route path="terminos-y-condiciones" element={<LegalPage />} />
-                  <Route path="eliminacion-de-datos" element={<LegalPage />} />
+                  <Route path="politica-de-privacidad" element={<LegalPage slug="politica-de-privacidad" />} />
+                  <Route path="terminos-y-condiciones" element={<LegalPage slug="terminos-y-condiciones" />} />
+                  <Route path="eliminacion-de-datos" element={<LegalPage slug="eliminacion-de-datos" />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>
