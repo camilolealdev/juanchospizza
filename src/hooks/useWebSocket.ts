@@ -63,7 +63,13 @@ const connect = (role?: string, locationId?: string) => {
 
     wsInstance.onmessage = (event: MessageEvent) => {
       try {
-        const parsed: WSEvent = JSON.parse(event.data as string);
+        // El servidor (server/websocket.js) manda { type, ...payload, timestamp },
+        // no { event, data }: leer solo parsed.event dejaba todos los listeners
+        // sin disparar. Se aceptan ambos formatos.
+        const raw = JSON.parse(event.data as string) as Record<string, unknown>;
+        const name = (raw.event ?? raw.type) as string;
+        const payload = raw.data !== undefined ? raw.data : raw;
+        const parsed: WSEvent = { event: name, data: payload };
         const listeners = globalListeners.get(parsed.event);
         if (listeners) {
           listeners.forEach((cb) => cb(parsed.data));

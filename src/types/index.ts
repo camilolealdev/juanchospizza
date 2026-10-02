@@ -130,7 +130,7 @@ export interface Order {
   userId: string;
   customerName: string;
   customerPhone?: string;
-  address: string;
+  address?: string | null;
   items: OrderItem[];
   total: number;
   status: OrderStatus;
