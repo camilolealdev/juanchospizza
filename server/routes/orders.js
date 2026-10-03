@@ -54,6 +54,9 @@ router.get(
       // aunque el pedido existiera en la DB.
       if (paidOnly === 'true') {
         conditions.push(`("paymentStatus" = 'paid' OR "paymentMethod" IN ('cash', 'card', 'whatsapp'))`);
+        // Pedidos de prueba (orderNumber "TEST-...", ej. probadores del bot de
+        // n8n) nunca llegan a cocina/repartidor; ADMIN los ve sin paidOnly.
+        conditions.push(`"orderNumber" NOT ILIKE 'TEST-%'`);
       }
 
       const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
@@ -191,7 +194,7 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
       orderNumber,
       customerName,
       customerPhone: customerPhone || null,
-      address,
+      address: address || null,
       total: verifiedTotal,
       estimatedTime,
       paymentMethod,
@@ -203,7 +206,8 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
     // ajenos. Se resuelve server-side buscando por teléfono, que es el mismo
     // valor que ya usamos como verificador para tracking/reviews.
     let resolvedClientId = null;
-    if (sanitized.customerPhone) {
+    // Pedidos de prueba (orderNumber "TEST-...") no ensucian el CRM.
+    if (sanitized.customerPhone && !/^TEST-/i.test(sanitized.orderNumber)) {
       const clientMatch = await client.query('SELECT id FROM clients WHERE telefono = $1 LIMIT 1', [
         sanitized.customerPhone,
       ]);
@@ -283,7 +287,9 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
     });
 
     // ── Notificaciones post-creación (no bloqueantes) ────────────
+    const isTestOrder = /^TEST-/i.test(sanitized.orderNumber);
     setImmediate(() => {
+      if (isTestOrder) return; // sin alerta/sonido a cocina
       // notifyNewOrder (server/websocket.js) es síncrona, no retorna Promise —
       // no encadenar .catch() aquí (lanzaba TypeError no capturado en cada pedido).
       notifyNewOrder({

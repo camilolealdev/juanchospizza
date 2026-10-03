@@ -13,7 +13,9 @@ export const createOrderSchema = z.object({
   orderNumber: str(50),
   customerName: str(100),
   customerPhone: strOpt(30),
-  address: str(200),
+  // Opcional: pedido para recoger no tiene dirección (cocina/correo ya lo
+  // tratan como "recoge en local" cuando viene vacío).
+  address: strOpt(200),
   items: itemsField,
   total: requiredPositiveNumber(999999999, 'Faltan datos requeridos'),
   estimatedTime: clampedNumber(0, 180, 30),
