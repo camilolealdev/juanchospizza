@@ -18,6 +18,11 @@ describe('createOrderSchema', () => {
     expect(result.data.estimatedTime).toBe(30);
   });
 
+  it('accepts an order without address (pickup)', () => {
+    const { address: _a, ...rest } = validOrder;
+    expect(createOrderSchema.safeParse(rest).success).toBe(true);
+  });
+
   it('rejects a missing total -- an order with no amount is not valid', () => {
     const { total: _total, ...rest } = validOrder;
     expect(createOrderSchema.safeParse(rest).success).toBe(false);

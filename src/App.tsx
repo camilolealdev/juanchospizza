@@ -40,6 +40,7 @@ const InvoicesView = lazy(() => import('./views/roles/InvoicesView'));
 const DigiturnoView = lazy(() => import('./views/roles/DigiturnoView'));
 const PedidosView = lazy(() => import('./views/roles/PedidosView'));
 const DerechosView = lazy(() => import('./views/roles/DerechosView'));
+const GuiaView = lazy(() => import('./views/roles/GuiaView'));
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -91,6 +92,7 @@ const GASTRO_MODULES: GastroModule[] = [
   'facturacion',
   'digiturno',
   'derechos',
+  'guia',
 ];
 const isGastroModule = (value: string): value is GastroModule => (GASTRO_MODULES as string[]).includes(value);
 
@@ -115,11 +117,12 @@ const ROLE_MODULE_ACCESS: Partial<Record<UserRole, GastroModule[]>> = {
     'pedidos',
     'comandas',
     'digiturno',
+    'guia',
   ],
   // Repartidor no tenía NINGÚN módulo propio -- 'pedidos' es su vista de
   // auto-reclamo de entregas (ver PedidosView.tsx).
-  [UserRole.REPARTIDOR]: ['dashboard', 'pedidos'],
-  [UserRole.MARKETING]: ['dashboard', 'reviews', 'campanas', 'derechos'],
+  [UserRole.REPARTIDOR]: ['dashboard', 'pedidos', 'guia'],
+  [UserRole.MARKETING]: ['dashboard', 'reviews', 'campanas', 'derechos', 'guia'],
 };
 
 const hasModuleAccess = (role: UserRole, module: GastroModule): boolean =>
@@ -235,9 +238,7 @@ const App: React.FC = () => {
     );
   }
 
-  const login = async (username: string, pin?: string, password?: string): Promise<boolean> => {
-    if (!username || (!pin && !password)) return false;
-    const result = await api.login(username, pin, password);
+  const applyLoginResult = (result: { role?: string; username?: string } | undefined): boolean => {
     if (!result?.role) return false;
     setAuthSession({ role: result.role, username: result.username });
     const resolvedRole = isKnownRole(result.role) ? result.role : UserRole.CLIENT;
@@ -248,6 +249,20 @@ const App: React.FC = () => {
       history.pushState({ gastroModule }, '', `/admin/${gastroModule}`);
     }
     return true;
+  };
+
+  const login = async (username: string, pin?: string, password?: string): Promise<boolean> => {
+    if (!username || (!pin && !password)) return false;
+    const result = await api.login(username, pin, password);
+    return applyLoginResult(result);
+  };
+
+  // credential es el id_token que entrega el botón de Google Identity
+  // Services (ver LoginModal). pin solo aplica si la cuenta es SUPER_ADMIN.
+  const loginGoogle = async (credential: string, pin?: string): Promise<boolean> => {
+    if (!credential) return false;
+    const result = await api.loginGoogle(credential, pin);
+    return applyLoginResult(result);
   };
 
   const renderGastroModule = () => {
@@ -292,6 +307,8 @@ const App: React.FC = () => {
         return <PedidosView role={role} locationId={selectedLocation} />;
       case 'derechos':
         return <DerechosView />;
+      case 'guia':
+        return <GuiaView role={role} />;
       default:
         return <GastroProDashboard locationId={selectedLocation} role={role} />;
     }
@@ -309,7 +326,7 @@ const App: React.FC = () => {
       <AuthContext.Provider value={{ isAuthenticated, userRole: role, login, logout }}>
         {showLogin && !isAuthenticated && (
           <Suspense fallback={null}>
-            <LoginModal onLogin={login} onClose={() => setShowLogin(false)} />
+            <LoginModal onLogin={login} onLoginGoogle={loginGoogle} onClose={() => setShowLogin(false)} />
           </Suspense>
         )}
 
@@ -359,9 +376,9 @@ const App: React.FC = () => {
                   <Route path="pizza" element={<PizzaPage />} />
                   <Route path="menu" element={<MenuPage />} />
                   <Route path="domicilios" element={<DomiciliosPage />} />
-                  <Route path="politica-de-privacidad" element={<LegalPage />} />
-                  <Route path="terminos-y-condiciones" element={<LegalPage />} />
-                  <Route path="eliminacion-de-datos" element={<LegalPage />} />
+                  <Route path="politica-de-privacidad" element={<LegalPage slug="politica-de-privacidad" />} />
+                  <Route path="terminos-y-condiciones" element={<LegalPage slug="terminos-y-condiciones" />} />
+                  <Route path="eliminacion-de-datos" element={<LegalPage slug="eliminacion-de-datos" />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>

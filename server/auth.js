@@ -1,5 +1,9 @@
 import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import { pool } from './db.js';
+import config from './config.js';
+
+const googleClient = new OAuth2Client(config.google.clientId);
 
 // Generar secrets seguros si no existen. El fallback de dev se memoiza --
 // antes generaba un secret random en CADA llamada, así que un token firmado
@@ -267,6 +271,74 @@ export async function login(username, credentials) {
   };
 }
 
+// Login con Google: el id_token ya prueba que el caller controla esa cuenta
+// de Gmail/Workspace, así que el único trabajo acá es mapear email ->
+// empleado. SUPER_ADMIN sigue pidiendo un segundo factor (PIN) -- el resto
+// de roles queda autenticado con solo el email verificado.
+export async function authenticateGoogle(email, pin) {
+  if (!email) return null;
+
+  const result = await pool.query(
+    'SELECT id, role, "pinHash", salt, "isSuperAdmin", "locationId", "lockedUntil" FROM employees WHERE email = $1 AND activo = true',
+    [String(email).trim().toLowerCase()]
+  );
+  const employee = result.rows[0];
+  if (!employee) return null;
+
+  if (employee.lockedUntil && new Date(employee.lockedUntil).getTime() > Date.now()) {
+    return null;
+  }
+
+  // ponytail: no se toca el contador de failedLoginAttempts acá -- ese
+  // contador existe para frenar fuerza bruta de PIN por un atacante que NO
+  // tiene la cuenta de Google del empleado. Si ya pasó la verificación de
+  // Google, el PIN de SUPER_ADMIN es un segundo factor sobre una identidad
+  // ya probada, no la primera línea de defensa contra adivinar PINs.
+  if (employee.isSuperAdmin && !(pin && verifyHash(pin, employee.salt, employee.pinHash))) {
+    return null;
+  }
+
+  return generateToken(
+    {
+      sub: employee.id,
+      role: employee.role,
+      locationId: employee.locationId || null,
+      type: 'access',
+      origIat: Math.floor(Date.now() / 1000),
+    },
+    '15m'
+  );
+}
+
+export async function loginWithGoogle(idToken, pin) {
+  if (!idToken) return { error: 'Credenciales inválidas' };
+
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken, audience: config.google.clientId });
+    payload = ticket.getPayload();
+  } catch {
+    return { error: 'Credenciales inválidas' };
+  }
+
+  if (!payload?.email_verified) {
+    return { error: 'Credenciales inválidas' };
+  }
+
+  const token = await authenticateGoogle(payload.email, pin);
+  if (!token) {
+    return { error: 'Credenciales inválidas' };
+  }
+
+  const verified = verifyToken(token);
+  return {
+    token,
+    expiresIn: verified.exp - Math.floor(Date.now() / 1000),
+    role: verified.role,
+    username: verified.sub,
+  };
+}
+
 // Middleware para verificar token
 export function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -400,6 +472,7 @@ export function requireSameLocation(getLocationId) {
 export default {
   getSecret,
   hashPin,
+  loginWithGoogle,
   generateSalt,
   generateToken,
   verifyToken,

@@ -436,8 +436,9 @@ const LEGAL_PAGES: Record<string, { title: string; kicker: string; icon: string;
   },
 };
 
-export default function LegalPage() {
-  const { slug } = useParams<{ slug: string }>();
+export default function LegalPage({ slug: slugProp }: { slug?: string }) {
+  const { slug: slugParam } = useParams<{ slug: string }>();
+  const slug = slugProp || slugParam;
   const page = LEGAL_PAGES[slug || ''];
 
   if (!page) {

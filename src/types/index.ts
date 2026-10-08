@@ -130,7 +130,7 @@ export interface Order {
   userId: string;
   customerName: string;
   customerPhone?: string;
-  address: string;
+  address?: string | null;
   items: OrderItem[];
   total: number;
   status: OrderStatus;
@@ -181,7 +181,8 @@ export type GastroModule =
   | 'compras'
   | 'facturacion'
   | 'digiturno'
-  | 'derechos';
+  | 'derechos'
+  | 'guia';
 
 // Solicitud de derechos ARCO (Ley 1581 Art. 14-15) — ver
 // server/routes/consent.js y server/schemas/derechos.js. Estados posibles:

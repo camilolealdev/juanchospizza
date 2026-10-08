@@ -31,6 +31,30 @@ const PAYMENT_LABELS: Record<string, string> = {
   wompi: 'Wompi',
 };
 
+// Aviso sonoro de pedido nuevo (Web Audio, sin assets). Puede quedar bloqueado
+// por el navegador hasta que el usuario interactúe con la página.
+function playNewOrderSound() {
+  try {
+    const ctx = new AudioContext();
+    [880, 1100, 880].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      const t = ctx.currentTime + i * 0.25;
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    });
+    setTimeout(() => ctx.close(), 1200);
+  } catch {
+    /* sin audio disponible */
+  }
+}
+
 const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
 const OrderCard: React.FC<{
@@ -46,8 +70,17 @@ const OrderCard: React.FC<{
   <div className="bg-stone-900 border border-stone-700 rounded-2xl p-5">
     <div className="flex items-start justify-between mb-3">
       <div>
-        <p className="text-white font-black text-lg">#{order.orderNumber}</p>
+        <p className="text-white font-black text-lg">
+          #{order.orderNumber}
+          {/^TEST-/i.test(order.orderNumber) && (
+            <span className="ml-2 align-middle bg-yellow-500 text-black text-[10px] px-2 py-0.5 rounded">PRUEBA</span>
+          )}
+        </p>
         <p className="text-stone-400 text-sm">{order.customerName}</p>
+        <p className="text-stone-500 text-xs">
+          {new Date(order.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+          {order.estimatedTime ? ` · est. ${order.estimatedTime} min` : ''}
+        </p>
       </div>
       <span className="text-orange-400 font-black text-sm">{formatter.format(order.total)}</span>
     </div>
@@ -74,6 +107,7 @@ const OrderCard: React.FC<{
         <li key={i}>
           {item.quantity}x {item.name}
           {item.size ? ` (${item.size})` : ''}
+          {item.details ? <span className="text-yellow-500"> — {item.details}</span> : null}
         </li>
       ))}
     </ul>
@@ -104,6 +138,8 @@ const PedidosView: React.FC<PedidosViewProps> = ({ role, locationId }) => {
   };
 
   const isRepartidor = role === UserRole.REPARTIDOR;
+  // ADMIN recibe todas las sedes de la API; respetar el selector de sede.
+  const inLoc = useCallback((o: Order) => !locationId || o.locationId === locationId, [locationId]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -113,25 +149,54 @@ const PedidosView: React.FC<PedidosViewProps> = ({ role, locationId }) => {
           api.getOrders('READY', { paidOnly: true }),
           api.getOrders(undefined, { paidOnly: true, mine: true }),
         ]);
-        setOrders(available);
-        setMyDeliveries(mine.filter((o: Order) => o.status === 'ASSIGNED' || o.status === 'DELIVERING'));
+        setOrders(available.filter(inLoc));
+        setMyDeliveries(mine.filter((o: Order) => inLoc(o) && o.status === 'ASSIGNED' || o.status === 'DELIVERING'));
       } else {
         const all = await api.getOrders(undefined, { paidOnly: true });
-        setOrders(all.filter((o: Order) => ['PENDING', 'CONFIRMED', 'PREPARING', 'READY'].includes(o.status)));
+        setOrders(all.filter((o: Order) => inLoc(o) && ['PENDING', 'CONFIRMED', 'PREPARING', 'READY'].includes(o.status)));
       }
     } catch (e) {
       showToast(`Error cargando pedidos: ${e instanceof Error ? e.message : 'error desconocido'}`);
     } finally {
       setLoading(false);
     }
-  }, [isRepartidor]);
+  }, [isRepartidor, inLoc]);
 
   useEffect(() => {
     loadAll();
   }, [loadAll]);
 
-  useWebSocket('order:new', () => loadAll());
-  useWebSocket('order:update', () => loadAll());
+  // Recarga silenciosa (sin el spinner de pantalla completa) para WS/polling.
+  const refresh = useCallback(async () => {
+    try {
+      if (isRepartidor) {
+        const [available, mine] = await Promise.all([
+          api.getOrders('READY', { paidOnly: true }),
+          api.getOrders(undefined, { paidOnly: true, mine: true }),
+        ]);
+        setOrders(available.filter(inLoc));
+        setMyDeliveries(mine.filter((o: Order) => inLoc(o) && o.status === 'ASSIGNED' || o.status === 'DELIVERING'));
+      } else {
+        const all = await api.getOrders(undefined, { paidOnly: true });
+        setOrders(all.filter((o: Order) => inLoc(o) && ['PENDING', 'CONFIRMED', 'PREPARING', 'READY'].includes(o.status)));
+      }
+    } catch {
+      /* el próximo ciclo reintenta */
+    }
+  }, [isRepartidor, inLoc]);
+
+  useWebSocket('order:new', () => {
+    playNewOrderSound();
+    refresh();
+  });
+  useWebSocket('order:update', () => refresh());
+
+  // Respaldo si el WS se cae o el navegador lo suspende: sin esto un pedido
+  // nuevo quedaba invisible hasta recargar a mano.
+  useEffect(() => {
+    const id = setInterval(refresh, 30000);
+    return () => clearInterval(id);
+  }, [refresh]);
 
   const advance = async (order: Order, nextStatus: OrderStatus) => {
     setBusyId(order.id);

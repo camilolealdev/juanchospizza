@@ -52,6 +52,12 @@ const ALL_NAV: { module: GastroModule; label: string; icon: string; roles: UserR
   { module: 'derechos', label: 'Derechos ARCO', icon: 'shield-halved', roles: [UserRole.ADMIN, UserRole.MARKETING] },
   { module: 'compras', label: 'Compras', icon: 'truck', roles: [UserRole.ADMIN] },
   { module: 'facturacion', label: 'Facturación', icon: 'file-invoice', roles: [UserRole.ADMIN] },
+  {
+    module: 'guia',
+    label: 'Guía',
+    icon: 'circle-question',
+    roles: [UserRole.ADMIN, UserRole.OPERATOR, UserRole.REPARTIDOR, UserRole.MARKETING],
+  },
 ];
 
 const MODULE_TITLES: Record<GastroModule, string> = {
@@ -76,6 +82,7 @@ const MODULE_TITLES: Record<GastroModule, string> = {
   derechos: 'Derechos ARCO',
   compras: 'Compras',
   facturacion: 'Facturación',
+  guia: 'Guía del sistema',
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {

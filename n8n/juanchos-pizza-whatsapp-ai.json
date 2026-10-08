@@ -250,7 +250,9 @@
             }
           ],
           "connections": {
-            "When Executed by Another Workflow": { "main": [[{ "node": "¿Caché vigente? (3 min)", "type": "main", "index": 0 }]] },
+            "When Executed by Another Workflow": {
+              "main": [[{ "node": "¿Caché vigente? (3 min)", "type": "main", "index": 0 }]]
+            },
             "¿Caché vigente? (3 min)": { "main": [[{ "node": "IF", "type": "main", "index": 0 }]] },
             "IF": {
               "main": [
@@ -259,7 +261,9 @@
               ]
             },
             "GET /api/menu": { "main": [[{ "node": "GET /api/pizza-sizes", "type": "main", "index": 0 }]] },
-            "GET /api/pizza-sizes": { "main": [[{ "node": "Recortar, desambiguar y cachear", "type": "main", "index": 0 }]] }
+            "GET /api/pizza-sizes": {
+              "main": [[{ "node": "Recortar, desambiguar y cachear", "type": "main", "index": 0 }]]
+            }
           }
         }
       },
@@ -297,7 +301,7 @@
         "url": "https://juanchospizza.com/api/orders",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ $fromAI('pedido', 'Objeto JSON del pedido YA CONFIRMADO por el cliente. Estructura EXACTA esperada por GastroPro (server/routes/orders.js) -- campos planos, NO anidar en \"cliente\"/\"items\" separados de forma distinta a esta:\\n{\\n  \"orderNumber\": \"GUIDO-XXXXXXXX\" (generá vos un código de 8 caracteres alfanuméricos en mayúscula, único, con prefijo GUIDO-),\\n  \"customerName\": \"nombre del cliente\",\\n  \"customerPhone\": \"teléfono del cliente\",\\n  \"address\": \"dirección de entrega completa\",\\n  \"items\": [ { \"productId\": \"id real devuelto por Consultar Menú\", \"name\": \"nombre del producto\", \"size\": \"tamaño si aplica, ej small/mediana/familiar -- omitir si el producto no tiene tamaños\", \"quantity\": 1, \"price\": 0 (precio unitario real de Consultar Menú -- GastroPro lo va a recalcular igual, pero mandalo correcto), \"details\": \"notas del item, opcional\" } ],\\n  \"paymentMethod\": \"cash\" | \"card\" | \"bold\" (cash/card = contra-entrega, ya paga marcado; bold = pago en línea, requiere llamar despues a Crear Link de Pago),\\n  \"locationId\": \"nemocon\" | \"zipaquira\" (la sede que el cliente eligió o la más cercana a su dirección),\\n  \"estimatedTime\": 30 (minutos, opcional, default razonable si no se sabe)\\n}\\nNUNCA inventes productId -- tiene que venir de una llamada previa a Consultar Menú.', 'json') }}",
+        "jsonBody": "={{ $fromAI('pedido', 'Objeto JSON del pedido YA CONFIRMADO por el cliente. Estructura EXACTA esperada por GastroPro (server/routes/orders.js) -- campos planos, NO anidar en \"cliente\"/\"items\" separados de forma distinta a esta:\\n{\\n  \"orderNumber\": \"GUIDO-XXXXXXXX\" (generá vos un código de 8 caracteres alfanuméricos en mayúscula, único, con prefijo GUIDO-),\\n  \"customerName\": \"nombre del cliente\",\\n  \"customerPhone\": \"teléfono del cliente\",\\n  \"address\": \"dirección de entrega completa; si el pedido es para RECOGER en el local, OMITE este campo\",\\n  \"items\": [ { \"productId\": \"id real devuelto por Consultar Menú\", \"name\": \"nombre del producto\", \"size\": \"tamaño si aplica, ej small/mediana/familiar -- omitir si el producto no tiene tamaños\", \"quantity\": 1, \"price\": 0 (precio unitario real de Consultar Menú -- GastroPro lo va a recalcular igual, pero mandalo correcto), \"details\": \"notas del item, opcional\" } ],\\n  \"paymentMethod\": \"cash\" | \"card\" | \"bold\" (cash/card = contra-entrega, ya paga marcado; bold = pago en línea, requiere llamar despues a Crear Link de Pago),\\n  \"locationId\": \"nemocon\" | \"zipaquira\" (la sede que el cliente eligió o la más cercana a su dirección),\\n  \"estimatedTime\": 30 (minutos, opcional, default razonable si no se sabe)\\n}\\nREGLA DE PRUEBAS: si el cliente esta en la lista de probadores, usa orderNumber con prefijo \"TEST-\" en vez de \"GUIDO-\" (los pedidos TEST- NO llegan a cocina ni al repartidor). Para clientes reales SIEMPRE \"GUIDO-\".\nNUNCA inventes productId -- tiene que venir de una llamada previa a Consultar Menú.', 'json') }}",
         "options": {},
         "toolDescription": "Crea un pedido real en GastroPro. Úsala SOLO después de que el cliente confirmó explícitamente el resumen completo (items + dirección + sede + método de pago). Devuelve el pedido creado: 'id' (identificador interno -- usalo para Crear Link de Pago, NUNCA se lo muestres al cliente) y 'orderNumber' (el que sí le comunicás al cliente para que pueda rastrear su pedido después). Endpoint público, no requiere autenticación."
       },
