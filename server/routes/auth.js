@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, refreshToken } from '../auth.js';
+import { login, loginWithGoogle, refreshToken } from '../auth.js';
 import { buildAuthCookie, buildClearAuthCookie, readAuthCookie } from '../auth.js';
 import { loginRateLimit } from '../middleware/rateLimit.js';
 import logger from '../services/logger.js';
@@ -47,6 +47,38 @@ router.post('/api/auth/login', loginRateLimit, async (req, res) => {
     });
   } catch (e) {
     logger.warn({ username: req.body?.username, ip: req.ip, err: e.message }, 'Login: error inesperado');
+    res.status(401).json({ error: 'Credenciales inválidas' });
+  }
+});
+
+// Login con Google: mismo contrato de respuesta/cookie que /login, solo
+// cambia la credencial. pin es opcional -- auth.js lo exige únicamente si
+// el empleado matcheado es SUPER_ADMIN.
+router.post('/api/auth/google', loginRateLimit, async (req, res) => {
+  try {
+    const { credential, pin } = req.body;
+
+    if (!credential) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    const result = await loginWithGoogle(String(credential), pin !== undefined ? String(pin) : undefined);
+
+    if (result.error) {
+      logger.warn({ ip: req.ip }, 'Login con Google fallido');
+      return res.status(401).json({ error: result.error });
+    }
+
+    logger.info({ username: result.username, role: result.role, ip: req.ip }, 'Login con Google exitoso');
+
+    res.setHeader('Set-Cookie', buildAuthCookie(result.token, 15 * 60));
+    res.json({
+      role: result.role,
+      username: result.username,
+      expiresIn: result.expiresIn,
+    });
+  } catch (e) {
+    logger.warn({ ip: req.ip, err: e.message }, 'Login con Google: error inesperado');
     res.status(401).json({ error: 'Credenciales inválidas' });
   }
 });

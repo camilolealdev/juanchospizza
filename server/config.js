@@ -12,6 +12,9 @@ const config = {
   gemini: {
     apiKey: process.env.GEMINI_API_KEY,
   },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+  },
   apiUrl: process.env.VITE_API_URL || 'http://localhost:3001',
   jwt: {
     secret: process.env.JWT_SECRET,
@@ -41,6 +44,9 @@ function validateConfig() {
   }
   if (!config.gemini.apiKey) {
     logger.warn('GEMINI_API_KEY no configurada — men\u00fa inteligente deshabilitado');
+  }
+  if (!config.google.clientId) {
+    logger.warn('GOOGLE_CLIENT_ID no configurada -- login con Google deshabilitado');
   }
   logger.info('Config OK');
 }

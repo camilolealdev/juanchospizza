@@ -20,7 +20,7 @@ describe('LoginModal', () => {
 
   it('shows a validation error on empty submit and does not call onLogin', async () => {
     const onLogin = vi.fn();
-    render(<LoginModal onLogin={onLogin} onClose={vi.fn()} />);
+    render(<LoginModal onLogin={onLogin} onLoginGoogle={vi.fn()} onClose={vi.fn()} />);
 
     submit();
 
@@ -30,7 +30,7 @@ describe('LoginModal', () => {
 
   it('does not call onLogin when username is filled but neither pin nor password is', async () => {
     const onLogin = vi.fn();
-    render(<LoginModal onLogin={onLogin} onClose={vi.fn()} />);
+    render(<LoginModal onLogin={onLogin} onLoginGoogle={vi.fn()} onClose={vi.fn()} />);
 
     fillUsername('nuevo.empleado');
     submit();
@@ -41,7 +41,7 @@ describe('LoginModal', () => {
 
   it('submits with username + pin only, leaving password undefined (password is optional)', async () => {
     const onLogin = vi.fn().mockResolvedValue(true);
-    render(<LoginModal onLogin={onLogin} onClose={vi.fn()} />);
+    render(<LoginModal onLogin={onLogin} onLoginGoogle={vi.fn()} onClose={vi.fn()} />);
 
     fillUsername('nuevo.empleado');
     fillPin('1234');
@@ -52,7 +52,7 @@ describe('LoginModal', () => {
 
   it('shows no error after a successful login', async () => {
     const onLogin = vi.fn().mockResolvedValue(true);
-    render(<LoginModal onLogin={onLogin} onClose={vi.fn()} />);
+    render(<LoginModal onLogin={onLogin} onLoginGoogle={vi.fn()} onClose={vi.fn()} />);
 
     fillUsername('nuevo.empleado');
     fillPin('1234');
@@ -65,7 +65,7 @@ describe('LoginModal', () => {
 
   it('shows "Credenciales incorrectas" when onLogin resolves false', async () => {
     const onLogin = vi.fn().mockResolvedValue(false);
-    render(<LoginModal onLogin={onLogin} onClose={vi.fn()} />);
+    render(<LoginModal onLogin={onLogin} onLoginGoogle={vi.fn()} onClose={vi.fn()} />);
 
     fillUsername('nuevo.empleado');
     fillPin('9999');
@@ -76,7 +76,7 @@ describe('LoginModal', () => {
 
   it('propagates the error message from a rejected onLogin', async () => {
     const onLogin = vi.fn().mockRejectedValue(new Error('No se pudo conectar con el servidor'));
-    render(<LoginModal onLogin={onLogin} onClose={vi.fn()} />);
+    render(<LoginModal onLogin={onLogin} onLoginGoogle={vi.fn()} onClose={vi.fn()} />);
 
     fillUsername('nuevo.empleado');
     fillPin('1234');

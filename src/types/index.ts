@@ -181,7 +181,8 @@ export type GastroModule =
   | 'compras'
   | 'facturacion'
   | 'digiturno'
-  | 'derechos';
+  | 'derechos'
+  | 'guia';
 
 // Solicitud de derechos ARCO (Ley 1581 Art. 14-15) — ver
 // server/routes/consent.js y server/schemas/derechos.js. Estados posibles:

@@ -346,6 +346,26 @@ const MIGRATIONS = [
       await pool.query('ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS "scheduleAt" TIMESTAMPTZ');
     },
   },
+  // ── 012: email único para login con Google ────────────────────
+  // La columna `email` ya existía desde la migración #002 ("login
+  // alternativo"), pero con un índice NO único -- nunca llegó a usarse para
+  // loguear, así que nadie notó que dos empleados podían compartir el mismo
+  // email. server/auth.js `authenticateGoogle()` hace SELECT ... WHERE
+  // email = $1 y toma rows[0]: sin unicidad, dos filas con el mismo email
+  // matchean ambas y cuál gana es arbitrario (orden de la fila en disco) --
+  // un empleado podría autenticarse como otro. Se reemplaza el índice viejo
+  // por uno único y parcial (WHERE email IS NOT NULL, porque NULL no cuenta
+  // como duplicado en Postgres de todos modos, pero lo deja explícito).
+  {
+    id: 12,
+    name: 'Make employees.email unique for Google login',
+    up: async (pool) => {
+      await pool.query('DROP INDEX IF EXISTS idx_employees_email');
+      await pool.query(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_employees_email ON employees(email) WHERE email IS NOT NULL'
+      );
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────

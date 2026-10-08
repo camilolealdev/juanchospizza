@@ -409,6 +409,16 @@ export const api = {
     });
   },
 
+  // credential es el id_token de Google Identity Services. pin solo lo
+  // exige el backend si el email matchea una cuenta isSuperAdmin.
+  async loginGoogle(credential: string, pin?: string) {
+    return apiFetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential, pin }),
+    });
+  },
+
   async refreshToken(token: string) {
     return apiFetch('/api/auth/refresh', {
       method: 'POST',

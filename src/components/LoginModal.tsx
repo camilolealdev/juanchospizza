@@ -1,9 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { lockBodyScroll, unlockBodyScroll } from '../utils/useBodyScrollLock';
 
 interface LoginModalProps {
   onLogin: (username: string, pin?: string, password?: string) => Promise<boolean>;
+  onLoginGoogle: (credential: string, pin?: string) => Promise<boolean>;
   onClose: () => void;
+}
+
+// Google Identity Services -- script liviano (no amerita el paquete
+// @react-oauth/google por un solo botón), se carga una sola vez.
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: { client_id: string; callback: (resp: { credential: string }) => void }) => void;
+          renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
+        };
+      };
+    };
+  }
+}
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+
+function loadGoogleScript(): Promise<void> {
+  if (window.google?.accounts?.id) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const existing = document.getElementById('google-identity-script');
+    if (existing) {
+      existing.addEventListener('load', () => resolve());
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'google-identity-script';
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('No se pudo cargar Google Identity Services'));
+    document.head.appendChild(script);
+  });
 }
 
 // Antes este modal solo dejaba elegir uno de 4 ROLES fijos, que App.tsx
@@ -23,12 +60,15 @@ const ROLE_PRESETS: { username: string; label: string }[] = [
   { username: 'marketing', label: 'Marketing' },
 ];
 
-const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose }) => {
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const pinRef = useRef('');
+  pinRef.current = pin;
 
   // Visible en cuanto hay un usuario -- opcional salvo que la cuenta lo
   // exija (server/auth.js decide eso por empleado, no esta UI por rol).
@@ -81,6 +121,43 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose }) => {
     };
   }, [onClose]);
 
+  // Botón oficial de Google -- se renderiza una sola vez. El callback lee
+  // pinRef (no `pin` capturado al montar) para que un PIN tipeado después de
+  // que el botón ya existe siga llegando al backend (relevante para
+  // SUPER_ADMIN, el único rol que lo exige junto con Google).
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || !googleButtonRef.current) return;
+    let cancelled = false;
+    loadGoogleScript()
+      .then(() => {
+        if (cancelled || !window.google || !googleButtonRef.current) return;
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: async (resp) => {
+            setError('');
+            setIsSubmitting(true);
+            try {
+              const success = await onLoginGoogle(resp.credential, pinRef.current || undefined);
+              if (!success) setError('Credenciales incorrectas');
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'No se pudo conectar con el servidor');
+            } finally {
+              setIsSubmitting(false);
+            }
+          },
+        });
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: 'filled_black',
+          size: 'large',
+          width: 328,
+        });
+      })
+      .catch(() => setError('No se pudo cargar el inicio de sesión con Google'));
+    return () => {
+      cancelled = true;
+    };
+  }, [onLoginGoogle]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // PIN ya no es obligatorio incondicionalmente -- una cuenta con
@@ -120,6 +197,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose }) => {
           </h2>
           <p className="text-stone-500 text-sm mt-1">CRM Gastronómico</p>
         </div>
+
+        {GOOGLE_CLIENT_ID && (
+          <div className="mb-5">
+            <div ref={googleButtonRef} className="flex justify-center" />
+            <div className="flex items-center gap-3 mt-5">
+              <div className="h-px flex-1 bg-white/10" />
+              <span className="text-[10px] text-stone-500 uppercase font-bold tracking-widest">o con usuario</span>
+              <div className="h-px flex-1 bg-white/10" />
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
