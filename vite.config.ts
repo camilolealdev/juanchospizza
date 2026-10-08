@@ -62,11 +62,27 @@ export default defineConfig(() => {
           runtimeCaching: [
             {
               // Assets estáticos con hash (inmutables por definición)
-              urlPattern: /\.(?:js|css|svg|png|jpg|jpeg|gif|ico|woff2?)$/,
+              urlPattern: /\.(?:js|css|svg|png|jpg|jpeg|gif|ico|woff2?|webp)$/,
               handler: 'StaleWhileRevalidate',
               options: {
                 cacheName: 'guido-pizza-assets',
                 expiration: { maxEntries: 80, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              },
+            },
+            {
+              // Video: mp4 no entra en el matcher de arriba. NetworkFirst
+              // (la regla catch-all de abajo) no tiene sentido para un archivo
+              // pesado -- en conexion lenta falla la red y sin nada en cache
+              // Workbox devuelve "no-response" (bug real: pizza-logo.mp4 en
+              // el Hero). CacheFirst + rangeRequests porque <video> pide
+              // bytes parciales (206) para hacer seek/streaming.
+              urlPattern: /\.mp4$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'guido-pizza-video',
+                expiration: { maxEntries: 5, maxAgeSeconds: 30 * 24 * 60 * 60 },
+                cacheableResponse: { statuses: [0, 200] },
+                rangeRequests: true,
               },
             },
             {
@@ -98,7 +114,7 @@ export default defineConfig(() => {
               urlPattern: ({ url }) =>
                 url.origin === self.location.origin &&
                 !url.pathname.startsWith('/api/') &&
-                !/\.(?:js|css|svg|png|jpg|jpeg|gif|ico|woff2?)$/.test(url.pathname),
+                !/\.(?:js|css|svg|png|jpg|jpeg|gif|ico|woff2?|webp|mp4)$/.test(url.pathname),
               handler: 'NetworkFirst',
               options: {
                 cacheName: 'guido-pizza-pages',
