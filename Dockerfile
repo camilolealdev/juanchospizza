@@ -70,13 +70,17 @@ ARG VITE_API_URL
 # src/services/push.ts). Sin ella el cliente no puede suscribirse. Mismo
 # valor que VAPID_PUBLIC_KEY, expuesta al bundle (la pública no es secreta).
 ARG VITE_VAPID_PUBLIC_KEY
+# VITE_GOOGLE_CLIENT_ID: client ID de Google OAuth para el botón de login con
+# Google (LoginModal.tsx); mismo valor que GOOGLE_CLIENT_ID del backend. No es
+# secreto -- se hornea en el bundle igual que VITE_VAPID_PUBLIC_KEY.
+ARG VITE_GOOGLE_CLIENT_ID
 
 COPY tsconfig.json vite.config.ts tailwind.config.js postcss.config.js ./
 COPY public/ ./public/
 COPY index.html ./
 COPY src/ ./src/
 
-RUN VITE_API_URL=${VITE_API_URL} VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY} npm run build 2>&1
+RUN VITE_API_URL=${VITE_API_URL} VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY} VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID} npm run build 2>&1
 
 # ── Stage 4: Runtime final (imagen mínima) ─────────────────────────────
 # Solo lo necesario para correr: Node, production deps, server, y dist.

@@ -18,6 +18,10 @@ services:
         # Default vacío = push desactivado en el cliente (no-op, sin errores).
         # Mismo valor que VAPID_PUBLIC_KEY del .env.production.
         VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY:-}
+        # VITE_GOOGLE_CLIENT_ID: mismo client ID que GOOGLE_CLIENT_ID (abajo),
+        # horneado en el bundle para que LoginModal.tsx pueda renderizar el
+        # botón de Google. No es secreto (ID público de OAuth).
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
       # ── Network para build ────────────────────────────────────
       # Docker Desktop en Windows tiene un proxy DNS virtual que
       # falla con etiquetas IPv6 de npm registry. network: host
@@ -42,6 +46,7 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       BOLD_API_KEY: ${BOLD_API_KEY}
       BOLD_WEBHOOK_SECRET: ${BOLD_WEBHOOK_SECRET}
