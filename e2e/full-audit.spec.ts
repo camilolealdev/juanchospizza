@@ -124,6 +124,19 @@ function step(name: string) {
   console.log(`\n  📌 ${name}`);
 }
 
+// El banner de consentimiento (public/consent-banner.js, inyectado vía
+// <script defer> en index.html) corre una vez por carga de documento real
+// -- sobrevive a la navegación client-side de React Router, pero reaparece
+// en cada page.goto() (hard navigation). Es fixed/overlay y puede
+// interceptar pointer events de botones flotantes (ej. el cart button,
+// bottom-right) si no se descarta primero.
+async function dismissConsentBanner(page: import('@playwright/test').Page) {
+  const acceptAll = page.locator('[data-jc-action="accept-all"]');
+  if (await acceptAll.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await acceptAll.click();
+  }
+}
+
 // ─── PUBLIC WEBSITE TESTS ──────────────────────────────────────────────────
 //
 // Reescrito 2026-10-10: la suite anterior apuntaba a una arquitectura de
@@ -139,6 +152,7 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
+    await dismissConsentBanner(page);
   });
 
   test('01 - Homepage: header, hero, cart button, footer visibles', async ({ page }) => {
@@ -224,6 +238,7 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
   test('08 - CTP: tamaños de pizza', async ({ page }) => {
     await page.goto('/pizza');
     await page.waitForTimeout(300);
+    await dismissConsentBanner(page);
     // PizzaConfigurator (src/components/PizzaConfigurator.tsx) tiene 4
     // tamaños fijos (src/data/menu-data.ts PIZZA_SIZES), sin data-testid --
     // son <button> con el label visible.
@@ -238,6 +253,7 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
   test('09 - CTP: selección de sabores', async ({ page }) => {
     await page.goto('/pizza');
     await page.waitForTimeout(300);
+    await dismissConsentBanner(page);
     step('Select size');
     await page.getByRole('button', { name: /^Mediana/ }).click();
     step('Toggle flavor checkbox');
@@ -250,6 +266,7 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
   test('10 - CTP: agregar al carrito', async ({ page }) => {
     await page.goto('/pizza');
     await page.waitForTimeout(300);
+    await dismissConsentBanner(page);
     step('Select Small size');
     await page.getByRole('button', { name: /^Small/ }).click();
     step('Select a flavor (Small permite 1 sabor)');
@@ -264,6 +281,7 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
   test('11 - Menú: tabs de categoría y búsqueda', async ({ page }) => {
     await page.goto('/menu');
     await page.waitForTimeout(300);
+    await dismissConsentBanner(page);
     step('Click categoría Hamburguesas');
     await page.locator('button').filter({ hasText: 'Hamburguesas' }).click();
     await expect(page).toHaveURL(/category=hamburguesas/);
@@ -275,6 +293,7 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
   test('12 - Domicilios: sedes y WhatsApp CTA', async ({ page }) => {
     await page.goto('/domicilios');
     await page.waitForTimeout(300);
+    await dismissConsentBanner(page);
     step('Sede cards');
     await expect(page.locator('.sede-card').first()).toBeVisible();
     await expect(page.locator('.sede-card').last()).toBeVisible();
