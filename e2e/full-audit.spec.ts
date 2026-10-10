@@ -156,7 +156,8 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
     await expect(nav.getByRole('link', { name: 'Domicilios' })).toBeVisible();
 
     step('Hero CTA');
-    await expect(page.getByRole('link', { name: 'Ver Menú' })).toBeVisible();
+    const heroSection = page.locator('section').filter({ has: page.getByRole('heading', { name: /El Sabor Que No Tiene Igual/i }) });
+    await expect(heroSection.getByRole('link', { name: 'Ver Menú', exact: true })).toBeVisible();
 
     step('Admin crown button ausente (acceso oculto, CHANGELOG JUL-30)');
     await expect(page.locator('button[title*="Panel Administrativo"]')).toHaveCount(0);
@@ -208,7 +209,8 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
 
   test('06 - Hero CTA navega a Menú', async ({ page }) => {
     step('Click hero CTA');
-    await page.getByRole('link', { name: 'Ver Menú' }).click();
+    const heroSection = page.locator('section').filter({ has: page.getByRole('heading', { name: /El Sabor Que No Tiene Igual/i }) });
+    await heroSection.getByRole('link', { name: 'Ver Menú', exact: true }).click();
     await expect(page).toHaveURL(/\/menu$/);
     await expect(page.locator('#menu')).toBeVisible();
   });
