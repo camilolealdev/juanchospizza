@@ -218,7 +218,12 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
     await expect(page.getByRole('heading', { name: 'Tu Pedido' })).toBeVisible();
     step('Close drawer');
     await page.getByRole('button', { name: 'Cerrar carrito' }).click();
-    await expect(page.getByRole('dialog', { name: 'Carrito de compras' })).not.toBeVisible();
+    // CartDrawer.tsx nunca desmonta el dialog -- togglea opacity-0 +
+    // pointer-events-none vía className, así que sigue teniendo bounding
+    // box y Playwright lo sigue contando como "visible" (opacity:0 no
+    // cuenta como hidden para toBeVisible). La señal real de "cerrado" es
+    // la opacidad computada.
+    await expect(page.getByRole('dialog', { name: 'Carrito de compras' })).toHaveCSS('opacity', '0');
   });
 
   test('06 - Hero CTA navega a Menú', async ({ page }) => {
