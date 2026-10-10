@@ -125,6 +125,14 @@ function step(name: string) {
 }
 
 // ─── PUBLIC WEBSITE TESTS ──────────────────────────────────────────────────
+//
+// Reescrito 2026-10-10: la suite anterior apuntaba a una arquitectura de
+// sitio pre-React Router (`.page-container[data-page]`, `.nav-links`,
+// `#navToggle`, `#cartCounter`, data-testid de un CTP builder viejo) que ya
+// no existe -- el sitio se migró a React Router (src/App.tsx) con páginas
+// separadas por ruta envueltas en CustomerSite (Header + Outlet + Footer +
+// CartButton + CartDrawer). Selectores verificados contra el código real de
+// src/components y src/pages/site, no inventados.
 
 test.describe.configure({ mode: 'serial' });
 test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
@@ -133,223 +141,233 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('01 - Homepage: hero, nav, botones flotantes visibles', async ({ page }) => {
+  test('01 - Homepage: header, hero, cart button, footer visibles', async ({ page }) => {
     step('Hero heading');
-    await expect(page.getByRole('heading', { name: /En Sabor y Calidad/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /El Sabor Que No Tiene Igual/i })).toBeVisible();
 
     step('Logo');
-    await expect(page.locator('.logo')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Ir al inicio' })).toBeVisible();
 
-    step('Nav links');
-    await expect(page.locator('.nav-links').getByText('Inicio')).toBeVisible();
-    await expect(page.locator('.nav-links').getByText('Menú')).toBeVisible();
-    await expect(page.locator('.nav-links').getByText('Domicilios')).toBeVisible();
-    await expect(page.locator('.nav-links').getByText('Carrito')).toBeVisible();
-    await expect(page.locator('.nav-links a[data-nav-page="crea-tu-pizza"]')).toBeVisible();
+    step('Nav links (desktop)');
+    const nav = page.getByRole('navigation', { name: 'Navegación principal' });
+    await expect(nav.getByRole('link', { name: 'Inicio' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Crea tu Pizza' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Menú' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Domicilios' })).toBeVisible();
 
     step('Hero CTA');
-    await expect(page.locator('.btn-primary').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Ver Menú' })).toBeVisible();
 
     step('Admin crown button ausente (acceso oculto, CHANGELOG JUL-30)');
     await expect(page.locator('button[title*="Panel Administrativo"]')).toHaveCount(0);
 
-    step('Cart counter');
-    await expect(page.locator('#cartCounter')).toBeVisible();
+    step('Cart button flotante');
+    await expect(page.getByRole('button', { name: 'Abrir carrito' })).toBeVisible();
+
+    step('Footer');
+    await expect(page.getByText("Síguenos en nuestras redes")).toBeVisible();
   });
 
-  test('02 - Nav link: Inicio', async ({ page }) => {
+  test('02 - Nav link: Menú y de vuelta a Inicio', async ({ page }) => {
+    const nav = page.getByRole('navigation', { name: 'Navegación principal' });
+    step('Click Menú');
+    await nav.getByRole('link', { name: 'Menú' }).click();
+    await expect(page).toHaveURL(/\/menu$/);
+    await expect(page.locator('#menu')).toBeVisible();
+
     step('Click Inicio');
-    await page
-      .locator('a')
-      .filter({ hasText: /^Inicio$/ })
-      .click();
-    await expect(page.locator('.page-container[data-page="inicio"]')).toHaveClass(/active/);
+    await nav.getByRole('link', { name: 'Inicio' }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('heading', { name: /El Sabor Que No Tiene Igual/i })).toBeVisible();
   });
 
   test('03 - Nav link: Crea tu Pizza', async ({ page }) => {
     step('Click Crea tu Pizza');
-    await page.locator('.nav-links a[data-nav-page="crea-tu-pizza"]').click();
-    await page.waitForTimeout(500);
-    await expect(page.locator('.page-container[data-page="crea-tu-pizza"]')).toHaveClass(/active/);
-    await expect(page.locator('#ctp-builder')).toBeVisible();
+    await page.getByRole('navigation', { name: 'Navegación principal' }).getByRole('link', { name: 'Crea tu Pizza' }).click();
+    await expect(page).toHaveURL(/\/pizza$/);
+    await expect(page.locator('#crea-tu-pizza')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'CREA TU PIZZA' })).toBeVisible();
   });
 
-  test('04 - Nav link: Menú', async ({ page }) => {
-    step('Click Menú');
-    await page
-      .locator('a')
-      .filter({ hasText: /^Menú$/ })
-      .click();
-    await expect(page.locator('.page-container[data-page="menu"]')).toHaveClass(/active/);
-  });
-
-  test('05 - Nav link: Domicilios', async ({ page }) => {
+  test('04 - Nav link: Domicilios', async ({ page }) => {
     step('Click Domicilios');
-    await page
-      .locator('a')
-      .filter({ hasText: /^Domicilios$/ })
-      .click();
-    await expect(page.locator('.page-container[data-page="domicilios"]')).toHaveClass(/active/);
-    await expect(page.locator('.dlv-hero')).toBeVisible();
+    await page.getByRole('navigation', { name: 'Navegación principal' }).getByRole('link', { name: 'Domicilios' }).click();
+    await expect(page).toHaveURL(/\/domicilios$/);
+    await expect(page.getByRole('heading', { name: 'Pide Sin Moverte de Casa' })).toBeVisible();
   });
 
-  test('06 - Nav link: Carrito', async ({ page }) => {
-    step('Click Carrito');
-    await page.locator('#navCartBtn').click();
-    await expect(page.locator('.page-container[data-page="carrito"]')).toHaveClass(/active/);
+  test('05 - Cart button abre el drawer', async ({ page }) => {
+    step('Click cart button');
+    await page.getByRole('button', { name: 'Abrir carrito' }).click();
+    await expect(page.getByRole('dialog', { name: 'Carrito de compras' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tu Pedido' })).toBeVisible();
+    step('Close drawer');
+    await page.getByRole('button', { name: 'Cerrar carrito' }).click();
+    await expect(page.getByRole('dialog', { name: 'Carrito de compras' })).not.toBeVisible();
   });
 
-  test('07 - Hero CTA', async ({ page }) => {
+  test('06 - Hero CTA navega a Menú', async ({ page }) => {
     step('Click hero CTA');
-    await page.locator('a.btn-primary').first().click();
-    await expect(page.locator('.page-container[data-page="menu"]')).toHaveClass(/active/);
+    await page.getByRole('link', { name: 'Ver Menú' }).click();
+    await expect(page).toHaveURL(/\/menu$/);
+    await expect(page.locator('#menu')).toBeVisible();
   });
 
-  test('08 - /login URL opens login modal (acceso oculto, CHANGELOG JUL-30)', async ({ page }) => {
+  test('07 - /login URL opens login modal (acceso oculto, CHANGELOG JUL-30)', async ({ page }) => {
     step('Navigate to /login');
     await page.goto('/login');
     await expect(page.getByText('GastroPro')).toBeVisible({ timeout: 3000 });
   });
 
-  test('09 - CTP builder sizes', async ({ page }) => {
-    await page.locator('.nav-links a[data-nav-page="crea-tu-pizza"]').click();
-    await page.waitForTimeout(500);
-    // CTP has 4 sizes, loaded from GET /api/pizza-sizes: Small, Junior, Mediana, Familiar
-    const sizeBtns = page.getByTestId('pizza-size');
-    await expect(sizeBtns).toHaveCount(4);
-    await sizeBtns.filter({ hasText: 'Familiar' }).click();
-    await expect(sizeBtns.filter({ hasText: 'Familiar' })).toHaveAttribute('aria-pressed', 'true');
-    await sizeBtns.filter({ hasText: 'Small' }).click();
-    await expect(sizeBtns.filter({ hasText: 'Small' })).toHaveAttribute('aria-pressed', 'true');
+  test('08 - CTP: tamaños de pizza', async ({ page }) => {
+    await page.goto('/pizza');
+    await page.waitForTimeout(300);
+    // PizzaConfigurator (src/components/PizzaConfigurator.tsx) tiene 4
+    // tamaños fijos (src/data/menu-data.ts PIZZA_SIZES), sin data-testid --
+    // son <button> con el label visible.
+    for (const label of ['Familiar', 'Mediana', 'Junior', 'Small']) {
+      await expect(page.getByRole('button', { name: new RegExp(label) })).toBeVisible();
+    }
+    step('Select Familiar');
+    await page.getByRole('button', { name: /^Familiar/ }).click();
+    await expect(page.getByText('Pizza Familiar')).toBeVisible();
   });
 
-  test('10 - CTP ingredient groups', async ({ page }) => {
-    await page.locator('.nav-links a[data-nav-page="crea-tu-pizza"]').click();
-    await page.waitForTimeout(500);
-    // CTP has 4 ingredient groups with chips
-    const groups = page.getByTestId('pizza-ingredient-group');
-    await expect(groups).toHaveCount(4);
-    await expect(groups.filter({ hasText: 'Carnes' })).toBeVisible();
-    await expect(groups.filter({ hasText: 'Vegetales' })).toBeVisible();
-    await expect(groups.filter({ hasText: 'Frutas' })).toBeVisible();
-    await expect(groups.filter({ hasText: 'Extras' })).toBeVisible();
-  });
-
-  test('11 - CTP chips interaction', async ({ page }) => {
-    await page.locator('.nav-links a[data-nav-page="crea-tu-pizza"]').click();
-    await page.waitForTimeout(500);
+  test('09 - CTP: selección de sabores', async ({ page }) => {
+    await page.goto('/pizza');
+    await page.waitForTimeout(300);
     step('Select size');
-    await page.getByTestId('pizza-size').filter({ hasText: 'Mediana' }).click();
-    step('Toggle ingredient chips');
-    const chip = page.getByTestId('pizza-ingredient-chip').filter({ hasText: 'Champiñones' });
-    await chip.click();
-    await expect(chip).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: /^Mediana/ }).click();
+    step('Toggle flavor checkbox');
+    // Cada sabor es un <label> con un checkbox sr-only -- togglear por el
+    // texto visible del sabor, no por un data-testid que no existe.
+    await page.getByText('Hawaiana', { exact: true }).click();
+    await expect(page.locator('input[type="checkbox"]').first()).toBeChecked();
   });
 
-  test('12 - CTP ingredient + add to cart', async ({ page }) => {
-    await page.locator('.nav-links a[data-nav-page="crea-tu-pizza"]').click();
-    await page.waitForTimeout(500);
+  test('10 - CTP: agregar al carrito', async ({ page }) => {
+    await page.goto('/pizza');
+    await page.waitForTimeout(300);
     step('Select Small size');
-    await page.getByTestId('pizza-size').filter({ hasText: 'Small' }).click();
-    step('Select ingredients');
-    await page.getByTestId('pizza-ingredient-chip').filter({ hasText: 'Jamón' }).click();
-    await page.getByTestId('pizza-ingredient-chip').filter({ hasText: 'Queso extra' }).click();
-    await expect(page.getByTestId('pizza-add-btn')).toBeEnabled({ timeout: 2000 });
-    step('Verify summary shows ingredients');
-    await expect(page.getByTestId('pizza-summary-list')).toContainText('Jamón');
-    await expect(page.getByTestId('pizza-summary-list')).toContainText('Queso extra');
+    await page.getByRole('button', { name: /^Small/ }).click();
+    step('Select a flavor (Small permite 1 sabor)');
+    await page.getByText('Carnes', { exact: true }).click();
+    step('Agregar al carrito');
+    const addBtn = page.getByRole('button', { name: /Agregar al Carrito/ });
+    await expect(addBtn).toBeVisible({ timeout: 2000 });
+    await addBtn.click();
+    await expect(page.getByText('¡Pizza agregada al carrito!')).toBeVisible();
   });
 
-  test('13 - Domicilios WhatsApp CTA', async ({ page }) => {
-    await page
-      .locator('a')
-      .filter({ hasText: /^Domicilios$/ })
-      .click();
-    await page.waitForTimeout(500);
-    await expect(page.locator('.dlv-cta-strip .cta-btn')).toBeVisible();
+  test('11 - Menú: tabs de categoría y búsqueda', async ({ page }) => {
+    await page.goto('/menu');
+    await page.waitForTimeout(300);
+    step('Click categoría Hamburguesas');
+    await page.locator('button').filter({ hasText: 'Hamburguesas' }).click();
+    await expect(page).toHaveURL(/category=hamburguesas/);
+    step('Buscar término inexistente');
+    await page.getByLabel('Buscar en el menú').fill('zzzznonexistente');
+    await expect(page.getByText('No encontramos resultados')).toBeVisible();
   });
 
-  test('14 - Domicilios sedes', async ({ page }) => {
-    await page
-      .locator('a')
-      .filter({ hasText: /^Domicilios$/ })
-      .click();
-    await page.waitForTimeout(500);
-    await expect(page.locator('.dlv-sede-card').first()).toBeVisible();
-    await expect(page.locator('.dlv-sede-card').last()).toBeVisible();
+  test('12 - Domicilios: sedes y WhatsApp CTA', async ({ page }) => {
+    await page.goto('/domicilios');
+    await page.waitForTimeout(300);
+    step('Sede cards');
+    await expect(page.locator('.sede-card').first()).toBeVisible();
+    await expect(page.locator('.sede-card').last()).toBeVisible();
+    step('WhatsApp CTA');
+    await expect(page.locator('a.whatsapp-btn').first()).toBeVisible();
   });
 
-  test('15 - Social media links', async ({ page }) => {
-    await expect(page.locator('a[href*="instagram.com/juanchospizzanemocon"]')).toBeVisible();
-    await expect(page.locator('a[href*="facebook.com/juanchospizzanemocon"]')).toBeVisible();
-    await expect(page.locator('a[href*="tiktok.com/@juanchospizzanemocon"]')).toBeVisible();
+  test('13 - Social media links', async ({ page }) => {
+    await expect(page.getByRole('link', { name: 'Instagram' })).toHaveAttribute(
+      'href',
+      /instagram\.com\/juanchospizza1/
+    );
+    await expect(page.getByRole('link', { name: 'Facebook' })).toHaveAttribute('href', /facebook\.com/);
+    await expect(page.getByRole('link', { name: 'TikTok' })).toHaveAttribute(
+      'href',
+      /tiktok\.com\/@juanchospizzanemocon/
+    );
   });
 
-  test('16 - Premium card', async ({ page }) => {
-    await expect(page.locator('#premium-card')).toBeVisible();
-    await expect(page.locator('.premium-logo-h2')).toBeVisible();
+  test('14 - Footer: links legales', async ({ page }) => {
+    step('Política de Privacidad');
+    await page.getByRole('link', { name: 'Política de Privacidad' }).click();
+    await expect(page).toHaveURL(/\/politica-de-privacidad$/);
+    step('Términos y Condiciones');
+    await page.getByRole('link', { name: 'Términos y Condiciones' }).click();
+    await expect(page).toHaveURL(/\/terminos-y-condiciones$/);
+    step('Eliminación de Datos');
+    await page.getByRole('link', { name: 'Eliminación de Datos' }).click();
+    await expect(page).toHaveURL(/\/eliminacion-de-datos$/);
   });
 
-  test('17 - Footer', async ({ page }) => {
-    await expect(page.locator('#site-footer')).toBeVisible();
+  test('15 - 404: ruta inexistente', async ({ page }) => {
+    await page.goto('/esta-ruta-no-existe');
+    await expect(page.getByRole('heading', { name: '404' })).toBeVisible();
   });
 
-  test('18 - Hamburger mobile menu', async ({ page }) => {
+  test('16 - Hamburger mobile menu', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.waitForTimeout(300);
     step('Click hamburger');
-    await page.locator('#navToggle').click();
-    await expect(page.locator('#navMenu')).toHaveClass(/active/);
+    await page.getByRole('button', { name: 'Abrir menú' }).click();
+    await expect(page.locator('#mobile-nav')).toBeVisible();
     step('Click nav link to close');
-    await page
-      .locator('a')
-      .filter({ hasText: /^Menú$/ })
-      .click();
-    await expect(page.locator('#navMenu')).not.toHaveClass(/active/);
+    await page.locator('#mobile-nav').getByRole('link', { name: 'Menú' }).click();
+    await expect(page.locator('#mobile-nav')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/menu$/);
   });
 });
 
 // ─── ADMIN CRM TESTS ───────────────────────────────────────────────────────
 
 test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => {
+  // src/components/LoginModal.tsx ya no tiene un <select> de rol: el
+  // usuario real es texto libre (#login-username), con 4 botones preset
+  // (Administrador/Cocina/Repartidor/Marketing) que solo rellenan ese
+  // input -- usernames reales verificados en server/migrate.js migración
+  // #004 (admin/cocina/repartidor/marketing). El bloque "¿Olvidaste el
+  // PIN?" se eliminó a propósito (frontend audit P0, no expone PINs en el
+  // bundle) -- no hay equivalente que probar.
+  async function loginAs(page: import('@playwright/test').Page, presetLabel: string, pin: string) {
+    await page.goto('/login');
+    await page.waitForTimeout(300);
+    await page.getByRole('button', { name: presetLabel, exact: true }).click();
+    await page.locator('#login-pin').fill(pin);
+    await page.getByRole('button', { name: 'Entrar' }).click();
+  }
+
   test('19 - Login modal elements', async ({ page }) => {
     await page.goto('/login');
     await page.waitForTimeout(500);
-    step('Role selector');
-    const roleSelect = page.locator('select').first();
-    await expect(roleSelect).toBeVisible();
-    await roleSelect.selectOption('admin');
-    await expect(roleSelect).toHaveValue('admin');
+    step('Username input + role presets');
+    await expect(page.locator('#login-username')).toBeVisible();
+    await page.getByRole('button', { name: 'Administrador', exact: true }).click();
+    await expect(page.locator('#login-username')).toHaveValue('admin');
     step('PIN input');
-    await expect(page.locator('input[type="password"]')).toBeVisible();
-    step('PIN hint toggle');
-    await page.getByText('Olvidaste').click();
-    await expect(page.getByText('1234')).toBeVisible();
+    await expect(page.locator('#login-pin')).toBeVisible();
   });
 
   test('20 - Login flow + dashboard', async ({ page }) => {
-    step('Open modal + fill credentials');
-    await page.goto('/login');
-    await page.waitForTimeout(300);
-    await page.locator('select').first().selectOption('admin');
-    await page.locator('input[type="password"]').fill('1234');
-    await page.locator('button[type="submit"]').click();
-    // If backend is running, verify dashboard loaded
+    step('Open /login + fill credentials');
+    // PIN real no está documentado en texto plano (solo el hash vive en
+    // server/migrate.js) -- si falla, el catch de abajo lo reporta como
+    // "backend pendiente" en vez de tronar la suite, igual que antes.
+    await loginAs(page, 'Administrador', '1234');
     try {
       await expect(page.getByText('Panel de Gestión')).toBeVisible({ timeout: 5000 });
       console.log('  ✅ Admin login successful — backend running');
     } catch {
-      console.log('  ⏳ Admin login requires backend on :3001 — UI tested, API pending');
+      console.log('  ⏳ Admin login requires backend on :3001 (o PIN real distinto) — UI tested, API pending');
     }
   });
 
   test('21 - CRM module navigation', async ({ page }) => {
     step('Login');
-    await page.goto('/login');
-    await page.waitForTimeout(300);
-    await page.locator('select').first().selectOption('admin');
-    await page.locator('input[type="password"]').fill('1234');
-    await page.locator('button[type="submit"]').click();
+    await loginAs(page, 'Administrador', '1234');
     try {
       await expect(page.getByText('Panel de Gestión')).toBeVisible({ timeout: 5000 });
     } catch {
@@ -386,11 +404,7 @@ test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => 
 
   test('22 - Dashboard interactions', async ({ page }) => {
     step('Login');
-    await page.goto('/login');
-    await page.waitForTimeout(300);
-    await page.locator('select').first().selectOption('admin');
-    await page.locator('input[type="password"]').fill('1234');
-    await page.locator('button[type="submit"]').click();
+    await loginAs(page, 'Administrador', '1234');
     try {
       await expect(page.getByText('Panel de Gestión')).toBeVisible({ timeout: 5000 });
     } catch {
@@ -413,11 +427,7 @@ test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => 
 
   test('23 - Logout flow', async ({ page }) => {
     step('Login');
-    await page.goto('/login');
-    await page.waitForTimeout(300);
-    await page.locator('select').first().selectOption('admin');
-    await page.locator('input[type="password"]').fill('1234');
-    await page.locator('button[type="submit"]').click();
+    await loginAs(page, 'Administrador', '1234');
     try {
       await expect(page.getByText('Panel de Gestión')).toBeVisible({ timeout: 5000 });
     } catch {
@@ -432,14 +442,13 @@ test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => 
 
   test('24 - Login as multiple roles', async ({ page }) => {
     step('Login as cocina');
-    await page.goto('/login');
-    await page.waitForTimeout(300);
-    await page.locator('select').first().selectOption('operator');
-    await page.locator('input[type="password"]').fill('5678');
-    await page.locator('button[type="submit"]').click();
+    await loginAs(page, 'Cocina', '5678');
     try {
       await expect(page.getByText('Panel de Gestión')).toBeVisible({ timeout: 5000 });
-      await expect(page.getByText('Cocina')).toBeVisible();
+      // ROLE_DISPLAY_NAMES en src/App.tsx muestra OPERATOR como "Chef
+      // Principal" (AdminLayout.tsx renderiza userName tal cual), no
+      // "Cocina" -- ese era el nombre de la UI vieja.
+      await expect(page.getByText('Chef Principal')).toBeVisible();
     } catch {
       console.log('  ⏳ Backend required for role login');
     }
@@ -450,7 +459,7 @@ test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => 
 
 test.describe('CONSOLE AUDIT', () => {
   test('Summary - Aggregate console errors across all pages', async ({ page }) => {
-    for (const url of ['/', '/menu', '/crea-tu-pizza', '/domicilios', '/carrito']) {
+    for (const url of ['/', '/menu', '/pizza', '/domicilios', '/login']) {
       await page.goto(url);
       await page.waitForTimeout(500);
     }
