@@ -89,7 +89,15 @@ app.use(
         // componentes de React renderizan event handlers inline. Migrar a
         // 'strict-dynamic' + nonce sería más seguro, pero requiere cambios en
         // la arquitectura SSR que están fuera del scope actual.
-        scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://connect.facebook.net', "'unsafe-inline'"],
+        // accounts.google.com: script del botón de Google Identity Services
+        // (LoginModal.tsx carga https://accounts.google.com/gsi/client).
+        scriptSrc: [
+          "'self'",
+          'https://cdnjs.cloudflare.com',
+          'https://connect.facebook.net',
+          'https://accounts.google.com',
+          "'unsafe-inline'",
+        ],
         // Explícito a propósito (Helmet ya lo trae en sus defaults, pero
         // dejarlo implícito es lo que causó el bug de CSP audit 2026-08-27:
         // scriptSrc 'unsafe-inline' NO cubre atributos on*, esa es una
@@ -132,6 +140,9 @@ app.use(
           // terminan de aplicarse (CSP audit 2026-08-27).
           'https://fonts.googleapis.com',
           'https://fonts.gstatic.com',
+          // Google Identity Services (botón de login) llama a accounts.google.com
+          // para el intercambio de credenciales.
+          'https://accounts.google.com',
         ],
         // facebook.com agregado 2026-08-27: fbevents.js (Meta Pixel) usa
         // iframes ocultos hacia facebook.com para sincronizar tracking
@@ -144,6 +155,7 @@ app.use(
           'https://checkout.bold.co',
           'https://www.mercadopago.com.co',
           'https://www.google.com',
+          'https://accounts.google.com',
           'https://www.facebook.com',
         ],
         // Sin esto Helmet aplica su default ("'self'" solamente) en
