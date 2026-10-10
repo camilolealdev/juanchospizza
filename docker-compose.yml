@@ -22,13 +22,12 @@ services:
         # horneado en el bundle para que LoginModal.tsx pueda renderizar el
         # botón de Google. No es secreto (ID público de OAuth).
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
-      # ── Network para build ────────────────────────────────────
-      # Docker Desktop en Windows tiene un proxy DNS virtual que
-      # falla con etiquetas IPv6 de npm registry. network: host
-      # hace que el build use la red del host directamente,
-      # saltando la virtualización DNS de Docker.
-      # Ver: https://docs.docker.com/engine/reference/commandline/buildx_build/#network
-      network: host
+    # NOTA: NO usar `network: host` en build acá -- rompe el build en
+    # BuildKit del VPS (Linux) con "network.host is blocked (missing
+    # entitlement)". Si el build local en Docker Desktop (Windows) falla por
+    # el proxy DNS virtual con etiquetas IPv6 del npm registry, arreglarlo en
+    # Docker Desktop > Settings > Docker Engine agregando
+    # { "dns": ["1.1.1.1", "8.8.8.8"] } -- NO acá, esto es compartido con prod.
     dns:
       # DNS para contenedores en RUNTIME (fallback cuando el proxy
       # DNS de Docker Desktop o el ISP fallan). NOTA: esto NO afecta
@@ -119,12 +118,22 @@ services:
   nginx:
     image: nginx:alpine
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+    # NO publicar 80/443 al host -- Traefik (compartido entre todos los
+    # proyectos del VPS: jrpos, easymkt, juanchospizza) es el único que
+    # puede bindear esos puertos. nginx recibe HTTP plano de Traefik vía
+    # la red `traefik_public`; Traefik termina TLS (ver labels abajo).
+    # Migrado 2026-10-10 -- antes esto competía por el puerto 80/443 del
+    # host con Traefik (y con el nginx.service del propio host VPS).
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_public"
+      - "traefik.http.routers.juanchospizza.entrypoints=websecure"
+      - "traefik.http.routers.juanchospizza.rule=Host(`juanchospizza.com`) || Host(`www.juanchospizza.com`)"
+      - "traefik.http.routers.juanchospizza.tls=true"
+      - "traefik.http.routers.juanchospizza.tls.certresolver=letsencrypt"
+      - "traefik.http.services.juanchospizza.loadbalancer.server.port=80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro
     depends_on:
       - app
     security_opt:
