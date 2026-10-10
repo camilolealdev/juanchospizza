@@ -150,11 +150,8 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
     step('Hero CTA');
     await expect(page.locator('.btn-primary').first()).toBeVisible();
 
-    step('WhatsApp floating');
-    await expect(page.locator('.floating-chatbot')).toBeVisible();
-
-    step('Admin crown button');
-    await expect(page.locator('button[title*="Panel Administrativo"]')).toBeVisible();
+    step('Admin crown button ausente (acceso oculto, CHANGELOG JUL-30)');
+    await expect(page.locator('button[title*="Panel Administrativo"]')).toHaveCount(0);
 
     step('Cart counter');
     await expect(page.locator('#cartCounter')).toBeVisible();
@@ -208,9 +205,9 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
     await expect(page.locator('.page-container[data-page="menu"]')).toHaveClass(/active/);
   });
 
-  test('08 - Admin crown button opens login modal', async ({ page }) => {
-    step('Click crown button');
-    await page.locator('button[title*="Panel Administrativo"]').click();
+  test('08 - /login URL opens login modal (acceso oculto, CHANGELOG JUL-30)', async ({ page }) => {
+    step('Navigate to /login');
+    await page.goto('/login');
     await expect(page.getByText('GastroPro')).toBeVisible({ timeout: 3000 });
   });
 
@@ -316,7 +313,7 @@ test.describe('PUBLIC WEBSITE - Todos los links y botones', () => {
 
 test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => {
   test('19 - Login modal elements', async ({ page }) => {
-    await page.locator('button[title*="Panel Administrativo"]').click();
+    await page.goto('/login');
     await page.waitForTimeout(500);
     step('Role selector');
     const roleSelect = page.locator('select').first();
@@ -332,7 +329,7 @@ test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => 
 
   test('20 - Login flow + dashboard', async ({ page }) => {
     step('Open modal + fill credentials');
-    await page.locator('button[title*="Panel Administrativo"]').click();
+    await page.goto('/login');
     await page.waitForTimeout(300);
     await page.locator('select').first().selectOption('admin');
     await page.locator('input[type="password"]').fill('1234');
@@ -348,7 +345,7 @@ test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => 
 
   test('21 - CRM module navigation', async ({ page }) => {
     step('Login');
-    await page.locator('button[title*="Panel Administrativo"]').click();
+    await page.goto('/login');
     await page.waitForTimeout(300);
     await page.locator('select').first().selectOption('admin');
     await page.locator('input[type="password"]').fill('1234');
@@ -389,7 +386,7 @@ test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => 
 
   test('22 - Dashboard interactions', async ({ page }) => {
     step('Login');
-    await page.locator('button[title*="Panel Administrativo"]').click();
+    await page.goto('/login');
     await page.waitForTimeout(300);
     await page.locator('select').first().selectOption('admin');
     await page.locator('input[type="password"]').fill('1234');
@@ -416,7 +413,7 @@ test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => 
 
   test('23 - Logout flow', async ({ page }) => {
     step('Login');
-    await page.locator('button[title*="Panel Administrativo"]').click();
+    await page.goto('/login');
     await page.waitForTimeout(300);
     await page.locator('select').first().selectOption('admin');
     await page.locator('input[type="password"]').fill('1234');
@@ -430,12 +427,12 @@ test.describe('ADMIN CRM - Login y navegación (requiere backend :3001)', () => 
     step('Cerrar Sesión');
     await page.getByText('Cerrar Sesión').click();
     await page.waitForTimeout(500);
-    await expect(page.locator('button[title*="Panel Administrativo"]')).toBeVisible();
+    await expect(page.locator('button[title*="Panel Administrativo"]')).toHaveCount(0);
   });
 
   test('24 - Login as multiple roles', async ({ page }) => {
     step('Login as cocina');
-    await page.locator('button[title*="Panel Administrativo"]').click();
+    await page.goto('/login');
     await page.waitForTimeout(300);
     await page.locator('select').first().selectOption('operator');
     await page.locator('input[type="password"]').fill('5678');
