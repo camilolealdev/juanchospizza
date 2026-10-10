@@ -134,6 +134,14 @@ async function dismissConsentBanner(page: import('@playwright/test').Page) {
   const acceptAll = page.locator('[data-jc-action="accept-all"]');
   if (await acceptAll.isVisible({ timeout: 1000 }).catch(() => false)) {
     await acceptAll.click();
+    // decide() en consent-banner.js anima 300ms y recién después remueve
+    // #juanchos-consent-banner del DOM (320ms). Sin esta espera, el banner
+    // (con su propio link "política de privacidad") sigue en el DOM y
+    // duplica cualquier getByRole('link', {name: /privacidad/}) de la página.
+    await page
+      .locator('#juanchos-consent-banner')
+      .waitFor({ state: 'detached', timeout: 2000 })
+      .catch(() => {});
   }
 }
 
