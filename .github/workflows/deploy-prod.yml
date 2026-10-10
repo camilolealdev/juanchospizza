@@ -17,7 +17,7 @@
 #  FLUJO:
 #    1. Quality: typecheck + build + tests
 #    2. Docker build check (opcional, verifica que la imagen compile)
-#    3. Deploy: git pull → docker compose up -d --build → healthcheck
+#    3. Deploy: git fetch + reset --hard (con respaldo) → docker compose up -d --build → healthcheck
 # ───────────────────────────────────────────────────────────────────
 
 name: 🚀 Deploy Production (Docker Compose)
@@ -167,8 +167,16 @@ jobs:
             cd "$PROJECT_DIR"
             echo "📥 Pulling branch: $BRANCH"
             git fetch origin
+            # El VPS debe igualar siempre a GitHub. Si hay commits o cambios
+            # locales (ediciones manuales), se respaldan antes de descartarlos.
+            if [ -n "$(git status --porcelain)" ] || [ -n "$(git log "origin/$BRANCH..HEAD" --oneline 2>/dev/null)" ]; then
+              BACKUP="vps-backup-$(date +%Y%m%d-%H%M%S)"
+              echo "⚠️ Cambios locales en el VPS, respaldando en rama $BACKUP"
+              git stash push --include-untracked -m "$BACKUP" || true
+              git branch "$BACKUP" HEAD
+            fi
             git checkout "$BRANCH"
-            git pull origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
 
             # ── 2. Copiar .env.production desde backup ────────
             # Asume que .env.production existe en el servidor
