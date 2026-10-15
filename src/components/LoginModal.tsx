@@ -43,10 +43,20 @@ function loadGoogleScript(): Promise<void> {
   });
 }
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+// Login del CRM: correo + contraseña, o Google. Nada de PINes.
+=======
+>>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
 // Login del CRM: identificador + contraseña, sin PIN y sin presets de rol.
 // El identificador es el correo (admin) o el username (cocina y cuentas de
 // terminal compartida) -- el backend resuelve el mismo campo contra ambos.
 // La contraseña es el único credencial -- ver server/auth.js authenticate().
+<<<<<<< HEAD
+=======
+>>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
+>>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
 const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose }) => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -86,7 +96,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose
     };
     window.addEventListener('keydown', handleKeyDown, true);
 
+<<<<<<< HEAD
     // Auto-focus al campo identificador al abrir
+=======
+<<<<<<< HEAD
+    // Auto-focus al campo de usuario al abrir
+=======
+    // Auto-focus al campo identificador al abrir
+>>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
+>>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
     const id = window.setTimeout(() => {
       const identifierInput = document.getElementById('login-identifier') as HTMLInputElement | null;
       identifierInput?.focus();
@@ -101,9 +119,19 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose
     };
   }, [onClose]);
 
+<<<<<<< HEAD
   // Botón oficial de Google -- se renderiza una sola vez. El id_token que
   // devuelve ya prueba la identidad, así que el backend no pide credencial
   // extra (ver server/auth.js loginWithGoogle).
+=======
+<<<<<<< HEAD
+  // Botón oficial de Google -- se renderiza una sola vez.
+=======
+  // Botón oficial de Google -- se renderiza una sola vez. El id_token que
+  // devuelve ya prueba la identidad, así que el backend no pide credencial
+  // extra (ver server/auth.js loginWithGoogle).
+>>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
+>>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID || !googleButtonRef.current) return;
     let cancelled = false;
@@ -139,11 +167,27 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+<<<<<<< HEAD
+    const trimmedIdentifier = identifier.trim();
+=======
+<<<<<<< HEAD
+    const trimmedIdentifier = identifier.trim().toLowerCase();
+>>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
+    if (!trimmedIdentifier || !password) {
+      setError('Ingresa tu correo (o usuario) y contraseña');
+      return;
+    }
+<<<<<<< HEAD
+=======
+    setError('');
+=======
     const trimmedIdentifier = identifier.trim();
     if (!trimmedIdentifier || !password) {
       setError('Ingresa tu correo (o usuario) y contraseña');
       return;
     }
+>>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
+>>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
     setIsSubmitting(true);
     try {
       const success = await onLogin(trimmedIdentifier, password);
@@ -202,7 +246,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose
                 setIdentifier(e.target.value);
                 setError('');
               }}
+<<<<<<< HEAD
               placeholder="tu@correo.com o usuario"
+=======
+<<<<<<< HEAD
+              placeholder="tu@correo.com o tu usuario"
+=======
+              placeholder="tu@correo.com o usuario"
+>>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
+>>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
               className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold focus:border-orange-600/50 outline-none transition-colors"
             />
           </div>
@@ -222,7 +274,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose
                 setPassword(e.target.value);
                 setError('');
               }}
+<<<<<<< HEAD
               placeholder="••••••••"
+=======
+<<<<<<< HEAD
+              placeholder="Tu contraseña"
+=======
+              placeholder="••••••••"
+>>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
+>>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
               autoComplete="current-password"
               className="w-full bg-stone-900 border border-white/10 rounded-xl p-4 text-white text-sm font-bold focus:border-orange-600/50 outline-none transition-colors"
             />
@@ -268,9 +328,21 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose
         </form>
 
         {/* Frontend audit P0: bloque "¿Olvidaste el PIN?" eliminado.
+<<<<<<< HEAD
             Si un empleado pierde su contraseña, debe hablar con ADMIN para
             resetearla (server/routes/employees.js tiene setEmployeePassword).
             No exponer credenciales en el bundle público. */}
+=======
+<<<<<<< HEAD
+            Si un empleado pierde su PIN, debe hablar con ADMIN para reset
+            (server/routes/employees.js tiene setEmployeePassword). No exponer
+            credenciales en el bundle público. */}
+=======
+            Si un empleado pierde su contraseña, debe hablar con ADMIN para
+            resetearla (server/routes/employees.js tiene setEmployeePassword).
+            No exponer credenciales en el bundle público. */}
+>>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
+>>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
 
         <button
           onClick={onClose}
