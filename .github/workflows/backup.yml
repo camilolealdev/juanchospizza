@@ -1,0 +1,85 @@
+# PizzaCRM — Backup Automático de Base de Datos
+# ────────────────────────────────────────────────────────────
+# Corre en un cron diario (04:00 Colombia = 09:00 UTC). Hace
+# pg_dump, comprime, sube a un bucket S3 (opcional) y rota
+# backups locales. También se puede triggerear manualmente
+# desde la UI de GitHub Actions.
+#
+# Requiere secrets:
+#   DATABASE_URL       — Connection string de PostgreSQL
+#   BACKUP_S3_BUCKET   — [opcional] Bucket S3 para backups remotos
+#   AWS_ACCESS_KEY_ID  — [si BACKUP_S3_BUCKET] AWS creds
+#   AWS_SECRET_ACCESS_KEY — [si BACKUP_S3_BUCKET]
+#   AWS_DEFAULT_REGION — [si BACKUP_S3_BUCKET]
+#
+name: Database Backup
+
+on:
+  schedule:
+    # 04:00 Colombia (UTC-5) → 09:00 UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      s3_upload:
+        description: '¿Subir también a S3?'
+        type: boolean
+        default: false
+
+jobs:
+  backup:
+    name: pg_dump · Compress · Upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # `secrets` NO está disponible en condiciones `if:` — GitHub no permite
+    # el contexto secrets en expresiones condicionales, así que el check
+    # "secrets.BACKUP_S3_BUCKET != ''" en el if del paso S3 nunca funcionaba
+    # en el trigger schedule (cron). Se expone vía env a nivel de job: el
+    # contexto `env` SÍ está disponible en el `if` de los pasos. Si el
+    # secret no está definido, la variable queda vacía → el if es false.
+    env:
+      BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: 📦 Crear backup
+        id: backup
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          chmod +x server/scripts/backup.sh
+          mkdir -p backups
+          ./server/scripts/backup.sh --output backups
+
+      - name: ☁️ Subir a S3 (si aplica)
+        if: >
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.s3_upload == 'true')
+          || (github.event_name == 'schedule' && env.BACKUP_S3_BUCKET != '')
+        env:
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+        run: |
+          # sudo necesario: el runner corre como usuario no-root y sin sudo
+          # el apt-get falla; el `|| true` previo lo ocultaba y la subida a
+          # S3 se saltaba silenciosamente (backup.sh hace `command -v aws`).
+          sudo apt-get install -y -qq awscli 2>/dev/null || true
+          ./server/scripts/backup.sh --output backups --s3
+
+      - name: 📊 Subir backup como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup
+          path: backups/guido-pizza_*.dump.gz*
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: 🧹 Limpiar artifacts locales
+        run: rm -rf backups/*.dump.gz backups/*.sha256

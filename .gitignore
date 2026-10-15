@@ -1,0 +1,95 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Variables de entorno (excepter .env.example template)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.backup
+
+# Archivos de build
+build/
+.cache/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Playwright
+playwright-report/
+test-results/
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+
+# Backend
+server/node_modules/
+server/dist/
+*.db
+*.sqlite
+*.db-shm
+*.db-wal
+
+# Imágenes generadas por IA
+guido_ai_images.json
+nul
+
+# Graphify output (contiene rutas absolutas del sistema local)
+graphify-out/
+# Legacy / archived code
+_legacy/
+
+# scripts y archivos auxiliares de CI/deploy que NO queremos trackear
+# (estos son locales de un servidor específico, no parte de la app)
+deploy.sh
+docker-compose.ci.yml
+docker-compose.override.yml
+# nginx.conf SI se trackea (auditoría 2026-07-26): docker-compose.yml lo monta
+# como bind mount de solo lectura y el flujo de deploy documentado es
+# git clone/pull en el VPS -- si no está en el repo, nunca llega ahí. No
+# contiene secretos (server_name genérico, certs se montan aparte desde
+# ./certs/, que sigue gitignored más abajo).
+
+# .github/ SI se trackea — contiene /workflows/ci.yml necesario para
+# que GitHub Actions encuentre el pipeline de lint/tsc/build/test/audit.
+# Si añadís secrets locales o scripts one-off, ponelos en .github/_local/
+# (excluido a continuación) o en un .gitignore_global/.git/info/exclude.
+.github/_local/
+
+# Backups locales de PostgreSQL — nunca versionar dumps ni checksums
+backups/
+
+# Certificados TLS locales autofirmados (nginx, dev/testing) -- nunca reales
+certs/

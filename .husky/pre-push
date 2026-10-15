@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# .husky/pre-push
+# Único remoto activo es `origin` (camilolealdev/juanchospizza) — sin lógica
+# de sincronización dual-remote (ver CONTRIBUTING.md, "Git workflow").
+exit 0

@@ -1,0 +1,274 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', sans-serif;
+    scroll-padding-top: 80px;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-carbon text-crema antialiased;
+    touch-action: manipulation;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  img {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  video {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  ::selection {
+    @apply bg-queso text-carbon;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #1a1512;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-horno rounded-full;
+  }
+}
+
+@layer components {
+  .font-brand {
+    font-family: 'Playfair Display', serif;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #444 #111;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .trust-card {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .trust-card:hover {
+    transform: translateY(-8px) scale(1.02);
+  }
+  .trust-card:hover .trust-icon {
+    transform: scale(1.2) rotate(-5deg);
+  }
+  .trust-icon {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .sede-card {
+    transition: all 0.3s ease;
+  }
+  .sede-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  }
+  .sede-card:hover .sede-emoji {
+    transform: scale(1.15);
+  }
+  .sede-emoji {
+    transition: transform 0.3s ease;
+  }
+  .feature-pill {
+    transition: all 0.3s ease;
+  }
+  .feature-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  }
+  .accent-line {
+    width: 0;
+    transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .trust-card:hover .accent-line {
+    width: 60px;
+  }
+  .whatsapp-btn {
+    transition: all 0.3s ease;
+  }
+  .whatsapp-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 12px 30px rgba(37, 211, 102, 0.35);
+  }
+  .cta-card {
+    transition: all 0.3s ease;
+  }
+  .cta-card:hover {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes float-emoji {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.float-anim {
+  animation: float-emoji 3s ease-in-out infinite;
+}
+.float-anim-delay {
+  animation: float-emoji 3s ease-in-out 0.5s infinite;
+}
+.float-anim-delay2 {
+  animation: float-emoji 3s ease-in-out 1s infinite;
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .pizza-texture {
+    background-image:
+      radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 20%),
+      radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 15%);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+.animate-in {
+  animation-duration: 300ms;
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fadeIn;
+}
+
+.slide-in-from-bottom-2 {
+  --tw-enter-translate-y: 0.5rem;
+}
+
+.slide-in-from-bottom-5 {
+  --tw-enter-translate-y: 1.25rem;
+}
+
+.zoom-in {
+  animation-name: zoomIn;
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Smooth scroll for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* === Accessibility overrides 2026-07-21 (P0 #4 y #5 del audit) === */
+
+/* WCAG 2.4.7 Focus visible.
+   Tailwind preflight resetea `outline: none` por compatibilidad con
+   utilidades de ring, pero el codebase tiene 22+ ocurrencias de
+   `outline-none` sin reemplazo. Esta regla cocina un ring consistente
+   que cuando el browser detecta foco por teclado muestra un aro de
+   marca; los mouse clicks no lo activan (`:focus-visible` solo).
+   `border-radius` se respeta para que el ring siga la curvatura del
+   botón/input. */
+@layer utilities {
+  *:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px #c62828,
+      0 0 0 4px rgba(198, 40, 40, 0.35);
+    border-radius: 6px;
+  }
+}
+
+/* WCAG 2.3.3 Animation from interactions — prefers-reduced-motion.
+   Apaga animaciones decorativas y respeta la preferencia del usuario
+   a nivel OS. Las animaciones puramente informativas (toast entrando
+   con fade) sí se shellean — la información sigue comunicándose. Pero
+   `animate-pulse`, `animate-spin`, `animate-ping`, `animate-bounce`,
+   `pulseGlow`, `pfiFloat`, `spin`, `ping`, `bounce`, `slideUp` etc.
+   se cancelan.
+   Si en el futuro hace falta una distinción más fina (mantener fade-in
+   pero apagar bounce), mover a clases nombradas tipo `.motion-safe-*`
+   y respetar condicionalmente. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-pulse,
+  .animate-spin,
+  .animate-ping,
+  .animate-bounce,
+  .animate-fade-in,
+  .animate-zoom-in,
+  .animate-in,
+  .pulse-glow,
+  .pfi-float {
+    animation: none !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* WCAG 2.4.1 Bypass Blocks — sr-only utility accesible vía teclado.
+   Tailwind ya trae `.sr-only` pero acá lo declaramos explícito para
+   que los inputs del cart que recién agregamos (con aria-labelledby
+   apuntando a labels sr-only) tengan respaldo sin depender de versión
+   particular de Tailwind. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

@@ -1,0 +1,294 @@
+# ───────────────────────────────────────────────────────────────────
+#  Deploy Production — Juancho's Pizza / GastroPro
+#  Pipeline seguro para desplegar Docker Compose en VPS via SSH.
+#
+#  TRIGGERS:
+#    - workflow_dispatch (manual, con selector de rama -- util para probar main)
+#    - push a master (unica rama de auto-deploy; main quedo fuera del trigger
+#      automatico el 2026-08-26 para evitar que un push a main redesplegara
+#      master por accidente -- ver historial de este archivo)
+#
+#  REQUISITOS (GitHub Secrets):
+#    PROD_HOST       — IP del VPS
+#    PROD_USER       — usuario SSH (ej. deploy)
+#    PROD_SSH_KEY    — clave privada SSH
+#    PROD_PATH       — ruta absoluta al proyecto (ej. /opt/guido-pizza)
+#
+#  FLUJO:
+#    1. Quality: typecheck + build + tests
+#    2. Docker build check (opcional, verifica que la imagen compile)
+#    3. Deploy: git fetch + reset --hard (con respaldo) → docker compose up -d --build → healthcheck
+# ───────────────────────────────────────────────────────────────────
+
+name: 🚀 Deploy Production (Docker Compose)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Rama a desplegar'
+        required: true
+        default: 'master'
+        type: choice
+        options:
+          - master
+          - main
+
+  # Auto-deploy: cada push a master lanza quality → build → deploy.
+  # main quedo fuera a propósito -- es la única rama que representa lo que
+  # corre en el VPS; main se usa para trabajo en curso y se mergea a master
+  # cuando está listo para producción.
+  push:
+    branches: [master]
+
+concurrency:
+  group: deploy-production-${{ github.ref }}
+  cancel-in-progress: false  # No cancelar un deploy en curso
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ── JOB 1: Quality Gate ────────────────────────────────────────
+  quality:
+    name: 🔍 Quality (typecheck · build · test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+      JWT_SECRET: ci-secret-no-usar-en-prod
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: 🟢 Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install
+        run: npm ci --no-audit --no-fund
+
+      - name: 🔷 TypeScript Check
+        run: npx tsc --noEmit
+
+      - name: 🏗️ Build
+        run: npx vite build
+
+      - name: 🧪 Unit Tests
+        run: npx vitest run --reporter=default
+
+      - name: 🛡️ Dependency Audit
+        continue-on-error: true
+        run: npm audit --audit-level=high --omit=dev
+
+      - name: 🔍 Lint
+        continue-on-error: true
+        run: npx eslint . --ext .ts,.tsx,.js --quiet
+
+  # ── JOB 2: Docker Build Check ─────────────────────────────────
+  docker-check:
+    name: 🐳 Docker Build Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [quality]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: 🐳 Build Docker image
+        run: docker build -t guidopizza:${{ github.sha }} .
+
+      - name: 🐳 Verify image
+        run: |
+          echo "✅ Docker image built: guidopizza:${{ github.sha }}"
+          docker images guidopizza --format '{{.Repository}}:{{.Tag}} ({{.Size}})'
+
+  # ── JOB 3: Deploy via SSH ─────────────────────────────────────
+  deploy:
+    name: 🚀 Deploy to VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [quality, docker-check]
+    # Corre con ambos triggers: workflow_dispatch manual y push a master/main.
+    # En push, github.event.inputs.branch es vacío — BRANCH usa github.ref_name
+    # (la rama que realmente disparó el push) dentro del script SSH (ver paso 0).
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: 🔑 Setup SSH and Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          # Fingerprint (SHA256) de la host key del VPS: appleboy/ssh-action
+          # (vía easyssh-proxy) compara ssh.FingerprintSHA256 de la key que el
+          # SERVIDOR elige presentar en el handshake con el cliente Go — NO es
+          # la de ssh-keyscan local (que lista TODAS las keys del server).
+          # Verificado 2026-08-14 (keyscan desde el runner = mismas keys):
+          #   ed25519 = SHA256:51L6hCFxpqMkxlboJa5Y3EIOg59U+V6Wy7lIzKIw/8g ✗
+          #   rsa     = SHA256:ntiGLnJqkfc3452w5P5kRYlG+mEcL06R2hjN9iThZTU ✗
+          #   ecdsa   = SHA256:970NxLNqTjUqnjEsrzV09GaCHAgWPcKCffzwzb+Mj9E ✓
+          # El server presenta ECDSA al cliente Go (ssh-rsa quedó deprecado
+          # y Go no lo ofrece como host key algorithm en versiones recientes).
+          fingerprint: SHA256:970NxLNqTjUqnjEsrzV09GaCHAgWPcKCffzwzb+Mj9E
+          # Tiempo suficiente para docker compose pull + build + up
+          command_timeout: 300s
+          script: |
+            set -e
+            echo "🚀 Iniciando deploy en $(hostname)"
+
+            # ── 0. Valores con fallback en shell ──────────────
+            # ⚠️ NO usar literales con comillas dentro de expresiones de
+            # GitHub Actions en bloques run/script: el parser rompe el
+            # YAML del workflow. Los defaults se resuelven acá en shell.
+            PROJECT_DIR="${{ secrets.PROD_PATH }}"
+            PROJECT_DIR="${PROJECT_DIR:-/opt/guido-pizza}"
+            # BUG (hasta este fix): en push automático github.event.inputs.branch
+            # está vacío y caía siempre al default "master", así que un push a
+            # main deployaba igual el master viejo -- el pull de main nunca
+            # pasaba aunque el job quedara verde. github.ref_name es la rama que
+            # realmente disparó el push (o el input manual si fue dispatch).
+            BRANCH="${{ github.event.inputs.branch || github.ref_name }}"
+            BRANCH="${BRANCH:-master}"
+
+            # ── 1. Ir al proyecto y traer últimos cambios ──────
+            cd "$PROJECT_DIR"
+            echo "📥 Pulling branch: $BRANCH"
+            git fetch origin
+            # El VPS debe igualar siempre a GitHub. Si hay commits o cambios
+            # locales (ediciones manuales), se respaldan antes de descartarlos.
+            if [ -n "$(git status --porcelain)" ] || [ -n "$(git log "origin/$BRANCH..HEAD" --oneline 2>/dev/null)" ]; then
+              BACKUP="vps-backup-$(date +%Y%m%d-%H%M%S)"
+              echo "⚠️ Cambios locales en el VPS, respaldando en rama $BACKUP"
+              git stash push --include-untracked -m "$BACKUP" || true
+              git branch "$BACKUP" HEAD
+            fi
+            git checkout "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+
+            # ── 2. Copiar .env.production desde backup ────────
+            # Asume que .env.production existe en el servidor
+            # (se creó manualmente en el primer deploy)
+            if [ ! -f .env.production ]; then
+              echo "❌ .env.production no encontrado en $PROJECT_DIR"
+              echo "   Copiar desde backup o crear manualmente"
+              exit 1
+            fi
+
+            # ── 3. Backup previo obligatorio ──────────────────
+            # El runner de GitHub no puede alcanzar postgres:5432 porque
+            # solo está expuesto dentro de app-network. El backup se ejecuta
+            # aquí, en el VPS, antes de bajar el stack.
+            echo "📦 Creando backup previo al deploy..."
+            BACKUP_DIR="$PROJECT_DIR/backups"
+            mkdir -p "$BACKUP_DIR"
+            BACKUP_FILE="$BACKUP_DIR/guido-pizza_predeploy_$(date +%Y%m%d_%H%M%S).dump"
+            # Asegurar que PostgreSQL esté disponible sin tocar app/nginx.
+            docker compose --env-file .env.production up -d postgres
+            docker compose --env-file .env.production exec -T postgres pg_isready -U postgres -d juanchos_pizza
+            docker compose --env-file .env.production exec -T postgres \
+              pg_dump -U postgres -d juanchos_pizza -Fc -Z 9 > "$BACKUP_FILE"
+            test -s "$BACKUP_FILE"
+            sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
+            find "$BACKUP_DIR" -name 'guido-pizza_*.dump' -type f -mtime +30 -delete
+            find "$BACKUP_DIR" -name 'guido-pizza_*.dump.sha256' -type f -mtime +30 -delete
+            echo "✅ Backup previo creado: $BACKUP_FILE"
+
+            # ── 4. Build + Deploy con Docker Compose ──────────
+            echo "🐳 Building and starting containers..."
+            # down + up --build es más limpio que restart
+            docker compose --env-file .env.production down --remove-orphans
+            docker compose --env-file .env.production up -d --build
+
+            # ── 5. Limpiar imágenes viejas ────────────────────
+            echo "🧹 Pruning old Docker images..."
+            docker image prune -f 2>&1 || true
+
+            # ── 6. Health check obligatorio ───────────────────
+            echo "⏳ Esperando health check (30s)..."
+            sleep 30
+
+            # Ni app ni nginx publican puertos al host en este VPS -- el
+            # tráfico real de producción llega vía un Traefik compartido
+            # (otro stack, ver `traefik.*` labels en docker-compose.yml) que
+            # enruta juanchospizza.com directo a app:3001 por la red edge.
+            # localhost:3001 / localhost (nginx propio) daban connection
+            # refused o 404 porque no es por ahí que pasa el tráfico real --
+            # el check tiene que ir contra el dominio público, el camino que
+            # de verdad usan los usuarios.
+            PROD_URL="${{ secrets.PROD_URL }}"
+            PROD_URL="${PROD_URL:-https://juanchospizza.com}"
+            HEALTH=$(curl -fsS -o /dev/null -w "%{http_code}" "$PROD_URL/api/health" 2>/dev/null || true)
+
+            if [ "$HEALTH" != "200" ]; then
+              echo "❌ Health check falló (HTTP ${HEALTH:-000} en $PROD_URL/api/health) — rollback manual requerido"
+              docker compose ps
+              docker compose logs --tail=50 app
+              exit 1
+            fi
+            echo "✅ App health check OK"
+            docker compose --env-file .env.production exec -T postgres pg_isready -U postgres -d juanchos_pizza
+            docker compose --env-file .env.production exec -T redis redis-cli ping | grep -qx PONG
+            echo "✅ App, PostgreSQL y Redis verificados"
+
+            # ── 7. Estado final ───────────────────────────────
+            echo ""
+            echo "📊 Container status:"
+            docker compose ps
+            echo ""
+            echo "✅ Deploy completado: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+
+      - name: 📬 Post-deploy notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Deploy completado exitosamente"
+          else
+            echo "❌ Deploy falló — revisar logs de VPS"
+          fi
+
+  # ── JOB 4: Smoke Test Post-Deploy ─────────────────────────────
+  smoke:
+    name: 🔥 Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [deploy]
+    if: success()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install
+        run: npm ci --no-audit --no-fund
+
+      - name: 📦 Install Playwright
+        run: npx playwright install chromium --with-deps
+
+      # El E2E apunta al dominio real en producción.
+      # Config dedicado (e2e/playwright.smoke.config.ts): sin webServer local
+      # (antes arrancaba dev:all, sin postgres en el runner → timeout de 90s
+      # y el `|| echo` ocultaba el fallo: job verde falso). Ahora el job FALLA
+      # si el smoke no pasa.
+      - name: 🌐 E2E Smoke contra producción
+        run: |
+          npx playwright test --config=e2e/playwright.smoke.config.ts
+        env:
+          PROD_URL: ${{ secrets.PROD_URL }}

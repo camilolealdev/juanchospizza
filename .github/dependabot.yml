@@ -1,0 +1,76 @@
+# Dependabot — Actualizaciones automáticas de dependencias
+# Documentación: https://docs.github.com/en/code-security/dependabot
+#
+# Estrategia:
+#   - npm (production): semanal, con límite de 5 PRs abiertas
+#   - npm (devDependencies): mensual, agrupadas en 1 PR
+#   - Docker: mensual (imágenes base cambian menos seguido)
+#
+# Labels: 'dependencies', 'automerge' para PRs de parches sin riesgo
+
+version: 2
+updates:
+  # ── npm: Producción ───────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Bogota"
+    versioning-strategy: "increase"
+    open-pull-requests-limit: 5
+    # SOLO dependencias de producción (evita PRs duplicados con el config dev)
+    allow:
+      - dependency-type: "production"
+    labels:
+      - "dependencies"
+      - "npm"
+      - "production"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # Solo parches y minor en producción (major requiere revisión manual)
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # ── npm: Dev ──────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      time: "09:00"
+      timezone: "America/Bogota"
+    versioning-strategy: "increase-if-necessary"
+    open-pull-requests-limit: 3
+    # SOLO devDependencies (evita PRs duplicados con el config production)
+    allow:
+      - dependency-type: "development"
+    labels:
+      - "dependencies"
+      - "npm"
+      - "dev"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # Agrupar todas las devDependencies patch+minor en 1 PR
+    groups:
+      dev-dependencies:
+        patterns: ["*"]
+        update-types: ["patch", "minor"]
+
+  # ── Docker (imagen base) ──────────────────────────────────────
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      time: "09:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore"
+      include: "scope"

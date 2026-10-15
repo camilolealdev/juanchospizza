@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a1a1a" width="400" height="300"/>
+  <circle cx="200" cy="160" r="95" fill="#e8e4da"/>
+  <circle cx="200" cy="160" r="78" fill="#f7f4ec"/>
+  <circle cx="194.7" cy="154.8" r="9.2" fill="#e8d8c8" opacity="0.9"/><circle cx="216.8" cy="166.2" r="5.4" fill="#f5e6c8" opacity="0.9"/><circle cx="176.3" cy="148.5" r="5.6" fill="#8b5a2b" opacity="0.9"/><circle cx="213.9" cy="178.6" r="9.8" fill="#f9e79f" opacity="0.9"/><circle cx="233.8" cy="173.0" r="7.4" fill="#f8c471" opacity="0.9"/><circle cx="215.2" cy="135.6" r="6.7" fill="#a04000" opacity="0.9"/><circle cx="199.5" cy="157.3" r="8.5" fill="#e8d8c8" opacity="0.9"/><circle cx="219.1" cy="169.3" r="9.8" fill="#f5e6c8" opacity="0.9"/>
+  <text x="200" y="225" text-anchor="middle" fill="#f5deb3" font-size="15" font-family="Arial, sans-serif" font-weight="bold">Pechuga al rancho</text>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a1a1a" width="400" height="300"/>
+  <rect x="175" y="90" width="50" height="20" rx="5" fill="#b0b0b0"/>
+  <rect x="185" y="105" width="30" height="16" rx="3" fill="#8a8a8a"/>
+  <path d="M180 121 L172 245 Q172 255 182 255 L218 255 Q228 255 228 245 L220 121 Z" fill="#1f6fb2"/>
+  <rect x="172" y="180" width="56" height="26" rx="8" fill="#ffffff" opacity="0.25"/>
+  <text x="200" y="225" text-anchor="middle" fill="#f5deb3" font-size="15" font-family="Arial, sans-serif" font-weight="bold">Jugo natural con agua</text>
+</svg>

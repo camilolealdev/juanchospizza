@@ -1,0 +1,22 @@
+# Project Rules — Guido Pizza
+
+@.ai/shared/project-context.md
+@.ai/shared/branding-cleanup.md
+
+## Quick rules
+- TypeScript strict, no `any` sin justificación
+- Tailwind con clases utility-first
+- Zod para validación de inputs
+- Queries parametrizadas (evitar SQL injection)
+- Respetar estructura: src/ (frontend), server/ (backend)
+
+## Security hard rules
+- NUNCA commitear .env* (excepto .env.example)
+- NUNCA hardcodear secretos, tokens, passwords
+- SIEMPRE sanitizar inputs en POST/PUT/PATCH
+- SIEMPRE verificar ownership antes de devolver datos
+
+## Off-limits
+- .env (secretos)
+- dist/ (build output)
+- node_modules/

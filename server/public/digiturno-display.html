@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Digiturno - Juancho's Pizza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #090302;
+      color: #fff;
+      overflow: hidden;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Background texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 100%, rgba(234, 88, 12, 0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 30% at 50% 0%, rgba(234, 88, 12, 0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Header */
+    header {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 32px 24px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      background: rgba(9,3,2,0.6);
+      backdrop-filter: blur(20px);
+    }
+    header h1 {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+    header h1 span { color: #ea580c; }
+    header p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.35);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* Main content */
+    main {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      gap: 40px;
+    }
+
+    /* Now serving section */
+    #now-serving {
+      text-align: center;
+    }
+    #now-serving .label {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      margin-bottom: 8px;
+    }
+    #now-serving .number {
+      font-size: 160px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #ea580c 0%, #f97316 50%, #fdba74 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 8px 40px rgba(234, 88, 12, 0.3));
+      transition: all 0.3s ease;
+    }
+    #now-serving .status-badge {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 6px 20px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(234, 88, 12, 0.15);
+      color: #fb923c;
+      border: 1px solid rgba(234, 88, 12, 0.25);
+      animation: pulse-label 2s ease-in-out infinite;
+    }
+    #now-serving .empty {
+      font-size: 40px;
+      font-weight: 900;
+      color: rgba(255,255,255,0.15);
+      letter-spacing: -0.02em;
+    }
+
+    @keyframes pulse-label {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Queue list */
+    #queue-section {
+      width: 100%;
+      max-width: 700px;
+    }
+    #queue-section h2 {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    #queue-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .queue-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      transition: all 0.3s ease;
+    }
+    .queue-item .ticket-num {
+      font-size: 28px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    .queue-item .ticket-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .queue-item .ticket-info .name {
+      font-size: 16px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.6);
+    }
+    .queue-item .ticket-info .pax {
+      font-size: 12px;
+      color: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.05);
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+    .queue-item .status-tag {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 4px 12px;
+      border-radius: 100px;
+    }
+    .status-waiting {
+      background: rgba(234, 179, 8, 0.15);
+      color: #eab308;
+      border: 1px solid rgba(234, 179, 8, 0.2);
+    }
+    .status-preparing {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    .status-ready {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      animation: pulse-label 1.5s ease-in-out infinite;
+    }
+
+    /* Empty state */
+    #empty-state {
+      display: none;
+      text-align: center;
+      padding: 40px;
+    }
+    #empty-state .icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.2;
+    }
+    #empty-state p {
+      font-size: 20px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.3);
+    }
+
+    /* Footer */
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 16px 24px;
+      border-top: 1px solid rgba(255,255,255,0.04);
+      font-size: 12px;
+      color: rgba(255,255,255,0.15);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    /* Connection status */
+    #connection-status {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      z-index: 10;
+    }
+    .conn-connected { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
+    .conn-connecting { background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.2); }
+    .conn-disconnected { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+    /* Sede selector */
+    #sede-selector {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+    }
+    #sede-selector select {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.6);
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    #sede-selector select option { background: #090302; color: #fff; }
+
+    /* Animation for new items */
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .queue-item-new { animation: slide-in 0.3s ease-out; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      #now-serving .number { font-size: 100px; }
+      .queue-item .ticket-num { font-size: 22px; }
+      header h1 { font-size: 22px; }
+    }
+    @media (min-width: 1200px) {
+      #now-serving .number { font-size: 200px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="connection-status" class="conn-connecting">Conectando...</div>
+
+  <div id="sede-selector">
+    <select id="sede">
+      <option value="nemocon">Nemocón</option>
+      <option value="zipaquira">Zipaquirá</option>
+    </select>
+  </div>
+
+  <header>
+    <h1>Juancho<span>'</span><span>s</span> Pizza</h1>
+    <p>Digiturno · Turno en línea</p>
+  </header>
+
+  <main>
+    <div id="now-serving">
+      <div class="label">Sirviendo ahora</div>
+      <div class="number" id="current-number">--</div>
+      <div class="status-badge" id="current-status">Esperando pedidos</div>
+    </div>
+
+    <div id="queue-section">
+      <h2>Próximos turnos</h2>
+      <div id="queue-list"></div>
+      <div id="empty-state">
+        <div class="icon">🍕</div>
+        <p>No hay pedidos en espera</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span id="live-clock"></span> · Actualizado en tiempo real · Juancho's Pizza © 2026
+  </footer>
+
+  <!-- Stats bar flotante -->
+  <div id="stats-bar">
+    <div class="stat">
+      <span class="stat-value" id="stat-today">0</span>
+      <span class="stat-label">Hoy</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-served">0</span>
+      <span class="stat-label">Servidos</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-wait">--</span>
+      <span class="stat-label">Espera</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-queue">0</span>
+      <span class="stat-label">En cola</span>
+    </div>
+  </div>
+
+  <style>
+    #stats-bar {
+      position: fixed;
+      bottom: 56px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      gap: 4px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 10px 20px;
+      backdrop-filter: blur(12px);
+    }
+    #stats-bar .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 14px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    #stats-bar .stat:last-child { border-right: none; }
+    #stats-bar .stat-value {
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.2;
+    }
+    #stats-bar .stat-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.3);
+    }
+    @media (max-width: 600px) {
+      #stats-bar { padding: 8px 10px; gap: 2px; }
+      #stats-bar .stat { padding: 0 8px; }
+      #stats-bar .stat-value { font-size: 16px; }
+    }
+  </style>
+
+  <script>
+    // El HTML lo sirve el mismo servidor Express que expone el API,
+    // así que siempre usamos rutas relativas al mismo origen.
+    const API_BASE = '';
+
+    let currentTickets = [];
+    let eventSource = null;
+    let reconnectTimer = null;
+    let itemCache = new Map();
+    let clockInterval = null;
+    let statsInterval = null;
+
+    const statusLabels = {
+      waiting: 'Esperando',
+      preparing: 'Preparando',
+      ready: 'Listo',
+    };
+
+    const $status = document.getElementById('connection-status');
+    const $currentNum = document.getElementById('current-number');
+    const $currentStatus = document.getElementById('current-status');
+    const $queueList = document.getElementById('queue-list');
+    const $emptyState = document.getElementById('empty-state');
+    const $sede = document.getElementById('sede');
+    const $clock = document.getElementById('live-clock');
+    const $statToday = document.getElementById('stat-today');
+    const $statServed = document.getElementById('stat-served');
+    const $statWait = document.getElementById('stat-wait');
+    const $statQueue = document.getElementById('stat-queue');
+
+    // ── Reloj en vivo ──────────────────────────────────────────────
+    function updateClock() {
+      const now = new Date();
+      const time = now.toLocaleTimeString('es-CO', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      });
+      const date = now.toLocaleDateString('es-CO', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      });
+      $clock.textContent = `${date} · ${time}`;
+    }
+    updateClock();
+    clockInterval = setInterval(updateClock, 1000);
+
+    // ── Stats ───────────────────────────────────────────────────────
+    async function fetchStats() {
+      try {
+        const locationId = $sede.value;
+        const url = `${API_BASE}/api/digiturno/stats${locationId ? `?locationId=${locationId}` : ''}`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const stats = await res.json();
+
+        $statToday.textContent = stats.ticketsToday;
+        $statServed.textContent = stats.servedToday;
+        $statWait.textContent = stats.averageWaitMinutes > 0
+          ? `${stats.averageWaitMinutes} min`
+          : '--';
+        $statQueue.textContent = stats.currentQueueCount;
+      } catch {
+        // Silencioso — no romper la pantalla si stats falla
+      }
+    }
+
+    function setConnStatus(cls, label) {
+      $status.className = cls;
+      $status.textContent = label;
+    }
+
+    function connectSSE() {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      setConnStatus('conn-connecting', 'Conectando...');
+
+      const locationId = $sede.value;
+      const url = `${API_BASE}/api/digiturno/queue/live?locationId=${locationId}`;
+
+      eventSource = new EventSource(url);
+
+      eventSource.onopen = () => {
+        setConnStatus('conn-connected', 'En vivo');
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+        // Cargar stats al conectar
+        fetchStats();
+      };
+
+      eventSource.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (Array.isArray(data)) {
+            currentTickets = data;
+            renderQueue(data);
+          }
+        } catch { /* ignore parse errors */ }
+      };
+
+      eventSource.onerror = () => {
+        setConnStatus('conn-disconnected', 'Reconectando...');
+        eventSource.close();
+        eventSource = null;
+        reconnectTimer = setTimeout(connectSSE, 3000);
+      };
+    }
+
+    function renderQueue(tickets) {
+      const nowServing = tickets.find(t => t.status === 'preparing');
+      const waiting = tickets.filter(t => t.status === 'waiting');
+      const ready = tickets.filter(t => t.status === 'ready');
+
+      // Now serving
+      if (nowServing) {
+        $currentNum.textContent = `#${String(nowServing.ticketNumber).padStart(2, '0')}`;
+        $currentStatus.textContent = `Preparando · ${nowServing.customerName || 'Sin nombre'}`;
+      } else {
+        const next = tickets[0];
+        if (next) {
+          $currentNum.textContent = `#${String(next.ticketNumber).padStart(2, '0')}`;
+          $currentStatus.textContent = statusLabels[next.status] || 'En espera';
+        } else {
+          $currentNum.textContent = '--';
+          $currentStatus.textContent = 'Sin pedidos';
+        }
+      }
+
+      // Build queue list: ready + preparing + waiting
+      const ordered = [...ready, ...tickets.filter(t => t.status === 'preparing'), ...waiting];
+
+      if (ordered.length === 0) {
+        $queueList.innerHTML = '';
+        $emptyState.style.display = 'block';
+        return;
+      }
+      $emptyState.style.display = 'none';
+
+      let html = '';
+      ordered.slice(0, 15).forEach((t) => {
+        const isNew = !itemCache.has(t.id);
+        itemCache.set(t.id, true);
+        const statusClass = `status-${t.status}`;
+        html += `
+          <div class="queue-item ${isNew ? 'queue-item-new' : ''}">
+            <span class="ticket-num">#${String(t.ticketNumber).padStart(2, '0')}</span>
+            <div class="ticket-info">
+              ${t.customerName ? `<span class="name">${escHtml(t.customerName)}</span>` : ''}
+              <span class="pax">${t.guestCount} pax</span>
+            </div>
+            <span class="status-tag ${statusClass}">${statusLabels[t.status] || t.status}</span>
+          </div>
+        `;
+      });
+      $queueList.innerHTML = html;
+    }
+
+    function escHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    $sede.addEventListener('change', () => {
+      itemCache.clear();
+      fetchStats();
+      connectSSE();
+    });
+
+    // Cargar stats cada 30s (un solo intervalo, fetchStats lee $sede.value dinámicamente)
+    statsInterval = setInterval(fetchStats, 30000);
+
+    // Initial connection
+    fetchStats();
+    connectSSE();
+  </script>
+</body>
+</html>

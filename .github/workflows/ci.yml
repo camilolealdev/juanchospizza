@@ -1,0 +1,185 @@
+# PizzaCRM — GitHub Actions CI/CD
+# ────────────────────────────────────────────────────────────
+# Pipeline completo:
+#   PR → lint + typecheck + build + tests + coverage gate + audit
+#   Push to master → build + Docker image + deploy signal
+#
+# Convenciones:
+#   - Node 22 (LTS) — alineado con el Dockerfile, caché npm
+#   - audit no bloqueante (solo high+)
+#   - coverage: job dedicado con umbrales en vitest.config.ts (B-P5)
+#   - Docker build multi-stage
+
+name: PizzaCRM CI/CD
+
+on:
+  push:
+    branches: [master, main, ci/fix-pipelines-v2]
+  pull_request:
+    branches: [master, main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # ── JOB 1: Lint + Typecheck + Build + Test ──────────────────
+  quality:
+    name: Quality (lint · typecheck · build · test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgres://test:test@localhost:5432/test
+      JWT_SECRET: ci-test-secret-do-not-use-in-prod
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install
+        run: npm ci --no-audit --no-fund
+
+      # [2026-07-30] Backlog: lint estricto — se eliminó --quiet (ocultaba
+      # warnings) y continue-on-error (dejaba pasar regresiones). npm run
+      # lint usa --max-warnings 0 + --report-unused-disable-directives, la
+      # misma configuración que exige el pre-commit local.
+      - name: 🔍 Lint
+        run: npm run lint
+
+      - name: 🔷 Typecheck
+        run: npx tsc --noEmit
+
+      - name: 🏗️ Build
+        run: npx vite build
+
+      - name: 🧪 Unit Tests
+        run: npx vitest run --reporter=default
+
+      - name: 🛡️ Dependency Audit
+        continue-on-error: true
+        run: npm audit --audit-level=high --omit=dev
+
+  # ── JOB 2: Coverage Gate ────────────────────────────────────
+  # [2026-08-04] B-P5: gate de cobertura en cada push/PR. Los umbrales
+  # viven en vitest.config.ts (coverage.thresholds) — si la cobertura cae
+  # del mínimo, vitest sale con exit 1 y el job falla (bloquea el merge).
+  # Los tests unitarios mockean la DB, así que no necesita Postgres.
+  # Baseline: 66.34% stmts (umbral 60).
+  coverage:
+    name: Coverage Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [quality]
+    env:
+      DATABASE_URL: postgres://test:test@localhost:5432/test
+      JWT_SECRET: ci-test-secret-do-not-use-in-prod
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install
+        run: npm ci --no-audit --no-fund
+
+      - name: 📊 Coverage Gate
+        run: npm run test:coverage
+
+  # ── JOB 3: Docker Build ─────────────────────────────────────
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [quality]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐳 Build Docker image
+        run: docker build -t guidopizza:${{ github.sha }} .
+
+      - name: 🐳 Verify image (healthcheck)
+        run: |
+          echo "✅ Docker image built: guidopizza:${{ github.sha }}"
+          docker images guidopizza --format '{{.Repository}}:{{.Tag}} ({{.Size}})'
+
+  # ── JOB 4: E2E Smoke Tests ─────────────────────────────────
+  e2e:
+    name: E2E Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [quality]
+    env:
+      DATABASE_URL: postgres://test:test@localhost:5432/test
+      JWT_SECRET: ci-test-secret-do-not-use-in-prod
+      NODE_ENV: test
+
+    # Postgres real para los tests e2e: api-smoke pega a /api/health,
+    # /api/metrics y /api/digiturno/queue; full-audit navega todos los
+    # módulos del CRM (requiere login → employees en DB). El webServer de
+    # playwright arranca `npm run dev:all` (Vite + Express) en CI, así que
+    # el backend necesita una DB real disponible.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install
+        run: npm ci --no-audit --no-fund
+
+      - name: 📦 Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: 🏗️ Build
+        run: npx vite build
+
+      # [2026-07-30] Backlog: full-audit.spec.ts (26 tests, audit de
+      # consola + navegación de módulos) nunca corría en CI — solo en
+      # local. Se agrega al mismo run de playwright.
+      #
+      # Nota: NO se inyectan claves falsas de proveedores (Gemini, pago,
+      # push). full-audit.spec.ts filtra por hostname los endpoints externos
+      # opcionales (ver OPTIONAL_EXTERNAL_HOSTS en el spec), así el audit
+      # reporta solo fallos reales del CRM y no ruido de providers sin key.
+      - name: 🧪 Run E2E tests
+        run: npx playwright test --reporter=list e2e/smoke.spec.ts e2e/api-smoke.spec.ts e2e/full-audit.spec.ts
+
+      - name: 📊 Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/

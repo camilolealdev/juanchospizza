@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a1a1a" width="400" height="300"/>
+  <path d="M130 190 L160 120 L240 120 L270 190 Z" fill="#e74c3c"/>
+  <path d="M140 190 L160 130 L240 130 L260 190 Z" fill="#c0392b"/>
+  <rect x="160.0" y="128.3" width="9" height="56.7" rx="4" fill="#f0c060" transform="rotate(4.6 164.0 185)"/><rect x="172.7" y="121.0" width="9" height="64.0" rx="4" fill="#f0c060" transform="rotate(4.0 176.7 185)"/><rect x="177.6" y="113.9" width="9" height="71.1" rx="4" fill="#f0c060" transform="rotate(-14.1 181.6 185)"/><rect x="187.7" y="124.3" width="9" height="60.7" rx="4" fill="#f0c060" transform="rotate(1.5 191.7 185)"/><rect x="199.1" y="116.2" width="9" height="68.8" rx="4" fill="#f0c060" transform="rotate(10.1 203.1 185)"/><rect x="207.3" y="118.1" width="9" height="66.9" rx="4" fill="#f0c060" transform="rotate(-8.8 211.3 185)"/><rect x="221.0" y="118.7" width="9" height="66.3" rx="4" fill="#f0c060" transform="rotate(11.2 225.0 185)"/><rect x="228.6" y="109.7" width="9" height="75.3" rx="4" fill="#f0c060" transform="rotate(-0.4 232.6 185)"/><rect x="239.7" y="127.6" width="9" height="57.4" rx="4" fill="#f0c060" transform="rotate(10.1 243.7 185)"/>
+  <text x="200" y="225" text-anchor="middle" fill="#f5deb3" font-size="15" font-family="Arial, sans-serif" font-weight="bold">Porción de criolla</text>
+</svg>

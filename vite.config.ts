@@ -1,0 +1,152 @@
+import path from 'path';
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
+
+export default defineConfig(() => {
+  return {
+    server: {
+      port: 3000,
+      host: '0.0.0.0',
+      // Proxy /api/* al backend Express (puerto 3001) para que
+      // `npm run dev` (Vite solo) sirva las llamadas del builder
+      // inline de "Crea-tu-Pizza" sin requerir `npm run dev:all`.
+      proxy: {
+        '/api': 'http://localhost:3001',
+      },
+    },
+    plugins: [
+      react(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.svg', 'favicon.png', 'favicon.ico', 'apple-touch-icon.png'],
+        manifest: {
+          name: "Guido Pizza — Juancho's Pizza",
+          short_name: 'Guido Pizza',
+          description: 'Pide tu pizza en Nemocón y Zipaquirá',
+          theme_color: '#ea580c',
+          background_color: '#0c0a09',
+          display: 'standalone',
+          start_url: '/',
+          icons: [
+            { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+            { src: '/favicon.png', sizes: '32x32', type: 'image/png', purpose: 'any' },
+            { src: '/pwa-192x192.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+            { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: '/pwa-512x512.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+            { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          ],
+        },
+        workbox: {
+          // generateSW registra un NavigationRoute("index.html") SIEMPRE,
+          // aparte de runtimeCaching -- sin este denylist, visitar /api/* como
+          // navegación de documento (pegar la URL en la barra del navegador)
+          // lo interceptaba el service worker y servía el shell cacheado en
+          // vez de dejar pasar la request al servidor (bug real detectado
+          // 2026-08-21: /api/menu "no aparecía nada, solo el sitio viejo").
+          // No afecta al fetch() real de la app -- ese nunca tiene mode:
+          // 'navigate', así que nunca pasaba por NavigationRoute.
+          navigateFallbackDenylist: [/^\/api\//],
+          // recharts (~363 KB) se excluye del precache: es un chunk dinámico
+          // que solo se descarga cuando una vista con gráficos lo importa
+          // (useLazyCharts). El personal que nunca abre Finanzas/Dashboard
+          // no paga esos KB, y la primera visita instala la PWA sin el peso.
+          globIgnores: ['**/recharts-*.js'],
+          // Estrategias de caché diferenciadas por tipo de recurso:
+          //   - Assets con hash (JS/CSS/imágenes) → StaleWhileRevalidate
+          //     (carga instantánea desde caché, actualiza en segundo plano)
+          //   - HTML/Navegación → NetworkFirst (contenido siempre fresco,
+          //     cae a caché solo sin conexión)
+          //   - API → no se cachea (datos dinámicos)
+          runtimeCaching: [
+            {
+              // Assets estáticos con hash (inmutables por definición)
+              urlPattern: /\.(?:js|css|svg|png|jpg|jpeg|gif|ico|woff2?|webp)$/,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'guido-pizza-assets',
+                expiration: { maxEntries: 80, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              },
+            },
+            {
+              // Video: mp4 no entra en el matcher de arriba. NetworkFirst
+              // (la regla catch-all de abajo) no tiene sentido para un archivo
+              // pesado -- en conexion lenta falla la red y sin nada en cache
+              // Workbox devuelve "no-response" (bug real: pizza-logo.mp4 en
+              // el Hero). CacheFirst + rangeRequests porque <video> pide
+              // bytes parciales (206) para hacer seek/streaming.
+              urlPattern: /\.mp4$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'guido-pizza-video',
+                expiration: { maxEntries: 5, maxAgeSeconds: 30 * 24 * 60 * 60 },
+                cacheableResponse: { statuses: [0, 200] },
+                rangeRequests: true,
+              },
+            },
+            {
+              // Google Fonts: hoja de estilos (cambia poco, se revalida en bg)
+              urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'google-fonts-stylesheets',
+              },
+            },
+            {
+              // Google Fonts: archivos de fuente (inmutables, cache-first 1 año)
+              urlPattern: ({ url }) => url.origin === 'https://fonts.gstatic.com',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'google-fonts-webfonts',
+                expiration: { maxEntries: 30, maxAgeSeconds: 365 * 24 * 60 * 60 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              // Navegación y HTML propios (siempre fresco, fallback a caché
+              // offline). Restringido a same-origin: antes este catch-all
+              // también interceptaba recursos de terceros (ej. la hoja de
+              // Google Fonts, que no matchea la regex de arriba porque
+              // "css2" no termina en ".css") y el SW respondía en un "world"
+              // distinto al del <link rel=preload>, generando el warning de
+              // Chrome "cross-world service worker resource mismatch".
+              urlPattern: ({ url }) =>
+                url.origin === self.location.origin &&
+                !url.pathname.startsWith('/api/') &&
+                !/\.(?:js|css|svg|png|jpg|jpeg|gif|ico|woff2?|webp|mp4)$/.test(url.pathname),
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'guido-pizza-pages',
+                expiration: { maxEntries: 30, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              },
+            },
+          ],
+        },
+      }),
+    ],
+
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, '.'),
+      },
+    },
+    build: {
+      manifest: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            // Nombre estable para recharts: con import dinámico el chunk no
+            // se puede tree-shakear por acceso a namespace, así que se aísla
+            // para poder excluirlo del precache (globIgnores abajo) y que
+            // solo baje on-demand vía useLazyCharts.
+            if (id.includes('node_modules/recharts')) return 'recharts';
+            if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) return 'react';
+            if (id.includes('react-router-dom')) return 'router';
+            if (id.includes('@radix-ui')) return 'ui';
+          },
+        },
+      },
+    },
+  };
+});
