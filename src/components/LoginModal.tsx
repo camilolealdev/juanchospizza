@@ -22,7 +22,7 @@ declare global {
   }
 }
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
 function loadGoogleScript(): Promise<void> {
   if (window.google?.accounts?.id) return Promise.resolve();
@@ -43,7 +43,6 @@ function loadGoogleScript(): Promise<void> {
   });
 }
 
-// Login del CRM: correo + contraseña, o Google. Nada de PINes.
 // Login del CRM: identificador + contraseña, sin PIN y sin presets de rol.
 // El identificador es el correo (admin) o el username (cocina y cuentas de
 // terminal compartida) -- el backend resuelve el mismo campo contra ambos.
@@ -88,8 +87,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose
     window.addEventListener('keydown', handleKeyDown, true);
 
     // Auto-focus al campo identificador al abrir
-    // Auto-focus al campo de usuario al abrir
-    // Auto-focus al campo identificador al abrir
     const id = window.setTimeout(() => {
       const identifierInput = document.getElementById('login-identifier') as HTMLInputElement | null;
       identifierInput?.focus();
@@ -104,10 +101,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose
     };
   }, [onClose]);
 
-  // Botón oficial de Google -- se renderiza una sola vez. El id_token que
-  // devuelve ya prueba la identidad, así que el backend no pide credencial
-  // extra (ver server/auth.js loginWithGoogle).
-  // Botón oficial de Google -- se renderiza una sola vez.
   // Botón oficial de Google -- se renderiza una sola vez. El id_token que
   // devuelve ya prueba la identidad, así que el backend no pide credencial
   // extra (ver server/auth.js loginWithGoogle).
@@ -146,13 +139,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedIdentifier = identifier.trim();
-    const trimmedIdentifier = identifier.trim().toLowerCase();
-    if (!trimmedIdentifier || !password) {
-      setError('Ingresa tu correo (o usuario) y contraseña');
-      return;
-    }
-    setError('');
     const trimmedIdentifier = identifier.trim();
     if (!trimmedIdentifier || !password) {
       setError('Ingresa tu correo (o usuario) y contraseña');
@@ -280,6 +266,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onLoginGoogle, onClose
             </p>
           </div>
         </form>
+
+        {/* Frontend audit P0: bloque "¿Olvidaste el PIN?" eliminado.
+            Si un empleado pierde su contraseña, debe hablar con ADMIN para
+            resetearla (server/routes/employees.js tiene setEmployeePassword).
+            No exponer credenciales en el bundle público. */}
 
         <button
           onClick={onClose}
