@@ -379,6 +379,18 @@ const MIGRATIONS = [
       await pool.query(`UPDATE employees SET email = $1 WHERE id = 'admin_default' AND email IS NULL`, [email]);
     },
   },
+  // ── 014: normaliza employees.email a minuscula ────────────────────
+  // authenticate() ya compara LOWER(email), pero authenticateGoogle() seguía
+  // comparando la columna sin normalizar -- un email guardado con mayúscula
+  // (PATCH manual, o seedInitialCredentialsFromEnv con ADMIN_EMAIL con
+  // mayúsculas) nunca podía loguearse con Google pese a token válido.
+  {
+    id: 14,
+    name: 'Lowercase existing employees.email values',
+    up: async (pool) => {
+      await pool.query(`UPDATE employees SET email = lower(email) WHERE email IS NOT NULL AND email != lower(email)`);
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────

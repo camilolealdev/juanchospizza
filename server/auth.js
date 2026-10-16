@@ -239,10 +239,12 @@ export async function seedInitialCredentialsFromEnv(env = process.env) {
   if (admin) {
     if (!admin.passwordHash || forceReset) {
       const passwordSalt = generateSalt();
-      await pool.query(
-        'UPDATE employees SET email = $1, "passwordHash" = $2, "passwordSalt" = $3 WHERE id = $4',
-        [adminEmail, hashPin(adminPassword, passwordSalt), passwordSalt, admin.id]
-      );
+      await pool.query('UPDATE employees SET email = $1, "passwordHash" = $2, "passwordSalt" = $3 WHERE id = $4', [
+        adminEmail,
+        hashPin(adminPassword, passwordSalt),
+        passwordSalt,
+        admin.id,
+      ]);
       changed = true;
     } else {
       // Ya tiene contraseña: solo completamos el correo si faltaba.
@@ -336,7 +338,7 @@ export async function authenticateGoogle(email) {
   if (!email) return null;
 
   const result = await pool.query(
-    'SELECT id, role, "pinHash", salt, "isSuperAdmin", "locationId", "lockedUntil" FROM employees WHERE email = $1 AND activo = true',
+    'SELECT id, role, "pinHash", salt, "isSuperAdmin", "locationId", "lockedUntil" FROM employees WHERE LOWER(email) = $1 AND activo = true',
     [String(email).trim().toLowerCase()]
   );
   const employee = result.rows[0];
