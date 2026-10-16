@@ -24,12 +24,8 @@ describe('LoginModal', () => {
 
     submit();
 
-<<<<<<< HEAD
     expect(await screen.findByText('Ingresa tu correo (o usuario) y contraseña')).toBeInTheDocument();
-=======
-<<<<<<< HEAD
     expect(await screen.findByText('Ingresa tu correo (o usuario) y tu contraseña')).toBeInTheDocument();
->>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
     expect(onLogin).not.toHaveBeenCalled();
   });
 
@@ -57,11 +53,8 @@ describe('LoginModal', () => {
     );
   });
 
-<<<<<<< HEAD
   it('submits a bare username + password (cuentas de terminal)', async () => {
-=======
   it('submits with username + password (terminal accounts like cocina)', async () => {
-=======
     expect(await screen.findByText('Ingresa tu correo (o usuario) y contraseña')).toBeInTheDocument();
     expect(onLogin).not.toHaveBeenCalled();
   });
@@ -91,79 +84,53 @@ describe('LoginModal', () => {
   });
 
   it('submits a bare username + password (cuentas de terminal)', async () => {
->>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
->>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
     const onLogin = vi.fn().mockResolvedValue(true);
     render(<LoginModal onLogin={onLogin} onLoginGoogle={vi.fn()} onClose={vi.fn()} />);
 
     fillIdentifier('cocina');
-<<<<<<< HEAD
     fillPassword('secreta123');
     submit();
 
     await waitFor(() => expect(onLogin).toHaveBeenCalledWith('cocina', 'secreta123'));
-=======
-<<<<<<< HEAD
     fillPassword('DY6tT9TSRfWk');
     submit();
 
     await waitFor(() => expect(onLogin).toHaveBeenCalledWith('cocina', 'DY6tT9TSRfWk'));
-=======
     fillPassword('secreta123');
     submit();
 
     await waitFor(() => expect(onLogin).toHaveBeenCalledWith('cocina', 'secreta123'));
->>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
->>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
   });
 
   it('shows no error after a successful login', async () => {
     const onLogin = vi.fn().mockResolvedValue(true);
     render(<LoginModal onLogin={onLogin} onLoginGoogle={vi.fn()} onClose={vi.fn()} />);
 
-<<<<<<< HEAD
     fillIdentifier('admin@juanchospizza.com');
     fillPassword('secreta123');
-=======
-<<<<<<< HEAD
     fillIdentifier('juanchospizzanz@gmail.com');
     fillPassword('DY6tT9TSRfWk');
-=======
     fillIdentifier('admin@juanchospizza.com');
     fillPassword('secreta123');
->>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
->>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
     submit();
 
     await waitFor(() => expect(onLogin).toHaveBeenCalled());
     expect(screen.queryByText(/credenciales incorrectas/i)).not.toBeInTheDocument();
-<<<<<<< HEAD
     expect(screen.queryByText('Ingresa tu correo (o usuario) y contraseña')).not.toBeInTheDocument();
-=======
-<<<<<<< HEAD
     expect(screen.queryByText('Ingresa tu correo (o usuario) y tu contraseña')).not.toBeInTheDocument();
-=======
     expect(screen.queryByText('Ingresa tu correo (o usuario) y contraseña')).not.toBeInTheDocument();
->>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
->>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
   });
 
   it('shows "Credenciales incorrectas" when onLogin resolves false', async () => {
     const onLogin = vi.fn().mockResolvedValue(false);
     render(<LoginModal onLogin={onLogin} onLoginGoogle={vi.fn()} onClose={vi.fn()} />);
 
-<<<<<<< HEAD
     fillIdentifier('admin@juanchospizza.com');
     fillPassword('mala');
-=======
-<<<<<<< HEAD
     fillIdentifier('juanchospizzanz@gmail.com');
     fillPassword('wrongpassword1');
-=======
     fillIdentifier('admin@juanchospizza.com');
     fillPassword('mala');
->>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
->>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
     submit();
 
     expect(await screen.findByText('Credenciales incorrectas')).toBeInTheDocument();
@@ -173,20 +140,16 @@ describe('LoginModal', () => {
     const onLogin = vi.fn().mockRejectedValue(new Error('No se pudo conectar con el servidor'));
     render(<LoginModal onLogin={onLogin} onLoginGoogle={vi.fn()} onClose={vi.fn()} />);
 
-<<<<<<< HEAD
     fillIdentifier('admin@juanchospizza.com');
     fillPassword('secreta123');
-=======
-<<<<<<< HEAD
     fillIdentifier('juanchospizzanz@gmail.com');
     fillPassword('DY6tT9TSRfWk');
-=======
     fillIdentifier('admin@juanchospizza.com');
     fillPassword('secreta123');
->>>>>>> 9446794 (Add dine-in/delivery orderType and mesa; persist to CRM; fix auth seed force-reset; update WhatsApp builder and CartDrawer)
->>>>>>> b12bdb5 (Force admin password reset on boot with DY6tT9TSRfWk)
     submit();
 
     expect(await screen.findByText('No se pudo conectar con el servidor')).toBeInTheDocument();
   });
+});
+
 });
