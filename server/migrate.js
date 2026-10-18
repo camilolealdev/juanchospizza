@@ -1230,6 +1230,19 @@ const MIGRATIONS = [
       }
     },
   },
+  // ── 016: orders."orderType" y orders.mesa ─────────────────────────
+  // POST /api/orders (commit 9446794) escribe estas dos columnas, pero nunca
+  // se agregaron a una tabla `orders` ya existente (CREATE TABLE IF NOT EXISTS
+  // no la altera) -- todo pedido nuevo respondía 500 en producción.
+  // mesa es TEXT porque el schema acepta número o texto ("A3").
+  {
+    id: 16,
+    name: 'Add orderType and mesa columns to orders',
+    up: async (pool) => {
+      await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS "orderType" TEXT`);
+      await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mesa TEXT`);
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────

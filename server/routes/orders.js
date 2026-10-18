@@ -202,7 +202,7 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
       paymentMethod,
       locationId,
       orderType: orderType || null,
-      mesa: (mesa !== undefined && mesa !== "") ? mesa : null,
+      mesa: mesa !== undefined && mesa !== '' ? mesa : null,
     };
 
     // clientId nunca se confía del body: cualquiera podía mandar el id de otro
@@ -252,7 +252,7 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
     const paymentStatus = ['cash', 'card'].includes(sanitized.paymentMethod) ? 'paid' : 'pending';
 
     await client.query(
-      `INSERT INTO orders (id, "orderNumber", "customerName", "customerPhone", address, items, total, status, "createdAt", "estimatedTime", "paymentMethod", "clientId", "paymentStatus", "locationId") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      `INSERT INTO orders (id, "orderNumber", "customerName", "customerPhone", address, items, total, status, "createdAt", "estimatedTime", "paymentMethod", "clientId", "paymentStatus", "locationId", "orderType", mesa) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
       [
         id,
         sanitized.orderNumber,
@@ -346,6 +346,9 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
         /* si ni siquiera esto funciona, cae al 500 genérico de abajo */
       }
     }
+    // Sin este log un fallo de INSERT/esquema era invisible: el cliente solo veía
+    // el 500 genérico y el servidor no dejaba rastro de la causa real.
+    logger.error({ err: e.message, code: e.code, orderNumber: req.body?.orderNumber }, 'POST /api/orders falló');
     res.status(500).json({ error: 'Error creating order' });
   } finally {
     if (client) client.release();
