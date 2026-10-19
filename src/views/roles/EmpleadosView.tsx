@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Employee } from '../../types';
 import { api } from '../../services/api';
+import { generatePassword, passwordAgeDays, PASSWORD_MAX_AGE_DAYS } from '../../utils/generatePassword';
 
 const ROLE_LABELS: Record<Employee['role'], string> = {
   ADMIN: 'Administrador',
-  OPERATOR: 'Cocina',
+  OPERATOR: 'Cocina / Caja',
   REPARTIDOR: 'Repartidor',
   MARKETING: 'Marketing',
 };
@@ -18,16 +19,18 @@ type FormState = {
   nombre: string;
   role: Employee['role'];
   locationId: '' | 'nemocon' | 'zipaquira';
-  pin: string;
+  password: string;
   username: string;
   email: string;
 };
 
-const emptyForm: FormState = { nombre: '', role: 'OPERATOR', locationId: '', pin: '', username: '', email: '' };
+const emptyForm: FormState = { nombre: '', role: 'OPERATOR', locationId: '', password: '', username: '', email: '' };
 
-// Roster CRUD -- server/auth.js logs in against this same employees table
-// (username+password or PIN). username/password are optional here: PIN alone
-// is still enough for shared-terminal roles (cocina, repartidor).
+// Roster CRUD -- server/auth.js logs in against this same employees table.
+// El login web usa correo/usuario + contraseña (el formulario no envía PIN),
+// así que toda cuenta nueva se crea con contraseña. La antigüedad se muestra
+// en la tarjeta y se marca "Vencida" a los PASSWORD_MAX_AGE_DAYS días; la
+// rotación la hace el ADMIN con un clic (llave -> Generar), no es silenciosa.
 const EmpleadosView: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +54,16 @@ const EmpleadosView: React.FC = () => {
   const [resetPasswordValue, setResetPasswordValue] = useState('');
   const [resetPasswordError, setResetPasswordError] = useState('');
   const [resetPasswordSubmitting, setResetPasswordSubmitting] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+
+  const copyToClipboard = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      showToast('Contraseña copiada.');
+    } catch {
+      showToast('No se pudo copiar; selecciónala y cópiala a mano.');
+    }
+  };
 
   const loadEmployees = () => {
     setLoading(true);
@@ -80,7 +93,7 @@ const EmpleadosView: React.FC = () => {
       nombre: emp.nombre,
       role: emp.role,
       locationId: emp.locationId || '',
-      pin: '',
+      password: '',
       username: emp.username || '',
       email: emp.email || '',
     });
@@ -91,6 +104,7 @@ const EmpleadosView: React.FC = () => {
     setResetPasswordEmp(emp);
     setResetPasswordValue('');
     setResetPasswordError('');
+    setShowResetPassword(false);
   };
 
   const submitResetPassword = async () => {
@@ -149,14 +163,18 @@ const EmpleadosView: React.FC = () => {
         });
         showToast('Empleado actualizado.');
       } else {
-        if (!/^\d{4}$/.test(form.pin)) {
-          showToast('El PIN debe ser de 4 dígitos.');
+        if (form.password.length < 10 || !/[a-zA-Z]/.test(form.password) || !/[0-9]/.test(form.password)) {
+          showToast('La contraseña necesita mínimo 10 caracteres, con una letra y un número.');
+          return;
+        }
+        if (!form.email.trim() && !form.username.trim()) {
+          showToast('Ingresa un correo o un usuario para que pueda iniciar sesión.');
           return;
         }
         await api.createEmployee({
           nombre: form.nombre,
           role: form.role,
-          pin: form.pin,
+          password: form.password,
           locationId: form.locationId || undefined,
           username: form.username.trim() || undefined,
           email: form.email.trim() || undefined,
@@ -241,6 +259,26 @@ const EmpleadosView: React.FC = () => {
               {ROLE_LABELS[emp.role] || emp.role}
             </p>
 
+            {(() => {
+              const age = passwordAgeDays(emp.passwordChangedAt);
+              const sinPwd = emp.tienePassword === false;
+              const vencida = age !== null && age >= PASSWORD_MAX_AGE_DAYS;
+              const label = sinPwd
+                ? 'Sin contraseña (no puede entrar)'
+                : age === null
+                  ? 'Contraseña: fecha desconocida'
+                  : `Contraseña: hace ${age} día${age === 1 ? '' : 's'}`;
+              return (
+                <p
+                  data-testid={`password-age-${emp.id}`}
+                  className={`text-[10px] font-bold mb-6 ${sinPwd || vencida ? 'text-red-500' : 'text-stone-500'}`}
+                >
+                  {label}
+                  {vencida && ' · VENCIDA, rotar'}
+                </p>
+              );
+            })()}
+
             <div className="grid grid-cols-2 gap-6 border-t border-white/5 pt-8">
               <div>
                 <p className="text-[9px] text-stone-600 uppercase font-black tracking-widest mb-1">Sede</p>
@@ -301,7 +339,7 @@ const EmpleadosView: React.FC = () => {
                     onChange={(e) => setForm({ ...form, role: e.target.value as Employee['role'] })}
                   >
                     <option value="ADMIN">Administrador</option>
-                    <option value="OPERATOR">Cocina</option>
+                    <option value="OPERATOR">Cocina / Caja</option>
                     <option value="REPARTIDOR">Repartidor</option>
                     <option value="MARKETING">Marketing</option>
                   </select>
@@ -332,13 +370,12 @@ const EmpleadosView: React.FC = () => {
                   placeholder="usuario.login"
                 />
                 <p className="text-stone-600 text-[10px] mt-2">
-                  Solo necesario si este empleado va a loguearse con usuario/contraseña en vez de PIN. La contraseña se
-                  define aparte con el ícono de llave en la tarjeta.
+                  Alternativa al correo para iniciar sesión (letras, números y guión bajo).
                 </p>
               </div>
               <div>
                 <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-2">
-                  Correo Google (opcional)
+                  Correo (para iniciar sesión)
                 </label>
                 <input
                   type="email"
@@ -348,25 +385,36 @@ const EmpleadosView: React.FC = () => {
                   placeholder="empleado@gmail.com"
                 />
                 <p className="text-stone-600 text-[10px] mt-2">
-                  Permite entrar con el botón &quot;Iniciar sesión con Google&quot;. Debe ser el correo de la cuenta de
-                  Google del empleado.
+                  Con este correo y la contraseña entra al CRM. Si es una cuenta de Google, también funciona el botón
+                  &quot;Iniciar sesión con Google&quot;.
                 </p>
               </div>
               {!editingId && (
                 <div>
                   <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-2">
-                    PIN (4 dígitos)
+                    Contraseña
                   </label>
-                  <input
-                    type="password"
-                    maxLength={4}
-                    className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-5 py-4 text-center text-2xl tracking-[0.5em] font-bold focus:outline-none focus:border-orange-500 transition-colors"
-                    value={form.pin}
-                    onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, '') })}
-                    placeholder="••••"
-                  />
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      data-testid="create-password-input"
+                      className="flex-1 bg-stone-950 border border-stone-700 rounded-2xl px-5 py-4 text-sm font-mono font-bold focus:outline-none focus:border-orange-500 transition-colors"
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      placeholder="Mínimo 10 caracteres"
+                    />
+                    <button
+                      type="button"
+                      data-testid="create-password-generate"
+                      className="px-5 rounded-2xl border border-stone-700 text-[10px] font-black uppercase tracking-widest text-orange-500 hover:border-orange-500 transition-colors"
+                      onClick={() => setForm({ ...form, password: generatePassword() })}
+                    >
+                      Generar
+                    </button>
+                  </div>
                   <p className="text-stone-600 text-[10px] mt-2">
-                    Este PIN habilita el login real del empleado en la terminal.
+                    Cópiala antes de crear: no se vuelve a mostrar. Mínimo 10 caracteres, con letra y número.
                   </p>
                 </div>
               )}
@@ -404,21 +452,45 @@ const EmpleadosView: React.FC = () => {
               <label className="text-[9px] font-black uppercase tracking-widest text-stone-500 block mb-2">
                 Nueva contraseña
               </label>
-              <input
-                type="password"
-                autoFocus
-                data-testid="reset-password-input"
-                className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-orange-500 transition-colors"
-                value={resetPasswordValue}
-                onChange={(e) => {
-                  setResetPasswordValue(e.target.value);
-                  setResetPasswordError('');
-                }}
-                placeholder="Mínimo 10 caracteres"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') submitResetPassword();
-                }}
-              />
+              <div className="flex gap-3">
+                <input
+                  type={showResetPassword ? 'text' : 'password'}
+                  autoFocus
+                  data-testid="reset-password-input"
+                  className="w-full bg-stone-950 border border-stone-700 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-orange-500 transition-colors"
+                  value={resetPasswordValue}
+                  onChange={(e) => {
+                    setResetPasswordValue(e.target.value);
+                    setResetPasswordError('');
+                  }}
+                  placeholder="Mínimo 10 caracteres"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') submitResetPassword();
+                  }}
+                />
+                <button
+                  type="button"
+                  data-testid="reset-password-generate"
+                  className="px-5 rounded-2xl border border-stone-700 text-[10px] font-black uppercase tracking-widest text-orange-500 hover:border-orange-500 transition-colors"
+                  onClick={() => {
+                    setResetPasswordValue(generatePassword());
+                    setShowResetPassword(true);
+                    setResetPasswordError('');
+                  }}
+                >
+                  Generar
+                </button>
+                {showResetPassword && resetPasswordValue && (
+                  <button
+                    type="button"
+                    data-testid="reset-password-copy"
+                    className="px-5 rounded-2xl border border-stone-700 text-[10px] font-black uppercase tracking-widest text-stone-400 hover:border-stone-500 transition-colors"
+                    onClick={() => copyToClipboard(resetPasswordValue)}
+                  >
+                    Copiar
+                  </button>
+                )}
+              </div>
               <p className="text-stone-600 text-[10px] mt-2">
                 Mínimo 10 caracteres, con al menos una letra y un número.
               </p>

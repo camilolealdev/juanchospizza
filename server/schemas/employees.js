@@ -15,8 +15,12 @@ const LOCATIONS = ['nemocon', 'zipaquira'];
 export const createEmployeeSchema = z.object({
   nombre: str(100),
   role: z.enum(ROLES, { error: 'Rol inválido' }),
-  // 4 dígitos, igual al PIN del login existente (ver App.tsx LoginModal, maxLength=4).
-  pin: z.string({ error: 'Falta el PIN' }).regex(/^\d{4}$/, 'El PIN debe ser de 4 dígitos'),
+  // El PIN ya no se pide en el alta: el login web usa contraseña. Si llega,
+  // debe ser de 4 dígitos; si no, el servidor siembra uno aleatorio.
+  pin: z
+    .string()
+    .regex(/^\d{4}$/, 'El PIN debe ser de 4 dígitos')
+    .nullish(),
   locationId: z.enum(LOCATIONS, { error: 'Sede inválida' }).nullish(),
   username: usernameOpt(),
   email: emailOpt(),

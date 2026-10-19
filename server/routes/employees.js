@@ -19,7 +19,8 @@ const router = express.Router();
 // otorga acá -- ver nota en schemas/employees.js.
 
 // pinHash/salt/passwordHash/passwordSalt nunca salen de la API -- son secretos.
-const EMPLOYEE_COLUMNS = 'id, nombre, role, username, email, "isSuperAdmin", "locationId", activo, creado';
+const EMPLOYEE_COLUMNS =
+  'id, nombre, role, username, email, "isSuperAdmin", "locationId", activo, creado, "passwordChangedAt", ("passwordHash" IS NOT NULL) AS "tienePassword"';
 
 router.get('/api/employees', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
@@ -43,13 +44,26 @@ router.post(
       // prefijo emp_ para no romper filtros/logs que ya esperan ese formato.
       const id = `emp_${crypto.randomUUID()}`;
       const salt = generateSalt();
-      const pinHash = hashPin(pin, salt);
+      // Sin PIN en el alta: se siembra uno aleatorio que nadie conoce (la
+      // columna es obligatoria; el login web usa contraseña).
+      const pinHash = hashPin(pin ?? String(crypto.randomInt(0, 10000)).padStart(4, '0'), salt);
       const passwordSalt = password ? generateSalt() : null;
       const passwordHash = password ? hashPin(password, passwordSalt) : null;
       await pool.query(
-        `INSERT INTO employees (id, nombre, role, "pinHash", salt, "locationId", username, email, "passwordHash", "passwordSalt")
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [id, nombre, role, pinHash, salt, locationId ?? null, username ?? null, email ?? null, passwordHash, passwordSalt]
+        `INSERT INTO employees (id, nombre, role, "pinHash", salt, "locationId", username, email, "passwordHash", "passwordSalt", "passwordChangedAt")
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $9::text IS NULL THEN NULL ELSE NOW() END)`,
+        [
+          id,
+          nombre,
+          role,
+          pinHash,
+          salt,
+          locationId ?? null,
+          username ?? null,
+          email ?? null,
+          passwordHash,
+          passwordSalt,
+        ]
       );
       res.status(201).json({
         id,
@@ -162,11 +176,10 @@ router.patch(
       const { password } = req.body;
       const passwordSalt = generateSalt();
       const passwordHash = hashPin(password, passwordSalt);
-      const result = await pool.query(`UPDATE employees SET "passwordHash" = $1, "passwordSalt" = $2 WHERE id = $3`, [
-        passwordHash,
-        passwordSalt,
-        req.params.id,
-      ]);
+      const result = await pool.query(
+        `UPDATE employees SET "passwordHash" = $1, "passwordSalt" = $2, "passwordChangedAt" = NOW(), "failedLoginAttempts" = 0, "lockedUntil" = NULL WHERE id = $3`,
+        [passwordHash, passwordSalt, req.params.id]
+      );
       if (result.rowCount === 0) return res.status(404).json({ error: 'Empleado no encontrado' });
       logger.info({ actorId, targetId: req.params.id, isSelfReset, ip: req.ip }, 'Contraseña de empleado actualizada');
       res.status(204).end();

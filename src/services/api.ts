@@ -26,7 +26,7 @@ type ClientPayload = Partial<Client>;
 export interface NewEmployeePayload {
   nombre: string;
   role: Employee['role'];
-  pin: string;
+  pin?: string;
   locationId?: Employee['locationId'];
   username?: string;
   email?: string;

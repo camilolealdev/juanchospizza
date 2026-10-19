@@ -240,6 +240,8 @@ export interface Employee {
   username: string | null;
   email: string | null;
   isSuperAdmin: boolean;
+  passwordChangedAt?: string | null;
+  tienePassword?: boolean;
 }
 
 // Turno de caja -- ver server/routes/shifts.js. expectedCash/difference son

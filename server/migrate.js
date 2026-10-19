@@ -1243,6 +1243,17 @@ const MIGRATIONS = [
       await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mesa TEXT`);
     },
   },
+
+  // ── 017: fecha del último cambio de contraseña ───────────────────
+  // Permite al CRM mostrar la antigüedad de la contraseña y marcar las
+  // vencidas. NULL = desconocida (contraseñas anteriores a esta migración).
+  {
+    id: 17,
+    name: 'Add passwordChangedAt to employees',
+    up: async (pool) => {
+      await pool.query('ALTER TABLE employees ADD COLUMN IF NOT EXISTS "passwordChangedAt" TIMESTAMPTZ');
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────

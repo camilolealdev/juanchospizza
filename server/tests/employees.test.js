@@ -91,7 +91,10 @@ describe('GET /api/employees', () => {
     const sql = mockQuery.mock.calls[0][0];
     expect(sql).toContain('SELECT id, nombre, role, username, email, "isSuperAdmin", "locationId", activo, creado');
     expect(sql).not.toContain('pinHash');
-    expect(sql).not.toContain('passwordHash');
+    // Único uso permitido del hash: el booleano "tienePassword" (nunca el valor).
+    expect(sql).toContain('("passwordHash" IS NOT NULL) AS "tienePassword"');
+    expect(sql.replace('("passwordHash" IS NOT NULL)', '')).not.toContain('passwordHash');
+    expect(sql).toContain('"passwordChangedAt"');
   });
 
   it('responde 500 si la query falla', async () => {
@@ -137,6 +140,26 @@ describe('POST /api/employees', () => {
     // username/password null
     expect(params[6]).toBeNull();
     expect(params[7]).toBeNull();
+  });
+
+  it('crea sin PIN (solo contraseña): siembra un PIN aleatorio y guarda el hash de la contraseña con fecha', async () => {
+    const app = createApp();
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+
+    const res = await supertest(app).post('/api/employees').send({
+      nombre: 'Caja',
+      role: 'OPERATOR',
+      email: 'caja@juanchospizza.com',
+      password: 'Segura12345',
+    });
+
+    expect(res.status).toBe(201);
+    const [sql, params] = mockQuery.mock.calls[0];
+    expect(params[3]).toMatch(/^hash:\d{4}:test-salt$/); // PIN aleatorio hasheado
+    expect(params[7]).toBe('caja@juanchospizza.com');
+    expect(params[8]).toBe('hash:Segura12345:test-salt');
+    expect(sql).toContain('"passwordChangedAt"');
+    expect(sql).toContain('CASE WHEN $9::text IS NULL THEN NULL ELSE NOW() END');
   });
 
   it('409 si el username ya existe (23505)', async () => {
@@ -205,6 +228,21 @@ describe('PATCH /api/employees/:id/password', () => {
     expect(mockQuery.mock.calls.some(([sql]) => String(sql).includes('UPDATE employees SET "passwordHash"'))).toBe(
       false
     );
+  });
+
+  it('el reset registra la fecha de cambio y desbloquea la cuenta', async () => {
+    const app = createApp();
+    mockAuth.sub = 'emp_2';
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ id: 'emp_3', isSuperAdmin: false }], rowCount: 1 })
+      .mockResolvedValueOnce({ rowCount: 1 });
+
+    const res = await supertest(app).patch('/api/employees/emp_3/password').send({ password: 'Nueva12345!' });
+
+    expect(res.status).toBe(204);
+    const sql = mockQuery.mock.calls[1][0];
+    expect(sql).toContain('"passwordChangedAt" = NOW()');
+    expect(sql).toContain('"lockedUntil" = NULL');
   });
 
   it('permite el reset cuando el super admin cambia SU propia password', async () => {
