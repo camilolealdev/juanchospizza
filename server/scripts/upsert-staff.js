@@ -11,8 +11,9 @@
 //                "username": "caja", "locationId": "nemocon" }]
 //
 // - Sin --apply solo muestra qué haría; no escribe nada.
-// - Si el correo ya existe: actualiza nombre/rol/usuario/sede, reactiva y
-//   desbloquea, pero NO toca la contraseña salvo que se pase --reset.
+// - Si el correo ya existe: actualiza nombre/rol/usuario/sede y desbloquea; NO
+//   toca la contraseña salvo --reset (o si no tenía) y NO reactiva cuentas dadas
+//   de baja salvo --reactivate. Nunca modifica ADMIN ni super admin.
 // - Las contraseñas se generan al azar y se imprimen una sola vez en la
 //   terminal de quien ejecuta. No se aceptan por argumento ni por chat.
 // - ADMIN y super admin quedan fuera a propósito.
@@ -50,15 +51,19 @@ export function validateEntry(raw) {
   return { nombre, role, email, username, locationId };
 }
 
-export async function upsertStaff(db, rawEntry, { apply = false, reset = false } = {}) {
+export async function upsertStaff(db, rawEntry, { apply = false, reset = false, reactivate = false } = {}) {
   const entry = validateEntry(rawEntry);
   const found = await db.query(
-    'SELECT id, "isSuperAdmin", "passwordHash" IS NOT NULL AS tiene_pwd FROM employees WHERE LOWER(email) = $1',
+    'SELECT id, role, activo, "isSuperAdmin", "passwordHash" IS NOT NULL AS tiene_pwd FROM employees WHERE LOWER(email) = $1',
     [entry.email]
   );
   const existing = found.rows[0];
   if (existing?.isSuperAdmin) throw new Error(`${entry.email} es super admin; este script no lo modifica`);
+  // Un ADMIN existente jamás se degrada ni se le cambia la contraseña desde aquí.
+  if (existing?.role === 'ADMIN') throw new Error(`${entry.email} es ADMIN; este script no modifica administradores`);
 
+  // Una cuenta dada de baja a propósito no se reactiva salvo que se pida.
+  const keepActivo = existing && existing.activo === false && !reactivate;
   const action = existing ? (reset ? 'actualizar+reset' : 'actualizar') : 'crear';
   if (!apply) return { ...entry, action, applied: false, password: null };
 
@@ -68,7 +73,7 @@ export async function upsertStaff(db, rawEntry, { apply = false, reset = false }
       password = generatePassword();
       const passwordSalt = generateSalt();
       await db.query(
-        `UPDATE employees SET nombre=$1, role=$2, username=COALESCE($3, username), "locationId"=$4, activo=true,
+        `UPDATE employees SET nombre=$1, role=$2, username=COALESCE($3, username), "locationId"=COALESCE($4, "locationId"), activo=CASE WHEN $8::boolean THEN activo ELSE true END,
            "failedLoginAttempts"=0, "lockedUntil"=NULL, "passwordHash"=$5, "passwordSalt"=$6 WHERE id=$7`,
         [
           entry.nombre,
@@ -78,13 +83,14 @@ export async function upsertStaff(db, rawEntry, { apply = false, reset = false }
           hashPin(password, passwordSalt),
           passwordSalt,
           existing.id,
+          keepActivo,
         ]
       );
     } else {
       await db.query(
-        `UPDATE employees SET nombre=$1, role=$2, username=COALESCE($3, username), "locationId"=$4, activo=true,
+        `UPDATE employees SET nombre=$1, role=$2, username=COALESCE($3, username), "locationId"=COALESCE($4, "locationId"), activo=CASE WHEN $6::boolean THEN activo ELSE true END,
            "failedLoginAttempts"=0, "lockedUntil"=NULL WHERE id=$5`,
-        [entry.nombre, entry.role, entry.username, entry.locationId, existing.id]
+        [entry.nombre, entry.role, entry.username, entry.locationId, existing.id, keepActivo]
       );
     }
     return { ...entry, action, applied: true, password };
@@ -124,6 +130,7 @@ async function main() {
   }
   const apply = args.includes('--apply');
   const reset = args.includes('--reset');
+  const reactivate = args.includes('--reactivate');
   const list = JSON.parse(fs.readFileSync(args[fileIdx + 1], 'utf8'));
   const { pool } = await import('../db.js');
   let failed = false;
@@ -131,7 +138,7 @@ async function main() {
     console.log(apply ? '== APLICANDO ==' : '== SIMULACIÓN (agrega --apply para escribir) ==');
     for (const item of list) {
       try {
-        const r = await upsertStaff(pool, item, { apply, reset });
+        const r = await upsertStaff(pool, item, { apply, reset, reactivate });
         const pwd = r.password ? `  contraseña: ${r.password}` : '';
         console.log(`${r.action.padEnd(17)} ${r.email}  rol=${r.role}  usuario=${r.username ?? '-'}${pwd}`);
       } catch (e) {

@@ -19,12 +19,31 @@ const router = express.Router();
 // otorga acá -- ver nota en schemas/employees.js.
 
 // pinHash/salt/passwordHash/passwordSalt nunca salen de la API -- son secretos.
-const EMPLOYEE_COLUMNS =
-  'id, nombre, role, username, email, "isSuperAdmin", "locationId", activo, creado, "passwordChangedAt", ("passwordHash" IS NOT NULL) AS "tienePassword"';
+const BASE_COLUMNS =
+  'id, nombre, role, username, email, "isSuperAdmin", "locationId", activo, creado, ("passwordHash" IS NOT NULL) AS "tienePassword"';
+const EMPLOYEE_COLUMNS = `${BASE_COLUMNS}, "passwordChangedAt"`;
+
+// "passwordChangedAt" (migración #17) es solo informativa. Si por cualquier
+// motivo la columna aún no existe (el runner de migraciones traga errores),
+// estas rutas deben seguir funcionando como antes en vez de caerse: se
+// reintenta con el SQL anterior (42703 = undefined_column).
+async function queryWithLegacyFallback(sql, params, legacySql, legacyParams = params) {
+  try {
+    return await pool.query(sql, params);
+  } catch (e) {
+    if (e?.code !== '42703') throw e;
+    logger.warn({ err: e.message }, 'employees."passwordChangedAt" no existe aún; usando SQL anterior');
+    return pool.query(legacySql, legacyParams);
+  }
+}
 
 router.get('/api/employees', authMiddleware, requireRole('ADMIN'), async (req, res) => {
   try {
-    const result = await pool.query(`SELECT ${EMPLOYEE_COLUMNS} FROM employees ORDER BY nombre`);
+    const result = await queryWithLegacyFallback(
+      `SELECT ${EMPLOYEE_COLUMNS} FROM employees ORDER BY nombre`,
+      [],
+      `SELECT ${BASE_COLUMNS} FROM employees ORDER BY nombre`
+    );
     res.json(result.rows);
   } catch (e) {
     res.status(500).json({ error: 'Error fetching employees' });
@@ -49,21 +68,24 @@ router.post(
       const pinHash = hashPin(pin ?? String(crypto.randomInt(0, 10000)).padStart(4, '0'), salt);
       const passwordSalt = password ? generateSalt() : null;
       const passwordHash = password ? hashPin(password, passwordSalt) : null;
-      await pool.query(
+      const values = [
+        id,
+        nombre,
+        role,
+        pinHash,
+        salt,
+        locationId ?? null,
+        username ?? null,
+        email ?? null,
+        passwordHash,
+        passwordSalt,
+      ];
+      await queryWithLegacyFallback(
         `INSERT INTO employees (id, nombre, role, "pinHash", salt, "locationId", username, email, "passwordHash", "passwordSalt", "passwordChangedAt")
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $9::text IS NULL THEN NULL ELSE NOW() END)`,
-        [
-          id,
-          nombre,
-          role,
-          pinHash,
-          salt,
-          locationId ?? null,
-          username ?? null,
-          email ?? null,
-          passwordHash,
-          passwordSalt,
-        ]
+        values,
+        `INSERT INTO employees (id, nombre, role, "pinHash", salt, "locationId", username, email, "passwordHash", "passwordSalt")
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`
       );
       res.status(201).json({
         id,
@@ -176,9 +198,10 @@ router.patch(
       const { password } = req.body;
       const passwordSalt = generateSalt();
       const passwordHash = hashPin(password, passwordSalt);
-      const result = await pool.query(
+      const result = await queryWithLegacyFallback(
         `UPDATE employees SET "passwordHash" = $1, "passwordSalt" = $2, "passwordChangedAt" = NOW(), "failedLoginAttempts" = 0, "lockedUntil" = NULL WHERE id = $3`,
-        [passwordHash, passwordSalt, req.params.id]
+        [passwordHash, passwordSalt, req.params.id],
+        `UPDATE employees SET "passwordHash" = $1, "passwordSalt" = $2, "failedLoginAttempts" = 0, "lockedUntil" = NULL WHERE id = $3`
       );
       if (result.rowCount === 0) return res.status(404).json({ error: 'Empleado no encontrado' });
       logger.info({ actorId, targetId: req.params.id, isSelfReset, ip: req.ip }, 'Contraseña de empleado actualizada');

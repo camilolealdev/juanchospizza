@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { str, boolOpt, usernameOpt, emailOpt, passwordSecure, passwordRequired } from './helpers.js';
+import { str, boolOpt, usernameOpt, emailOpt, passwordRequired } from './helpers.js';
 
 // Mismos 4 roles de staff que ya existen en server/auth.js (USERS). CLIENT
 // deliberadamente excluido -- no es un rol de planta.
@@ -24,7 +24,9 @@ export const createEmployeeSchema = z.object({
   locationId: z.enum(LOCATIONS, { error: 'Sede inválida' }).nullish(),
   username: usernameOpt(),
   email: emailOpt(),
-  password: passwordSecure(),
+  // Obligatoria: el login web solo acepta contraseña. Sin ella la cuenta quedaría
+  // solo con un PIN de 4 dígitos (10^4 combinaciones) y no podría entrar por la UI.
+  password: passwordRequired(),
 });
 
 // El PIN nunca se toca vía esta ruta -- cambiar el PIN es un flujo aparte,

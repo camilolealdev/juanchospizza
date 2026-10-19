@@ -88,6 +88,36 @@ describe('upsertStaff', () => {
     expect(r.password).toBeTruthy();
   });
 
+  it('nunca modifica a un ADMIN (no lo degrada ni le cambia la contraseña)', async () => {
+    query.mockResolvedValueOnce({
+      rows: [{ id: 'emp_9', role: 'ADMIN', activo: true, isSuperAdmin: false, tiene_pwd: true }],
+    });
+    await expect(upsertStaff({ query }, entry, { apply: true, reset: true })).rejects.toThrow(/ADMIN/);
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('no reactiva una cuenta dada de baja salvo --reactivate', async () => {
+    const row = { id: 'emp_1', role: 'OPERATOR', activo: false, isSuperAdmin: false, tiene_pwd: true };
+    query.mockResolvedValueOnce({ rows: [row] }).mockResolvedValueOnce({ rows: [] });
+    await upsertStaff({ query }, entry, { apply: true });
+    expect(query.mock.calls[1][1].at(-1)).toBe(true); // keepActivo
+
+    query.mockReset();
+    query.mockResolvedValueOnce({ rows: [row] }).mockResolvedValueOnce({ rows: [] });
+    await upsertStaff({ query }, entry, { apply: true, reactivate: true });
+    expect(query.mock.calls[1][1].at(-1)).toBe(false);
+  });
+
+  it('conserva la sede existente si el JSON no la trae', async () => {
+    query
+      .mockResolvedValueOnce({
+        rows: [{ id: 'emp_1', role: 'OPERATOR', activo: true, isSuperAdmin: false, tiene_pwd: true }],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+    await upsertStaff({ query }, { ...entry, locationId: undefined }, { apply: true });
+    expect(query.mock.calls[1][0]).toContain('COALESCE($4, "locationId")');
+  });
+
   it('nunca modifica a un super admin', async () => {
     query.mockResolvedValueOnce({ rows: [{ id: 'admin_default', isSuperAdmin: true, tiene_pwd: true }] });
     await expect(upsertStaff({ query }, entry, { apply: true })).rejects.toThrow(/super admin/);

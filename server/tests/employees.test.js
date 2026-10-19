@@ -119,7 +119,16 @@ describe('POST /api/employees', () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it('crea el empleado hasheando el PIN y devuelve 201', async () => {
+  it('rechaza el alta sin contraseña (solo PIN) con 400 y no toca la base', async () => {
+    const app = createApp();
+    const res = await supertest(app)
+      .post('/api/employees')
+      .send({ nombre: 'Ana', role: 'OPERATOR', pin: '1234', locationId: 'nemocon' });
+    expect(res.status).toBe(400);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('crea el empleado hasheando el PIN (si se envía) y devuelve 201', async () => {
     const app = createApp();
     mockQuery.mockResolvedValueOnce({ rowCount: 1 });
 
@@ -127,6 +136,7 @@ describe('POST /api/employees', () => {
       nombre: 'Ana',
       role: 'OPERATOR',
       pin: '1234',
+      password: 'Segura12345',
       locationId: 'nemocon',
     });
 
@@ -137,9 +147,10 @@ describe('POST /api/employees', () => {
     expect(sql).toContain('INSERT INTO employees');
     expect(params[3]).toBe('hash:1234:test-salt'); // pinHash
     expect(params[4]).toBe('test-salt'); // salt
-    // username/password null
+    // username/email null; contraseña hasheada
     expect(params[6]).toBeNull();
     expect(params[7]).toBeNull();
+    expect(params[8]).toBe('hash:Segura12345:test-salt');
   });
 
   it('crea sin PIN (solo contraseña): siembra un PIN aleatorio y guarda el hash de la contraseña con fecha', async () => {
@@ -170,6 +181,7 @@ describe('POST /api/employees', () => {
       nombre: 'Ana',
       role: 'OPERATOR',
       pin: '1234',
+      password: 'Segura12345',
       username: 'ana',
     });
 
@@ -209,6 +221,51 @@ describe('PUT /api/employees/:id', () => {
     const res = await supertest(app).put('/api/employees/emp_zzz').send({ role: 'ADMIN' });
 
     expect(res.status).toBe(404);
+  });
+});
+
+// ── Degradación: columna passwordChangedAt aún inexistente (42703) ──
+describe('compatibilidad si la migración 17 no corrió', () => {
+  const undefinedColumn = () =>
+    Object.assign(new Error('column "passwordChangedAt" does not exist'), { code: '42703' });
+
+  it('GET lista empleados con el SQL anterior en vez de responder 500', async () => {
+    const app = createApp();
+    mockQuery.mockRejectedValueOnce(undefinedColumn()).mockResolvedValueOnce({ rows: [mockEmployee()] });
+    const res = await supertest(app).get('/api/employees');
+    expect(res.status).toBe(200);
+    expect(mockQuery.mock.calls[1][0]).not.toContain('passwordChangedAt');
+  });
+
+  it('PATCH contraseña sigue funcionando (la ruta crítica no depende de la columna nueva)', async () => {
+    const app = createApp();
+    mockAuth.sub = 'emp_2';
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ id: 'emp_3', isSuperAdmin: false }], rowCount: 1 })
+      .mockRejectedValueOnce(undefinedColumn())
+      .mockResolvedValueOnce({ rowCount: 1 });
+    const res = await supertest(app).patch('/api/employees/emp_3/password').send({ password: 'Nueva12345!' });
+    expect(res.status).toBe(204);
+    expect(mockQuery.mock.calls[2][0]).toContain('"passwordHash" = $1');
+    expect(mockQuery.mock.calls[2][0]).not.toContain('passwordChangedAt');
+  });
+
+  it('POST crea el empleado con el INSERT anterior', async () => {
+    const app = createApp();
+    mockQuery.mockRejectedValueOnce(undefinedColumn()).mockResolvedValueOnce({ rowCount: 1 });
+    const res = await supertest(app)
+      .post('/api/employees')
+      .send({ nombre: 'Caja', role: 'OPERATOR', email: 'caja@juanchospizza.com', password: 'Segura12345' });
+    expect(res.status).toBe(201);
+    expect(mockQuery.mock.calls[1][0]).not.toContain('passwordChangedAt');
+  });
+
+  it('otros errores SQL no se enmascaran', async () => {
+    const app = createApp();
+    mockQuery.mockRejectedValueOnce(Object.assign(new Error('boom'), { code: '53300' }));
+    const res = await supertest(app).get('/api/employees');
+    expect(res.status).toBe(500);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
   });
 });
 
