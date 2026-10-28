@@ -170,6 +170,7 @@ export const PRODUCTS = [
     nombre: 'Porción individual',
     descripcion: 'Porción individual de pizza',
     basePrice: 9200,
+    priceBySede: { nemocon: 9500 },
     type: 'tradicional',
     image: '/images/menu/pizza-1.webp',
   },

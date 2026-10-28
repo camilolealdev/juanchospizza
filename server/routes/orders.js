@@ -182,7 +182,7 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
 
     let verifiedTotal;
     try {
-      verifiedTotal = await computeVerifiedTotal(client, items);
+      verifiedTotal = await computeVerifiedTotal(client, items, locationId);
     } catch (pricingError) {
       await client.query('ROLLBACK');
       if (pricingError instanceof OrderPricingError) {
@@ -202,7 +202,7 @@ router.post('/api/orders', validate(createOrderSchema), async (req, res) => {
       paymentMethod,
       locationId,
       orderType: orderType || null,
-      mesa: (mesa !== undefined && mesa !== "") ? mesa : null,
+      mesa: mesa !== undefined && mesa !== '' ? mesa : null,
     };
 
     // clientId nunca se confía del body: cualquiera podía mandar el id de otro
@@ -552,7 +552,7 @@ router.put(
 
         let verifiedTotal;
         try {
-          verifiedTotal = await computeVerifiedTotal(client, items);
+          verifiedTotal = await computeVerifiedTotal(client, items, existing.rows[0].locationId);
         } catch (pricingError) {
           // OrderPricingError → 400 con ROLLBACK acá mismo (la transacción
           // queda descartada y el catch externo no debe volver a hacerlo).

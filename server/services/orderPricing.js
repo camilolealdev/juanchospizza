@@ -81,16 +81,17 @@ export class OrderPricingError extends Error {
 // the order insert). Throws OrderPricingError for anything the caller should
 // turn into a 400 (unknown product id, bad quantity) -- callers must not
 // fall back to the client-submitted total when this succeeds.
-export async function computeVerifiedTotal(client, items) {
+export async function computeVerifiedTotal(client, items, locationId) {
   if (!Array.isArray(items) || items.length === 0) return 0;
 
   const productIds = [...new Set(items.map((i) => i?.productId).filter((id) => id && id !== PIZZA_BUILDER_PRODUCT_ID))];
 
   const [productsResult, sizesResult] = await Promise.all([
     productIds.length
-      ? client.query('SELECT id, "basePrice", "categoryId", subcategory FROM products WHERE id = ANY($1::text[])', [
-          productIds,
-        ])
+      ? client.query(
+          'SELECT id, "basePrice", "priceBySede", "categoryId", subcategory FROM products WHERE id = ANY($1::text[])',
+          [productIds]
+        )
       : Promise.resolve({ rows: [] }),
     client.query('SELECT id, nombre, precio FROM pizza_sizes'),
   ]);
@@ -128,7 +129,12 @@ export async function computeVerifiedTotal(client, items) {
       // coincidencia matchea el id/nombre de alguna fila de pizza_sizes.
       const sizeKey = hasRealSizes(product) && item?.size ? String(item.size).toLowerCase() : null;
       const sizePrice = sizeKey ? sizePriceByKey.get(sizeKey) : undefined;
-      unitPrice = sizePrice !== undefined ? sizePrice : Number(product.basePrice) || 0;
+      // priceBySede es un override opcional por sede sobre basePrice (p.ej.
+      // la porción individual cuesta más en Nemocón) -- el precio por talla
+      // siempre gana cuando aplica, igual que antes.
+      const sedePrice = locationId ? product.priceBySede?.[locationId] : undefined;
+      const base = sedePrice !== undefined ? sedePrice : Number(product.basePrice) || 0;
+      unitPrice = sizePrice !== undefined ? sizePrice : base;
     }
 
     total += unitPrice * quantity;

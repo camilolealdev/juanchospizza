@@ -57,6 +57,29 @@ describe('computeVerifiedTotal', () => {
     expect(total).toBe(150000); // basePrice real, NO el precio de la pizza Small
   });
 
+  it('uses priceBySede[locationId] instead of basePrice when an override exists for that sede', async () => {
+    const client = fakeClient({
+      products: [{ id: 'pz-porcion', basePrice: 9200, priceBySede: { nemocon: 9500 } }],
+      sizes: [],
+    });
+
+    const items = [{ productId: 'pz-porcion', name: 'Porción individual', quantity: 1, price: 9200 }];
+
+    expect(await computeVerifiedTotal(client, items, 'nemocon')).toBe(9500);
+    expect(await computeVerifiedTotal(client, items, 'zipaquira')).toBe(9200); // sin override, cae a basePrice
+    expect(await computeVerifiedTotal(client, items)).toBe(9200); // sin locationId, igual cae a basePrice
+  });
+
+  it('ignores priceBySede for a product that has no override, regardless of locationId', async () => {
+    const client = fakeClient({
+      products: [{ id: 'p1', basePrice: 30000 }], // sin priceBySede
+      sizes: [],
+    });
+
+    const items = [{ productId: 'p1', quantity: 1, price: 30000 }];
+    expect(await computeVerifiedTotal(client, items, 'nemocon')).toBe(30000);
+  });
+
   it('rejects an item referencing a product id that does not exist in the catalog', async () => {
     const client = fakeClient({ products: [], sizes: [] });
     const items = [{ productId: 'no-existe', name: 'Fantasma', quantity: 1, price: 100 }];

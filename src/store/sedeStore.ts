@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type Sede = 'nemocon' | 'zipaquira';
+export type Sede = 'nemocon' | 'zipaquira';
 
 interface SedeState {
   sede: Sede;

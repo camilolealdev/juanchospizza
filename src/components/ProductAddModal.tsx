@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
-import { MenuItem, formatPrice, getProductImage, BEBIDAS_ADDON, PAPAS_ADDON, COMBO_GASEOSAS } from '../data/menu-data';
+import {
+  MenuItem,
+  formatPrice,
+  getItemPrice,
+  getProductImage,
+  BEBIDAS_ADDON,
+  PAPAS_ADDON,
+  COMBO_GASEOSAS,
+} from '../data/menu-data';
 import { useCartStore } from '../store/cartStore';
+import { useSedeStore } from '../store/sedeStore';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { lockBodyScroll, unlockBodyScroll } from '../utils/useBodyScrollLock';
 
@@ -20,6 +29,7 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
   const addItem = useCartStore((s) => s.addItem);
+  const sede = useSedeStore((s) => s.sede);
 
   useEffect(() => {
     if (!isOpen) {
@@ -58,7 +68,7 @@ export default function ProductAddModal({ item, isOpen, onClose, onAdded }: Prop
   const canCombo = !!item.priceCombo;
 
   // Base price: variant > combo > default
-  let basePrice = item.price;
+  let basePrice = getItemPrice(item, sede);
   if (hasVariants) {
     basePrice = item.variants![selectedVariantIdx].price;
   } else if (canCombo && isCombo) {

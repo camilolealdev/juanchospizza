@@ -1230,6 +1230,21 @@ const MIGRATIONS = [
       }
     },
   },
+  // priceBySede permite un override de precio por sede sin tocar basePrice
+  // (que sigue siendo el precio por defecto / Zipaquirá). Hoy solo se usa
+  // para la porción individual de pizza en Nemocón; cualquier producto sin
+  // override se comporta exactamente igual que antes.
+  {
+    id: 16,
+    name: 'Add priceBySede to products, set Nemocón override for porción',
+    up: async (pool) => {
+      await pool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS "priceBySede" JSONB');
+      await pool.query(
+        `UPDATE products SET "priceBySede" = '{"nemocon":9500}'::jsonb
+         WHERE id = 'pz-porcion' AND "priceBySede" IS NULL`
+      );
+    },
+  },
 ];
 
 // ─── Runner ────────────────────────────────────────────────────────

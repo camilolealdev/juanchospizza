@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CATEGORIES, MENU_ITEMS, formatPrice, getProductImage, type MenuItem } from '../data/menu-data';
+import { CATEGORIES, MENU_ITEMS, formatPrice, getItemPrice, getProductImage, type MenuItem } from '../data/menu-data';
 import { POSTRES_ITEMS, SUBCATEGORIES, type PostreItem } from '../data/postres-data';
+import { useSedeStore } from '../store/sedeStore';
 
 import ProductAddModal from './ProductAddModal';
 
@@ -256,9 +257,10 @@ const MenuSection: React.FC = () => {
 };
 
 function ProductCard({ item, onOpenModal }: { item: MenuItem; onOpenModal: (item: MenuItem) => void }) {
+  const sede = useSedeStore((s) => s.sede);
   const hasPopular = item.tags?.includes('popular');
   const hasVariants = item.variants && item.variants.length > 0;
-  const lowestPrice = hasVariants ? Math.min(...item.variants!.map((v) => v.price)) : item.price;
+  const lowestPrice = hasVariants ? Math.min(...item.variants!.map((v) => v.price)) : getItemPrice(item, sede);
 
   return (
     <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col">

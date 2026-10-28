@@ -1,3 +1,5 @@
+import type { Sede } from '../store/sedeStore';
+
 export type PizzaSize = 'familiar' | 'mediana' | 'junior' | 'small';
 
 export interface PizzaSizeInfo {
@@ -20,6 +22,7 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number;
+  priceBySede?: Partial<Record<Sede, number>>;
   priceCombo?: number;
   tags?: string[];
   image?: string;
@@ -79,6 +82,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Hawaiana',
     description: 'Una porción. Piña, jamón',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
     tags: ['popular'],
   },
   {
@@ -87,6 +91,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Pollo y Champiñones',
     description: 'Una porción. Jamón, champiñones, pollo desmechado',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
   },
   {
     id: 'pizza-carnes',
@@ -94,6 +99,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Carnes',
     description: 'Una porción. Jamón, salami, cabano',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
   },
   {
     id: 'pizza-costillitas-bbq',
@@ -101,6 +107,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Costillitas BBQ',
     description: 'Una porción. Jamón, costillas BBQ, maíz tierno',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
   },
   {
     id: 'pizza-criolla',
@@ -108,6 +115,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Criolla',
     description: 'Una porción. Carne desmechada, maíz tierno',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
   },
   {
     id: 'pizza-mexicana',
@@ -115,6 +123,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Mexicana',
     description: 'Una porción. Carne molida, maíz tierno, tomate, cilantro, tostacos',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
   },
   {
     id: 'pizza-ranchera',
@@ -122,6 +131,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Ranchera',
     description: 'Una porción. Champiñones, cebolla, maíz tierno, chorizo',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
   },
   {
     id: 'pizza-de-la-casa',
@@ -129,6 +139,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza De la Casa',
     description: 'Una porción. Champiñones, cebolla, carne desmechada',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
     tags: ['popular'],
   },
   {
@@ -137,6 +148,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Española',
     description: 'Una porción. Espinaca, tocineta, maíz tierno, champiñón',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
   },
   {
     id: 'pizza-napolitana',
@@ -144,6 +156,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Napolitana',
     description: 'Una porción. Tomate, orégano',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
   },
   {
     id: 'pizza-vegetariana',
@@ -151,6 +164,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Vegetariana',
     description: 'Una porción. Champiñón, maíz tierno, cebolla',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
     tags: ['vegetariana'],
   },
   {
@@ -159,6 +173,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Tropical',
     description: 'Una porción. Cerezas, piña, duraznos, uvas pasas',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
   },
   {
     id: 'pizza-queso-bocadillo',
@@ -166,6 +181,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Porción Pizza Queso y Bocadillo',
     description: 'Una porción. Queso y bocadillo',
     price: 9200,
+    priceBySede: { nemocon: 9500 },
   },
 
   // ─── HAMBURGUESAS ───
@@ -561,6 +577,10 @@ export const WHATSAPP_NUMBERS = {
 
 export function formatPrice(price: number): string {
   return '$' + price.toLocaleString('es-CO');
+}
+
+export function getItemPrice(item: MenuItem, sede: Sede): number {
+  return item.priceBySede?.[sede] ?? item.price;
 }
 
 // ─── PRODUCT IMAGES ──────────────────────────────────────────────────────────

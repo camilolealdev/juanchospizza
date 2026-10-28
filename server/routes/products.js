@@ -45,13 +45,14 @@ router.post('/api/products', authMiddleware, requireRole('ADMIN'), validate(crea
     const id = `prod_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     await pool.query(
-      `INSERT INTO products (id, "categoryId", nombre, descripcion, "basePrice", type, image, tiempo, popularidad, vegetariano, "isPremium", exclusiva, subcategory) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      `INSERT INTO products (id, "categoryId", nombre, descripcion, "basePrice", "priceBySede", type, image, tiempo, popularidad, vegetariano, "isPremium", exclusiva, subcategory) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
       [
         id,
         sanitized.categoryId,
         sanitized.nombre,
         sanitized.descripcion,
         sanitized.basePrice,
+        sanitized.priceBySede ? JSON.stringify(sanitized.priceBySede) : null,
         sanitized.type,
         sanitized.image,
         sanitized.tiempo,
@@ -100,13 +101,14 @@ router.post('/api/products/bulk', authMiddleware, requireRole('ADMIN'), async (r
     try {
       const id = `prod_${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${i}`;
       await pool.query(
-        `INSERT INTO products (id, "categoryId", nombre, descripcion, "basePrice", type, image, tiempo, popularidad, vegetariano, "isPremium", exclusiva, subcategory) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+        `INSERT INTO products (id, "categoryId", nombre, descripcion, "basePrice", "priceBySede", type, image, tiempo, popularidad, vegetariano, "isPremium", exclusiva, subcategory) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
         [
           id,
           sanitized.categoryId,
           sanitized.nombre,
           sanitized.descripcion,
           sanitized.basePrice,
+          sanitized.priceBySede ? JSON.stringify(sanitized.priceBySede) : null,
           sanitized.type,
           sanitized.image,
           sanitized.tiempo,
@@ -138,6 +140,7 @@ router.put(
         nombre,
         descripcion,
         basePrice,
+        priceBySede,
         type,
         image,
         tiempo,
@@ -165,6 +168,10 @@ router.put(
       if (basePrice !== undefined) {
         params.push(basePrice);
         updates.push(`"basePrice" = $${params.length}`);
+      }
+      if (priceBySede !== undefined) {
+        params.push(JSON.stringify(priceBySede));
+        updates.push(`"priceBySede" = $${params.length}`);
       }
       if (type !== undefined) {
         params.push(type);

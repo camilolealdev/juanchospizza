@@ -52,7 +52,8 @@ export async function initDB() {
         vegetariano BOOLEAN,
         "isPremium" BOOLEAN,
         exclusiva BOOLEAN,
-        subcategory TEXT
+        subcategory TEXT,
+        "priceBySede" JSONB
       )
     `);
 
