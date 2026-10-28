@@ -396,6 +396,28 @@ describe('POST /api/orders (checkout público)', () => {
     expect(mockClientQuery.mock.calls.some(([sql]) => String(sql).includes('ROLLBACK'))).toBe(false);
   });
 
+  it('el INSERT tiene tantas columnas y marcadores $n como parámetros (regresión: 14 vs 16 → 500 en producción)', async () => {
+    const app = createApp();
+
+    const res = await supertest(app)
+      .post('/api/orders')
+      .send({ ...validOrderBody(), orderType: 'consumo-local', mesa: 5 });
+
+    expect(res.status).toBe(201);
+    const [sql, params] = mockClientQuery.mock.calls.find(([s]) => String(s).includes('INSERT INTO orders'));
+    const columns = String(sql)
+      .match(/INSERT INTO orders \(([^)]*)\)/)[1]
+      .split(',').length;
+    const placeholders = (String(sql).match(/\$\d+/g) || []).length;
+    // pg rechaza el bind si no coinciden ("bind message supplies N parameters, but prepared statement requires M")
+    expect(columns).toBe(params.length);
+    expect(placeholders).toBe(params.length);
+    expect(String(sql)).toContain('"orderType"');
+    expect(String(sql)).toContain('mesa');
+    expect(params[14]).toBe('consumo-local');
+    expect(params[15]).toBe(5);
+  });
+
   it('marca paymentStatus pending para métodos online (espera webhook del proveedor)', async () => {
     const app = createApp();
 

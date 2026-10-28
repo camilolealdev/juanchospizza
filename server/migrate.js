@@ -1230,12 +1230,25 @@ const MIGRATIONS = [
       }
     },
   },
+  // ── 016: orders."orderType" y orders.mesa ─────────────────────────
+  // POST /api/orders (commit 9446794) escribe estas dos columnas, pero nunca
+  // se agregaron a una tabla `orders` ya existente (CREATE TABLE IF NOT EXISTS
+  // no la altera) -- todo pedido nuevo respondía 500 en producción.
+  // mesa es TEXT porque el schema acepta número o texto ("A3").
+  {
+    id: 16,
+    name: 'Add orderType and mesa columns to orders',
+    up: async (pool) => {
+      await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS "orderType" TEXT`);
+      await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mesa TEXT`);
+    },
+  },
   // priceBySede permite un override de precio por sede sin tocar basePrice
   // (que sigue siendo el precio por defecto / Zipaquirá). Hoy solo se usa
   // para la porción individual de pizza en Nemocón; cualquier producto sin
   // override se comporta exactamente igual que antes.
   {
-    id: 16,
+    id: 17,
     name: 'Add priceBySede to products, set Nemocón override for porción',
     up: async (pool) => {
       await pool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS "priceBySede" JSONB');
